@@ -19,12 +19,15 @@ namespace CombatSystem.Core
         [SerializeField] private HealthComponent health;
         [SerializeField] private ResourceComponent resource;
         [SerializeField] private CooldownComponent cooldown;
+        [SerializeField] private UnitTagsComponent unitTags;
+        [SerializeField] private BuffController buffController;
         
         [Header("选项")]
         [Tooltip("是否在 Awake 时自动初始化")]
         [SerializeField] private bool initializeOnAwake = true;
 
         public UnitDefinition Definition => unitDefinition;
+        public CombatEventHub EventHub => eventHub;
 
         private void Reset()
         {
@@ -33,6 +36,8 @@ namespace CombatSystem.Core
             health = GetComponent<HealthComponent>();
             resource = GetComponent<ResourceComponent>();
             cooldown = GetComponent<CooldownComponent>();
+            unitTags = GetComponent<UnitTagsComponent>();
+            buffController = GetComponent<BuffController>();
         }
 
         private void Awake()
@@ -58,6 +63,11 @@ namespace CombatSystem.Core
             if (stats != null)
             {
                 stats.Initialize(definition);
+            }
+
+            if (unitTags != null)
+            {
+                unitTags.Initialize(definition);
             }
 
             if (health != null)
@@ -100,6 +110,7 @@ namespace CombatSystem.Core
             {
                 cooldown.SetEventHub(eventHub);
             }
+
         }
     }
 }

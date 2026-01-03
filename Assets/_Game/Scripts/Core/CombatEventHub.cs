@@ -22,6 +22,10 @@ namespace CombatSystem.Core
         public event Action<ResourceChangedEvent> ResourceChanged;
         /// <summary> 当技能冷却状态发生变化时触发 </summary>
         public event Action<CooldownChangedEvent> CooldownChanged;
+        /// <summary> 当技能开始施放时触发 </summary>
+        public event Action<SkillCastEvent> SkillCastStarted;
+        /// <summary> 当技能完成施放时触发 </summary>
+        public event Action<SkillCastEvent> SkillCastCompleted;
 
         // --- 广播方法 (由 Component 调用) ---
 
@@ -30,6 +34,8 @@ namespace CombatSystem.Core
         public void RaiseUnitDied(HealthComponent source) => UnitDied?.Invoke(source);
         public void RaiseResourceChanged(ResourceChangedEvent evt) => ResourceChanged?.Invoke(evt);
         public void RaiseCooldownChanged(CooldownChangedEvent evt) => CooldownChanged?.Invoke(evt);
+        public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
+        public void RaiseSkillCastCompleted(SkillCastEvent evt) => SkillCastCompleted?.Invoke(evt);
 
         private void OnDisable()
         {
@@ -39,6 +45,8 @@ namespace CombatSystem.Core
             UnitDied = null;
             ResourceChanged = null;
             CooldownChanged = null;
+            SkillCastStarted = null;
+            SkillCastCompleted = null;
         }
     }
 }
