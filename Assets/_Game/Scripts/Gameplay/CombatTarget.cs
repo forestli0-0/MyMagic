@@ -24,6 +24,10 @@ namespace CombatSystem.Gameplay
         public ResourceComponent Resource;
         public UnitTagsComponent Tags;
         public TeamComponent Team;
+        /// <summary>
+        /// Buff 控制器引用，用于条件判断等场景。
+        /// </summary>
+        public BuffController Buffs;
 
         /// <summary>
         /// 检查目标是否有效（GameObject 未被销毁）。
@@ -76,6 +80,7 @@ namespace CombatSystem.Gameplay
                 target.Resource = target.Unit.GetComponent<ResourceComponent>();
                 target.Tags = target.Unit.GetComponent<UnitTagsComponent>();
                 target.Team = target.Unit.GetComponent<TeamComponent>();
+                target.Buffs = target.Unit.GetComponent<BuffController>();
             }
             else
             {
@@ -83,6 +88,7 @@ namespace CombatSystem.Gameplay
                 target.Resource = target.GameObject.GetComponent<ResourceComponent>();
                 target.Tags = target.GameObject.GetComponent<UnitTagsComponent>();
                 target.Team = target.GameObject.GetComponent<TeamComponent>();
+                target.Buffs = target.GameObject.GetComponent<BuffController>();
             }
 
             return target.IsValid;

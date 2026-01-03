@@ -12,6 +12,8 @@ namespace CombatSystem.Data
         [Header("目标设定")]
         [Tooltip("要修正的对象类型")]
         [SerializeField] private ModifierTargetType target = ModifierTargetType.Stat;
+        [Tooltip("修正器作用的侧向（施法者或目标）")]
+        [SerializeField] private ModifierScope scope = ModifierScope.Caster;
         [Tooltip("如果是修正属性，请指定具体属性")]
         [SerializeField] private StatDefinition stat;
         [Tooltip("如果是修正参数，请指定参数的唯一 ID")]
@@ -31,6 +33,7 @@ namespace CombatSystem.Data
         [SerializeField] private List<TagDefinition> blockedTags = new List<TagDefinition>();
 
         public ModifierTargetType Target => target;
+        public ModifierScope Scope => scope;
         public StatDefinition Stat => stat;
         public string ParameterId => parameterId;
         public ModifierOperation Operation => operation;
@@ -40,4 +43,3 @@ namespace CombatSystem.Data
         public IReadOnlyList<TagDefinition> BlockedTags => blockedTags;
     }
 }
-

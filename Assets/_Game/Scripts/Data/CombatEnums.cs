@@ -91,6 +91,16 @@ namespace CombatSystem.Data
     }
 
     /// <summary>
+    /// 修正器作用域（施法者侧 or 目标侧）。
+    /// </summary>
+    public enum ModifierScope
+    {
+        Caster, // 作用于施法者侧（默认）
+        Target, // 作用于目标侧（用于抗性/易伤等）
+        Both    // 同时作用于施法者与目标
+    }
+
+    /// <summary>
     /// 修正器运算方式。
     /// </summary>
     public enum ModifierOperation

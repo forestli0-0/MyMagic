@@ -12,13 +12,14 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            if (amount <= 0f)
+            var finalAmount = ModifierResolver.ApplyTargetResistance(amount, effect, context, target);
+            if (finalAmount <= 0f)
             {
                 return;
             }
 
             var wasAlive = target.Health.IsAlive;
-            target.Health.ApplyDamage(amount);
+            target.Health.ApplyDamage(finalAmount);
 
             var notifySkillHit = trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
             var notifyBuffHit = trigger != SkillStepTrigger.OnHit;

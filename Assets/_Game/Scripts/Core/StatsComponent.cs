@@ -337,6 +337,11 @@ namespace CombatSystem.Core
                         continue;
                     }
 
+                    if (modifier.Scope == ModifierScope.Target)
+                    {
+                        continue;
+                    }
+
                     if (modifier.Stat != stat)
                     {
                         continue;

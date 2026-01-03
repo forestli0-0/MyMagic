@@ -40,6 +40,8 @@ namespace CombatSystem.Gameplay
         public const string EffectMoveDistance = "Effect.MoveDistance";
         /// <summary>位移速度</summary>
         public const string EffectMoveSpeed = "Effect.MoveSpeed";
+        /// <summary>目标侧抗性参数（用于伤害减免）</summary>
+        public const string EffectResistance = "Effect.Resistance";
     }
 
     /// <summary>
@@ -102,7 +104,8 @@ namespace CombatSystem.Gameplay
                 null,
                 skill.Tags,
                 context,
-                target);
+                target,
+                ModifierScope.Caster);
         }
 
         /// <summary>
@@ -122,30 +125,94 @@ namespace CombatSystem.Gameplay
             string parameterId)
         {
             // 参数校验
-            if (effect == null || string.IsNullOrEmpty(parameterId) || context.CasterUnit == null)
-            {
-                return baseValue;
-            }
-
-            // 获取施法者的 Buff 控制器
-            var buffController = context.CasterUnit.GetComponent<BuffController>();
-            if (buffController == null || buffController.ActiveBuffs.Count == 0)
+            if (effect == null || string.IsNullOrEmpty(parameterId))
             {
                 return baseValue;
             }
 
             // 效果的修正器匹配使用其所属技能的标签
             var tags = context.Skill != null ? context.Skill.Tags : null;
+            var value = baseValue;
 
-            return ApplyModifiers(
-                baseValue,
-                buffController.ActiveBuffs,
+            // 施法者侧修正
+            BuffController buffController = null;
+            if (context.CasterUnit != null)
+            {
+                buffController = context.CasterUnit.GetComponent<BuffController>();
+            }
+
+            if (buffController != null && buffController.ActiveBuffs.Count > 0)
+            {
+                value = ApplyModifiers(
+                    value,
+                    buffController.ActiveBuffs,
+                    ModifierTargetType.Effect,
+                    parameterId,
+                    null,
+                    tags,
+                    context,
+                    target,
+                    ModifierScope.Caster);
+            }
+
+            // 目标侧修正
+            if (target.IsValid)
+            {
+                var targetBuffs = GetBuffController(target);
+                if (targetBuffs != null && targetBuffs.ActiveBuffs.Count > 0)
+                {
+                    value = ApplyModifiers(
+                        value,
+                        targetBuffs.ActiveBuffs,
+                        ModifierTargetType.Effect,
+                        parameterId,
+                        null,
+                        tags,
+                        context,
+                        target,
+                        ModifierScope.Target);
+                }
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// 应用目标侧抗性公式（仅用于伤害）。
+        /// </summary>
+        public static float ApplyTargetResistance(float amount, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
+        {
+            if (effect == null || amount <= 0f || !target.IsValid)
+            {
+                return amount;
+            }
+
+            var targetBuffs = GetBuffController(target);
+            if (targetBuffs == null || targetBuffs.ActiveBuffs.Count == 0)
+            {
+                return amount;
+            }
+
+            var tags = context.Skill != null ? context.Skill.Tags : null;
+            var resistance = ApplyModifiers(
+                0f,
+                targetBuffs.ActiveBuffs,
                 ModifierTargetType.Effect,
-                parameterId,
+                ModifierParameters.EffectResistance,
                 null,
                 tags,
                 context,
-                target);
+                target,
+                ModifierScope.Target);
+
+            if (Mathf.Approximately(resistance, 0f))
+            {
+                return amount;
+            }
+
+            var clamped = Mathf.Clamp(resistance, -95f, 10000f);
+            var result = amount * 100f / (100f + clamped);
+            return Mathf.Max(0f, result);
         }
 
         /// <summary>
@@ -168,7 +235,8 @@ namespace CombatSystem.Gameplay
             StatDefinition stat,
             IReadOnlyList<TagDefinition> contextTags,
             SkillRuntimeContext context,
-            CombatTarget target)
+            CombatTarget target,
+            ModifierScope applyScope)
         {
             // 累加器：分别收集加法、乘法和覆盖修正
             var add = 0f;
@@ -201,6 +269,11 @@ namespace CombatSystem.Gameplay
                     
                     // 目标类型必须匹配
                     if (modifier == null || modifier.Target != targetType)
+                    {
+                        continue;
+                    }
+
+                    if (!ScopeMatches(modifier.Scope, applyScope))
                     {
                         continue;
                     }
@@ -262,6 +335,30 @@ namespace CombatSystem.Gameplay
             }
 
             return result;
+        }
+
+        private static BuffController GetBuffController(CombatTarget target)
+        {
+            if (target.Unit != null)
+            {
+                return target.Unit.GetComponent<BuffController>();
+            }
+
+            return target.GameObject != null ? target.GameObject.GetComponent<BuffController>() : null;
+        }
+
+        private static bool ScopeMatches(ModifierScope modifierScope, ModifierScope applyScope)
+        {
+            switch (applyScope)
+            {
+                case ModifierScope.Caster:
+                    return modifierScope == ModifierScope.Caster || modifierScope == ModifierScope.Both;
+                case ModifierScope.Target:
+                    return modifierScope == ModifierScope.Target || modifierScope == ModifierScope.Both;
+                case ModifierScope.Both:
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
@@ -330,4 +427,3 @@ namespace CombatSystem.Gameplay
         }
     }
 }
-
