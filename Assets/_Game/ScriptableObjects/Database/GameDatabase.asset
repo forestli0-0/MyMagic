@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23f3f0c940743834a9c0505884fba8e7, type: 3}
+  m_Name: GameDatabase
+  m_EditorClassIdentifier: 
+  stats:
+  - {fileID: 11400000, guid: 6c7db899c0ad436419000803dbc3cd24, type: 2}
+  - {fileID: 11400000, guid: ab84145102b4ce34790eb1fd89e2e931, type: 2}
+  - {fileID: 11400000, guid: 9a916076c5d4eaa439c736310f883b88, type: 2}
+  - {fileID: 11400000, guid: 9513982558b6fb943b14b6b56874d4a9, type: 2}
+  tags:
+  - {fileID: 11400000, guid: 424ff5cc9af4798419091345410a8259, type: 2}
+  - {fileID: 11400000, guid: 5694c53b3beef254ba056d7d5908bddf, type: 2}
+  - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}
+  - {fileID: 11400000, guid: 3c125633f625b144a985216b688a7efc, type: 2}
+  units:
+  - {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
+  - {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  skills:
+  - {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
+  - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}
+  - {fileID: 11400000, guid: b4334c8f64255634f894c947e4f459c0, type: 2}
+  buffs:
+  - {fileID: 11400000, guid: b3a1e9710246cee4daea997e8414498f, type: 2}
+  - {fileID: 11400000, guid: b6de9338415d76c40a6351d5243cdb96, type: 2}
+  effects:
+  - {fileID: 11400000, guid: b059aada7d919934abeaad340b644d60, type: 2}
+  - {fileID: 11400000, guid: b7744e7035094634e9ab9feaa79d9a7c, type: 2}
+  - {fileID: 11400000, guid: 850351bd026a1da4992ec6d055a703d7, type: 2}
+  - {fileID: 11400000, guid: 78fcaa908fefdc54496398ada172336f, type: 2}
+  - {fileID: 11400000, guid: 0e64dee68e7942949bc218b241c9769c, type: 2}
+  conditions: []
+  modifiers:
+  - {fileID: 11400000, guid: e2ddbc6798c187d41a79ff48190cf4b6, type: 2}
+  - {fileID: 11400000, guid: 71d435ce53359184686b1408e66f219b, type: 2}
+  - {fileID: 11400000, guid: 5b220bcb251d2964a81fb93bef0579b3, type: 2}
+  - {fileID: 11400000, guid: a2147e181c8c0cb45a0be869a741aff5, type: 2}
+  projectiles: []
+  targetings:
+  - {fileID: 11400000, guid: edf6f826bdbc46948b7be81b3a9e63f7, type: 2}
+  - {fileID: 11400000, guid: b09f3e999e6bfa34ea7ef9d4b4efc0f8, type: 2}
+  aiProfiles:
+  - {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
+  hudConfigs:
+  - {fileID: 11400000, guid: 30fa15c661bf3c84ca51c52cadff7d28, type: 2}

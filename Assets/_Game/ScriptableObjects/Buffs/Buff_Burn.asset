@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2311ba78f5e90484893a3c49b89e27a3, type: 3}
+  m_Name: Buff_Burn
+  m_EditorClassIdentifier: 
+  id: Buff_Burn
+  displayName: Burn
+  icon: {fileID: 0}
+  isDebuff: 1
+  duration: 5
+  tickInterval: 1
+  stackingRule: 0
+  maxStacks: 3
+  tags:
+  - {fileID: 11400000, guid: 3c125633f625b144a985216b688a7efc, type: 2}
+  modifiers: []
+  triggers:
+  - triggerType: 2
+    chance: 1
+    condition: {fileID: 0}
+    effects:
+    - {fileID: 11400000, guid: 78fcaa908fefdc54496398ada172336f, type: 2}
