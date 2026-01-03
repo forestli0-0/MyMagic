@@ -33,6 +33,8 @@ namespace CombatSystem.Gameplay
         [SerializeField] private ResourceComponent resource;
         [Tooltip("冷却组件")]
         [SerializeField] private CooldownComponent cooldown;
+        [Tooltip("Buff 控制器")]
+        [SerializeField] private BuffController buffController;
         [Tooltip("目标选择系统")]
         [SerializeField] private TargetingSystem targetingSystem;
         [Tooltip("效果执行器")]
@@ -58,6 +60,7 @@ namespace CombatSystem.Gameplay
         private float castEndTime;
         private float currentCastTime;
         private SkillDefinition currentSkill;
+        private bool currentIsChannel;
 
         /// <summary>当技能开始施法时触发</summary>
         public event Action<SkillCastEvent> SkillCastStarted;
@@ -81,6 +84,7 @@ namespace CombatSystem.Gameplay
             health = GetComponent<HealthComponent>();
             resource = GetComponent<ResourceComponent>();
             cooldown = GetComponent<CooldownComponent>();
+            buffController = GetComponent<BuffController>();
         }
 
         private void Awake()
@@ -123,6 +127,11 @@ namespace CombatSystem.Gameplay
                 cooldown = GetComponent<CooldownComponent>();
             }
 
+            if (buffController == null)
+            {
+                buffController = GetComponent<BuffController>();
+            }
+
             if (eventHub == null && unitRoot != null)
             {
                 eventHub = unitRoot.EventHub;
@@ -160,11 +169,12 @@ namespace CombatSystem.Gameplay
                 isCasting = false;
                 if (currentSkill != null)
                 {
-                    RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime);
+                    RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime, currentIsChannel);
                 }
 
                 currentSkill = null;
                 currentCastTime = 0f;
+                currentIsChannel = false;
             }
         }
 
@@ -230,23 +240,29 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            // 创建技能上下文
+            var context = CreateContext(skill);
+            var primaryTarget = targets.Count > 0 ? targets[0] : default;
+            var resourceCost = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ResourceCost, skill, context, primaryTarget, ModifierParameters.SkillResourceCost));
+            var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
+            var castTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.CastTime, skill, context, primaryTarget, ModifierParameters.SkillCastTime));
+            var channelTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTime, skill, context, primaryTarget, ModifierParameters.SkillChannelTime));
+            var isChannel = channelTime > 0f;
+
             // 扣除资源
-            if (!SpendResource(skill))
+            if (!SpendResource(skill, resourceCost))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
                 return false;
             }
 
             // 开始冷却
-            if (cooldown != null && skill.Cooldown > 0f)
+            if (cooldown != null && cooldownDuration > 0f)
             {
-                cooldown.StartCooldown(skill, skill.Cooldown);
+                cooldown.StartCooldown(skill, cooldownDuration);
             }
 
-            // 创建技能上下文
-            var context = CreateContext(skill);
             var now = Time.time;
-            var castTime = Mathf.Max(0f, skill.CastTime);
 
             // 调度技能步骤
             var targetHandle = GetTargetHandle(targets);
@@ -260,7 +276,8 @@ namespace CombatSystem.Gameplay
             }
 
             // 派发施法开始事件
-            RaiseSkillCastStarted(context, castTime);
+            RaiseSkillCastStarted(context, castTime, isChannel);
+            buffController?.NotifySkillCast(context, primaryTarget);
 
             // 如果有施法时间，进入施法状态
             if (castTime > 0f)
@@ -269,11 +286,12 @@ namespace CombatSystem.Gameplay
                 castEndTime = now + castTime;
                 currentSkill = skill;
                 currentCastTime = castTime;
+                currentIsChannel = isChannel;
             }
             else
             {
                 // 瞬发技能立即完成
-                RaiseSkillCastCompleted(context, castTime);
+                RaiseSkillCastCompleted(context, castTime, isChannel);
             }
 
             return true;
@@ -311,7 +329,7 @@ namespace CombatSystem.Gameplay
             }
 
             // 检查资源
-            return HasResource(skill);
+            return HasResource(skill, skill.ResourceCost);
         }
 
         /// <summary>
@@ -448,12 +466,12 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 检查当前资源是否足够释放技能。
         /// </summary>
-        private bool HasResource(SkillDefinition skill)
+        private bool HasResource(SkillDefinition skill, float cost)
         {
             // 无资源组件时，只有零消耗技能可以释放
             if (resource == null)
             {
-                return skill.ResourceCost <= 0f;
+                return cost <= 0f;
             }
 
             // 资源类型必须匹配
@@ -462,18 +480,18 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            return resource.Current >= skill.ResourceCost;
+            return resource.Current >= cost;
         }
 
         /// <summary>
         /// 扣除技能所需资源。
         /// </summary>
         /// <returns>若成功扣除则返回 true</returns>
-        private bool SpendResource(SkillDefinition skill)
+        private bool SpendResource(SkillDefinition skill, float cost)
         {
             if (resource == null)
             {
-                return skill.ResourceCost <= 0f;
+                return cost <= 0f;
             }
 
             if (resource.ResourceType != skill.ResourceType)
@@ -481,7 +499,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            return resource.Spend(skill.ResourceCost);
+            return resource.Spend(cost);
         }
 
         /// <summary>
@@ -495,9 +513,9 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 派发技能施法开始事件。
         /// </summary>
-        private void RaiseSkillCastStarted(SkillRuntimeContext context, float castTime)
+        private void RaiseSkillCastStarted(SkillRuntimeContext context, float castTime, bool isChannel)
         {
-            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, context.Skill != null && context.Skill.ChannelTime > 0f);
+            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, isChannel);
             SkillCastStarted?.Invoke(evt);
             eventHub?.RaiseSkillCastStarted(evt);
         }
@@ -505,9 +523,9 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 派发技能施法完成事件。
         /// </summary>
-        private void RaiseSkillCastCompleted(SkillRuntimeContext context, float castTime)
+        private void RaiseSkillCastCompleted(SkillRuntimeContext context, float castTime, bool isChannel)
         {
-            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, context.Skill != null && context.Skill.ChannelTime > 0f);
+            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, isChannel);
             SkillCastCompleted?.Invoke(evt);
             eventHub?.RaiseSkillCastCompleted(evt);
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CombatSystem.Data;
+using CombatSystem.Gameplay;
 using UnityEngine;
 
 namespace CombatSystem.Core
@@ -14,6 +15,12 @@ namespace CombatSystem.Core
         [SerializeField] private UnitDefinition unitDefinition;
         [Tooltip("事件中心引用，用于分发全局变更事件")]
         [SerializeField] private CombatEventHub eventHub;
+        [Tooltip("Buff 控制器，用于应用修正器")]
+        [SerializeField] private BuffController buffController;
+        [Tooltip("单位根组件")]
+        [SerializeField] private UnitRoot unitRoot;
+        [Tooltip("单位标签组件")]
+        [SerializeField] private UnitTagsComponent unitTags;
         [Tooltip("是否在 Awake 时执行初始化")]
         [SerializeField] private bool initializeOnAwake = true;
 
@@ -32,11 +39,49 @@ namespace CombatSystem.Core
         /// </summary>
         public UnitDefinition Definition => unitDefinition;
 
+        private void Reset()
+        {
+            unitRoot = GetComponent<UnitRoot>();
+            buffController = GetComponent<BuffController>();
+            unitTags = GetComponent<UnitTagsComponent>();
+        }
+
         private void Awake()
         {
             if (initializeOnAwake && unitDefinition != null)
             {
                 Initialize(unitDefinition);
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            if (buffController == null)
+            {
+                buffController = GetComponent<BuffController>();
+            }
+
+            if (unitTags == null)
+            {
+                unitTags = GetComponent<UnitTagsComponent>();
+            }
+
+            if (buffController != null)
+            {
+                buffController.BuffsChanged += HandleBuffsChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (buffController != null)
+            {
+                buffController.BuffsChanged -= HandleBuffsChanged;
             }
         }
 
@@ -46,6 +91,31 @@ namespace CombatSystem.Core
         public void SetEventHub(CombatEventHub hub)
         {
             eventHub = hub;
+        }
+
+        /// <summary>
+        /// 设置或更换 Buff 控制器。
+        /// </summary>
+        public void SetBuffController(BuffController controller)
+        {
+            if (buffController == controller)
+            {
+                return;
+            }
+
+            if (buffController != null)
+            {
+                buffController.BuffsChanged -= HandleBuffsChanged;
+            }
+
+            buffController = controller;
+
+            if (buffController != null)
+            {
+                buffController.BuffsChanged += HandleBuffsChanged;
+            }
+
+            RefreshModifiers();
         }
 
         /// <summary>
@@ -67,6 +137,8 @@ namespace CombatSystem.Core
             {
                 AddOrSet(baseStats[i].stat, baseStats[i].value, false);
             }
+
+            RefreshModifiers();
         }
 
         /// <summary>
@@ -111,15 +183,15 @@ namespace CombatSystem.Core
         }
 
         /// <summary>
-        /// 直接设置某个属性的值。
+        /// 直接设置某个属性的基础值。
         /// </summary>
         public void SetValue(StatDefinition stat, float value)
         {
-            AddOrSet(stat, value, true);
+            SetBaseValue(stat, value, true);
         }
 
         /// <summary>
-        /// 修改某个属性的值（增量方式）。
+        /// 修改某个属性的基础值（增量方式）。
         /// </summary>
         /// <param name="stat">目标属性</param>
         /// <param name="delta">变化量</param>
@@ -132,8 +204,8 @@ namespace CombatSystem.Core
 
             if (indexByStat.TryGetValue(stat, out var index))
             {
-                var current = runtimeStats[index].value;
-                SetValueInternal(index, current + delta, true);
+                var data = runtimeStats[index];
+                SetBaseValueInternal(index, data.baseValue + delta, true);
                 return;
             }
 
@@ -142,9 +214,37 @@ namespace CombatSystem.Core
         }
 
         /// <summary>
+        /// 强制刷新所有属性修正器。
+        /// </summary>
+        public void RefreshModifiers()
+        {
+            if (runtimeStats.Count == 0)
+            {
+                return;
+            }
+
+            var context = CreateContext();
+            var hasTarget = CombatTarget.TryCreate(gameObject, out var selfTarget);
+
+            for (int i = 0; i < runtimeStats.Count; i++)
+            {
+                var data = runtimeStats[i];
+                var oldValue = data.value;
+                var newValue = CalculateModifiedValue(data.stat, data.baseValue, context, hasTarget ? selfTarget : default);
+
+                if (!Mathf.Approximately(oldValue, newValue))
+                {
+                    data.value = newValue;
+                    runtimeStats[i] = data;
+                    RaiseStatChanged(data.stat, oldValue, newValue);
+                }
+            }
+        }
+
+        /// <summary>
         /// 内部方法：添加新属性或更新已有属性，可选是否派发事件。
         /// </summary>
-        private void AddOrSet(StatDefinition stat, float value, bool raiseEvent)
+        private void AddOrSet(StatDefinition stat, float baseValue, bool raiseEvent)
         {
             if (stat == null)
             {
@@ -153,39 +253,179 @@ namespace CombatSystem.Core
 
             if (indexByStat.TryGetValue(stat, out var index))
             {
-                SetValueInternal(index, value, raiseEvent);
+                SetBaseValueInternal(index, baseValue, raiseEvent);
                 return;
             }
 
             // 注册新属性
             indexByStat[stat] = runtimeStats.Count;
-            runtimeStats.Add(new RuntimeStat(stat, value));
+            runtimeStats.Add(new RuntimeStat(stat, baseValue, baseValue));
 
             if (raiseEvent)
             {
-                RaiseStatChanged(stat, 0f, value);
+                RaiseStatChanged(stat, 0f, baseValue);
             }
         }
 
         /// <summary>
-        /// 内部方法：执行实际的数值赋值并处理变更逻辑。
+        /// 内部方法：更新基础值并重新计算最终值。
         /// </summary>
-        private void SetValueInternal(int index, float value, bool raiseEvent)
+        private void SetBaseValueInternal(int index, float baseValue, bool raiseEvent)
         {
             var data = runtimeStats[index];
             var oldValue = data.value;
-            if (Mathf.Approximately(oldValue, value))
+            data.baseValue = baseValue;
+            data.value = CalculateModifiedValue(data.stat, baseValue, CreateContext(), GetSelfTarget());
+            runtimeStats[index] = data;
+
+            if (raiseEvent && !Mathf.Approximately(oldValue, data.value))
+            {
+                RaiseStatChanged(data.stat, oldValue, data.value);
+            }
+        }
+
+        private void SetBaseValue(StatDefinition stat, float baseValue, bool raiseEvent)
+        {
+            if (stat == null)
             {
                 return;
             }
 
-            data.value = value;
-            runtimeStats[index] = data;
-
-            if (raiseEvent)
+            if (indexByStat.TryGetValue(stat, out var index))
             {
-                RaiseStatChanged(data.stat, oldValue, value);
+                SetBaseValueInternal(index, baseValue, raiseEvent);
+                return;
             }
+
+            AddOrSet(stat, baseValue, raiseEvent);
+        }
+
+        private float CalculateModifiedValue(StatDefinition stat, float baseValue, SkillRuntimeContext context, CombatTarget selfTarget)
+        {
+            if (buffController == null || buffController.ActiveBuffs.Count == 0)
+            {
+                return baseValue;
+            }
+
+            var add = 0f;
+            var mul = 0f;
+            var hasOverride = false;
+            var overrideValue = baseValue;
+
+            var buffs = buffController.ActiveBuffs;
+            for (int i = 0; i < buffs.Count; i++)
+            {
+                var buffDef = buffs[i].Definition;
+                if (buffDef == null)
+                {
+                    continue;
+                }
+
+                var modifiers = buffDef.Modifiers;
+                if (modifiers == null || modifiers.Count == 0)
+                {
+                    continue;
+                }
+
+                var stacks = Mathf.Max(1, buffs[i].Stacks);
+
+                for (int j = 0; j < modifiers.Count; j++)
+                {
+                    var modifier = modifiers[j];
+                    if (modifier == null || modifier.Target != ModifierTargetType.Stat)
+                    {
+                        continue;
+                    }
+
+                    if (modifier.Stat != stat)
+                    {
+                        continue;
+                    }
+
+                    if (!TagsMatch(modifier.RequiredTags, modifier.BlockedTags))
+                    {
+                        continue;
+                    }
+
+                    if (modifier.Condition != null && !ConditionEvaluator.Evaluate(modifier.Condition, context, selfTarget))
+                    {
+                        continue;
+                    }
+
+                    var value = modifier.Value * stacks;
+                    switch (modifier.Operation)
+                    {
+                        case ModifierOperation.Add:
+                            add += value;
+                            break;
+                        case ModifierOperation.Multiply:
+                            mul += value;
+                            break;
+                        case ModifierOperation.Override:
+                            hasOverride = true;
+                            overrideValue = value;
+                            break;
+                    }
+                }
+            }
+
+            var result = (baseValue + add) * (1f + mul);
+            if (hasOverride)
+            {
+                result = overrideValue;
+            }
+
+            return result;
+        }
+
+        private SkillRuntimeContext CreateContext()
+        {
+            return new SkillRuntimeContext(null, unitRoot, null, eventHub, null, null);
+        }
+
+        private CombatTarget GetSelfTarget()
+        {
+            CombatTarget.TryCreate(gameObject, out var selfTarget);
+            return selfTarget;
+        }
+
+        private bool TagsMatch(IReadOnlyList<TagDefinition> required, IReadOnlyList<TagDefinition> blocked)
+        {
+            if (required != null && required.Count > 0)
+            {
+                if (unitTags == null)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < required.Count; i++)
+                {
+                    var tag = required[i];
+                    if (tag != null && !unitTags.HasTag(tag))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            if (blocked != null && blocked.Count > 0 && unitTags != null)
+            {
+                for (int i = 0; i < blocked.Count; i++)
+                {
+                    var tag = blocked[i];
+                    if (tag != null && unitTags.HasTag(tag))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private void HandleBuffsChanged()
+        {
+            RefreshModifiers();
         }
 
         /// <summary>
@@ -204,11 +444,13 @@ namespace CombatSystem.Core
         private struct RuntimeStat
         {
             public StatDefinition stat;
+            public float baseValue;
             public float value;
 
-            public RuntimeStat(StatDefinition stat, float value)
+            public RuntimeStat(StatDefinition stat, float baseValue, float value)
             {
                 this.stat = stat;
+                this.baseValue = baseValue;
                 this.value = value;
             }
         }

@@ -21,6 +21,14 @@ namespace CombatSystem.Core
     ///     SimpleListPool&lt;CombatTarget&gt;.Release(list);
     /// }
     /// </code>
+    /// 
+    /// [设计说明] 当前实现没有池容量上限。
+    /// 在极端情况下（如战斗结束后大量列表被归还），池可能持有过多实例。
+    /// 若需控制内存占用，可添加 MaxPoolSize 限制：
+    /// <code>
+    /// private const int MaxPoolSize = 64;
+    /// if (Pool.Count >= MaxPoolSize) return;
+    /// </code>
     /// </remarks>
     /// <typeparam name="T">列表元素类型</typeparam>
     public static class SimpleListPool<T>

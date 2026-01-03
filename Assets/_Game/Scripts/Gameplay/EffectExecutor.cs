@@ -72,17 +72,19 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void ApplyEffectInternal(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger)
         {
+            var effectValue = ModifierResolver.ApplyEffectModifiers(effect.Value, effect, context, target, ModifierParameters.EffectValue);
+
             switch (effect.EffectType)
             {
                 case EffectType.Damage:
                     // 伤害效果：通过 DamageSystem 处理伤害公式
-                    DamageSystem.ApplyDamage(effect, context, target, trigger);
+                    DamageSystem.ApplyDamage(effectValue, effect, context, target, trigger);
                     break;
                 case EffectType.Heal:
                     // 治疗效果：直接调用目标的 HealthComponent
                     if (target.Health != null)
                     {
-                        target.Health.Heal(effect.Value);
+                        target.Health.Heal(effectValue);
                     }
                     break;
                 case EffectType.ApplyBuff:
@@ -99,11 +101,12 @@ namespace CombatSystem.Gameplay
                     break;
                 case EffectType.Move:
                     // 位移效果
-                    ApplyMove(effect, context, target);
+                    var moveDistance = ModifierResolver.ApplyEffectModifiers(effect.MoveDistance, effect, context, target, ModifierParameters.EffectMoveDistance);
+                    ApplyMove(moveDistance, effect, context, target);
                     break;
                 case EffectType.Resource:
                     // 资源操作（法力等）
-                    ApplyResource(effect, target);
+                    ApplyResource(effectValue, effect, target);
                     break;
                 case EffectType.Summon:
                     // 召唤单位
@@ -206,9 +209,9 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 应用位移效果（击退/拉拽/冲刺）。
         /// </summary>
-        private static void ApplyMove(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
+        private static void ApplyMove(float moveDistance, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
-            if (target.Transform == null || effect.MoveDistance == 0f)
+            if (target.Transform == null || moveDistance == 0f)
             {
                 return;
             }
@@ -239,13 +242,13 @@ namespace CombatSystem.Gameplay
             }
 
             // 直接位移（简化实现，实际应该用 MovementComponent）
-            target.Transform.position += direction * effect.MoveDistance;
+            target.Transform.position += direction * moveDistance;
         }
 
         /// <summary>
         /// 应用资源效果（回复或消耗法力等）。
         /// </summary>
-        private static void ApplyResource(EffectDefinition effect, CombatTarget target)
+        private static void ApplyResource(float value, EffectDefinition effect, CombatTarget target)
         {
             if (target.Resource == null)
             {
@@ -259,19 +262,24 @@ namespace CombatSystem.Gameplay
             }
 
             // 正值为回复，负值为消耗
-            if (effect.Value >= 0f)
+            if (value >= 0f)
             {
-                target.Resource.Restore(effect.Value);
+                target.Resource.Restore(value);
             }
             else
             {
-                target.Resource.Spend(-effect.Value);
+                target.Resource.Spend(-value);
             }
         }
 
         /// <summary>
         /// 召唤单位。
         /// </summary>
+        /// <remarks>
+        /// [性能提示] 当前使用 Object.Instantiate 直接创建实例。
+        /// 对于频繁召唤的单位（如召唤物、陷阱），建议实现对象池化，
+        /// 类似 ProjectilePool 的模式。
+        /// </remarks>
         private static void Summon(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
             // 优先使用直接配置的 Prefab，否则使用 UnitDefinition 的 Prefab
@@ -283,6 +291,8 @@ namespace CombatSystem.Gameplay
 
             // 在目标位置生成（无目标时在施法者位置）
             var spawnPosition = target.IsValid ? target.Transform.position : (context.CasterUnit != null ? context.CasterUnit.transform.position : Vector3.zero);
+            
+            // [性能] 直接 Instantiate 会产生 GC，高频召唤场景建议使用对象池
             Object.Instantiate(prefab, spawnPosition, Quaternion.identity);
         }
 
@@ -301,4 +311,3 @@ namespace CombatSystem.Gameplay
         }
     }
 }
-

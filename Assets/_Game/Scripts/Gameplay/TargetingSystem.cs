@@ -482,6 +482,14 @@ namespace CombatSystem.Gameplay
             return Mathf.Max(0f, definition.Range);
         }
 
+        /// <summary>
+        /// 检查目标是否符合阵营条件。
+        /// </summary>
+        /// <remarks>
+        /// [性能提示] 每次调用都会执行 GetComponent&lt;TeamComponent&gt;。
+        /// 优化建议：在 UnitRoot 初始化时缓存 TeamComponent 引用，
+        /// 或者将 TeamComponent 添加到 CombatTarget 结构体中（已实现）。
+        /// </remarks>
         private static bool IsTeamMatch(UnitRoot caster, TargetTeam team, CombatTarget target)
         {
             if (team == TargetTeam.Any)
@@ -499,6 +507,8 @@ namespace CombatSystem.Gameplay
                 return target.Unit == caster;
             }
 
+            // [性能] 此处 GetComponent 可能在大量目标验证时产生开销
+            // 建议：在 UnitRoot 中缓存 TeamComponent 引用
             var casterTeam = caster.GetComponent<TeamComponent>();
             if (casterTeam == null || target.Team == null)
             {

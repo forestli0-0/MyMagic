@@ -1,39 +1,56 @@
+using System;
 using System.Collections.Generic;
 using CombatSystem.Data;
+using CombatSystem.Gameplay;
 using UnityEngine;
 
 namespace CombatSystem.Core
 {
     /// <summary>
-    /// Buff 控制器，负责管理单位身上所有 Buff 实例的生命周期。
+    /// Buff 控制器，负责管理单位身上所有 Buff 实例的生命周期、触发器与修正器。
     /// </summary>
-    /// <remarks>
-    /// 核心职责：
-    /// - 应用新 Buff（处理堆叠规则：刷新/延长/独立）
-    /// - 追踪 Buff 剩余时间并自动过期移除
-    /// - 提供 Buff 状态查询接口
-    /// 
-    /// 注意：当前版本尚未实现 Tick 触发器，后续需要扩展。
-    /// </remarks>
     public class BuffController : MonoBehaviour
     {
-        // 当前激活的 Buff 实例列表
+        [Header("组件引用")]
+        [SerializeField] private UnitRoot unitRoot;
+        [SerializeField] private SkillUserComponent skillUser;
+        [SerializeField] private EffectExecutor effectExecutor;
+        [SerializeField] private TargetingSystem targetingSystem;
+
         private readonly List<BuffInstance> activeBuffs = new List<BuffInstance>(16);
-        
-        // 通过 Buff 定义快速查找其在 activeBuffs 中的索引
         private readonly Dictionary<BuffDefinition, int> indexByBuff = new Dictionary<BuffDefinition, int>(16);
-        
-        // 用于收集本帧过期的 Buff 索引，避免在遍历时修改列表
         private readonly List<int> expiredIndices = new List<int>(8);
+
+        private CombatTarget selfTarget;
+        private bool hasSelfTarget;
+
+        public event Action BuffsChanged;
 
         /// <summary>
         /// 获取当前激活的 Buff 实例只读列表。
         /// </summary>
         public IReadOnlyList<BuffInstance> ActiveBuffs => activeBuffs;
 
+        private void Reset()
+        {
+            unitRoot = GetComponent<UnitRoot>();
+            skillUser = GetComponent<SkillUserComponent>();
+        }
+
+        private void Awake()
+        {
+            EnsureReferences();
+            RefreshSelfTarget();
+        }
+
+        private void OnEnable()
+        {
+            EnsureReferences();
+            RefreshSelfTarget();
+        }
+
         private void Update()
         {
-            // 无激活 Buff 时直接跳过
             if (activeBuffs.Count == 0)
             {
                 return;
@@ -42,29 +59,40 @@ namespace CombatSystem.Core
             var now = Time.time;
             expiredIndices.Clear();
 
-            // 第一遍：收集所有已过期的 Buff 索引
             for (int i = 0; i < activeBuffs.Count; i++)
             {
                 var instance = activeBuffs[i];
-                // EndTime <= 0 表示永久 Buff，不会过期
+                if (instance.Definition == null)
+                {
+                    expiredIndices.Add(i);
+                    continue;
+                }
+
                 if (instance.EndTime > 0f && instance.EndTime <= now)
                 {
                     expiredIndices.Add(i);
+                    continue;
+                }
+
+                if (instance.NextTickTime > 0f && now >= instance.NextTickTime)
+                {
+                    TriggerBuff(instance, BuffTriggerType.OnTick, BuildContext(default), GetSelfTarget());
+
+                    var interval = instance.Definition.TickInterval;
+                    instance.NextTickTime = interval > 0f ? now + interval : -1f;
+                    activeBuffs[i] = instance;
                 }
             }
 
-            // 第二遍：从后向前移除过期 Buff（避免索引偏移问题）
             for (int i = expiredIndices.Count - 1; i >= 0; i--)
             {
-                RemoveAt(expiredIndices[i]);
+                RemoveAt(expiredIndices[i], true);
             }
         }
 
         /// <summary>
         /// 检查单位是否拥有指定的 Buff。
         /// </summary>
-        /// <param name="buff">要检查的 Buff 定义</param>
-        /// <returns>若拥有该 Buff 则返回 true</returns>
         public bool HasBuff(BuffDefinition buff)
         {
             return buff != null && indexByBuff.ContainsKey(buff);
@@ -73,8 +101,6 @@ namespace CombatSystem.Core
         /// <summary>
         /// 获取指定 Buff 的当前堆叠层数。
         /// </summary>
-        /// <param name="buff">目标 Buff 定义</param>
-        /// <returns>堆叠层数，若不存在该 Buff 则返回 0</returns>
         public int GetStacks(BuffDefinition buff)
         {
             if (buff == null)
@@ -93,13 +119,6 @@ namespace CombatSystem.Core
         /// <summary>
         /// 应用一个 Buff 到该单位。
         /// </summary>
-        /// <remarks>
-        /// 根据 Buff 的堆叠规则处理重复应用：
-        /// - Refresh: 刷新持续时间到完整值
-        /// - Extend: 在剩余时间基础上延长
-        /// - Independent: 仅增加层数，不改变时间
-        /// </remarks>
-        /// <param name="buff">要应用的 Buff 定义</param>
         public void ApplyBuff(BuffDefinition buff)
         {
             if (buff == null)
@@ -107,52 +126,58 @@ namespace CombatSystem.Core
                 return;
             }
 
-            // 已存在该 Buff，根据堆叠规则处理
+            EnsureReferences();
+
+            var now = Time.time;
+            var duration = buff.Duration;
+            var tickInterval = buff.TickInterval;
+
             if (indexByBuff.TryGetValue(buff, out var index))
             {
                 var instance = activeBuffs[index];
-                var duration = buff.Duration;
-                var now = Time.time;
-
-                // 增加层数（受 MaxStacks 限制）
                 instance.Stacks = Mathf.Clamp(instance.Stacks + 1, 1, Mathf.Max(1, buff.MaxStacks));
 
-                // 根据堆叠规则更新结束时间
                 if (buff.StackingRule == BuffStackingRule.Refresh)
                 {
-                    // 刷新：重置为完整持续时间
                     instance.EndTime = duration > 0f ? now + duration : -1f;
+                    instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
                 }
                 else if (buff.StackingRule == BuffStackingRule.Extend)
                 {
-                    // 延长：在当前剩余时间基础上增加
                     if (duration > 0f)
                     {
                         instance.EndTime = instance.EndTime > 0f ? instance.EndTime + duration : now + duration;
                     }
+
+                    if (instance.NextTickTime <= 0f && tickInterval > 0f)
+                    {
+                        instance.NextTickTime = now + tickInterval;
+                    }
                 }
                 else
                 {
-                    // Independent：仅更新层数，时间不变（除非原本是永久）
                     instance.EndTime = duration > 0f ? now + duration : instance.EndTime;
                 }
 
                 activeBuffs[index] = instance;
+                TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                BuffsChanged?.Invoke();
                 return;
             }
 
-            // 新增 Buff 实例
-            var endTime = buff.Duration > 0f ? Time.time + buff.Duration : -1f;
-            var newInstance = new BuffInstance(buff, 1, endTime);
+            var endTime = duration > 0f ? now + duration : -1f;
+            var nextTick = tickInterval > 0f ? now + tickInterval : -1f;
+            var newInstance = new BuffInstance(buff, 1, endTime, nextTick);
             indexByBuff[buff] = activeBuffs.Count;
             activeBuffs.Add(newInstance);
+
+            TriggerBuff(newInstance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+            BuffsChanged?.Invoke();
         }
 
         /// <summary>
         /// 移除指定的 Buff。
         /// </summary>
-        /// <param name="buff">要移除的 Buff 定义</param>
-        /// <returns>若成功移除返回 true</returns>
         public bool RemoveBuff(BuffDefinition buff)
         {
             if (buff == null)
@@ -162,26 +187,118 @@ namespace CombatSystem.Core
 
             if (indexByBuff.TryGetValue(buff, out var index))
             {
-                RemoveAt(index);
+                RemoveAt(index, true);
                 return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// 内部方法：按索引移除 Buff，使用"交换删除"策略保持性能。
-        /// </summary>
-        /// <remarks>
-        /// 将最后一个元素移动到被删除位置，然后移除末尾元素。
-        /// 这样可以避免数组元素整体移动，保持 O(1) 删除复杂度。
-        /// </remarks>
-        private void RemoveAt(int index)
+        public void NotifyHit(SkillRuntimeContext context, CombatTarget target)
+        {
+            TriggerBuffs(BuffTriggerType.OnHit, context, target);
+        }
+
+        public void NotifyDamaged(SkillRuntimeContext context, CombatTarget attacker)
+        {
+            TriggerBuffs(BuffTriggerType.OnDamaged, context, attacker);
+        }
+
+        public void NotifySkillCast(SkillRuntimeContext context, CombatTarget target)
+        {
+            TriggerBuffs(BuffTriggerType.OnSkillCast, context, target);
+        }
+
+        public void NotifyKill(SkillRuntimeContext context, CombatTarget target)
+        {
+            TriggerBuffs(BuffTriggerType.OnKill, context, target);
+        }
+
+        private void TriggerBuffs(BuffTriggerType triggerType, SkillRuntimeContext context, CombatTarget target)
+        {
+            if (activeBuffs.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                TriggerBuff(activeBuffs[i], triggerType, context, target);
+            }
+        }
+
+        private void TriggerBuff(BuffInstance instance, BuffTriggerType triggerType, SkillRuntimeContext context, CombatTarget target)
+        {
+            if (effectExecutor == null || instance.Definition == null)
+            {
+                return;
+            }
+
+            var triggers = instance.Definition.Triggers;
+            if (triggers == null || triggers.Count == 0)
+            {
+                return;
+            }
+
+            var execContext = BuildContext(context);
+            if (!target.IsValid)
+            {
+                target = GetSelfTarget();
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                var trigger = triggers[i];
+                if (trigger == null || trigger.triggerType != triggerType)
+                {
+                    continue;
+                }
+
+                var chance = Mathf.Clamp01(trigger.chance);
+                if (chance <= 0f || (chance < 1f && UnityEngine.Random.value > chance))
+                {
+                    continue;
+                }
+
+                if (trigger.condition != null && !ConditionEvaluator.Evaluate(trigger.condition, execContext, target))
+                {
+                    continue;
+                }
+
+                if (trigger.effects == null || trigger.effects.Count == 0)
+                {
+                    continue;
+                }
+
+                var mappedTrigger = MapTrigger(triggerType);
+                for (int j = 0; j < trigger.effects.Count; j++)
+                {
+                    effectExecutor.ExecuteEffect(trigger.effects[j], execContext, target, mappedTrigger);
+                }
+            }
+        }
+
+        private SkillRuntimeContext BuildContext(SkillRuntimeContext context)
+        {
+            var skill = context.Skill;
+            if (context.CasterUnit != null && context.CasterUnit == unitRoot && context.Caster == skillUser)
+            {
+                return context;
+            }
+
+            return new SkillRuntimeContext(skillUser, unitRoot, skill, unitRoot != null ? unitRoot.EventHub : null, targetingSystem, effectExecutor);
+        }
+
+        private void RemoveAt(int index, bool invokeExpire)
         {
             var lastIndex = activeBuffs.Count - 1;
             var removed = activeBuffs[index];
 
-            // 如果不是最后一个元素，需要交换
+            if (invokeExpire)
+            {
+                TriggerBuff(removed, BuffTriggerType.OnExpire, BuildContext(default), GetSelfTarget());
+            }
+
             if (index != lastIndex)
             {
                 var last = activeBuffs[lastIndex];
@@ -189,9 +306,65 @@ namespace CombatSystem.Core
                 indexByBuff[last.Definition] = index;
             }
 
-            // 移除末尾并更新索引映射
             activeBuffs.RemoveAt(lastIndex);
             indexByBuff.Remove(removed.Definition);
+
+            BuffsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 确保所有必需的组件引用已就绪。
+        /// </summary>
+        /// <remarks>
+        /// 性能提示：FindObjectOfType 在大型场景中开销较高。
+        /// 建议在 Inspector 中预先配置 effectExecutor 和 targetingSystem 的引用，
+        /// 而非依赖运行时查找。
+        /// </remarks>
+        private void EnsureReferences()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            if (skillUser == null)
+            {
+                skillUser = GetComponent<SkillUserComponent>();
+            }
+
+            // [性能] FindObjectOfType 是全局搜索，首次调用时可能影响性能
+            // 建议：通过 Inspector 注入或在场景初始化时配置
+            if (effectExecutor == null)
+            {
+                effectExecutor = FindObjectOfType<EffectExecutor>();
+            }
+
+            if (targetingSystem == null)
+            {
+                targetingSystem = FindObjectOfType<TargetingSystem>();
+            }
+        }
+
+        private void RefreshSelfTarget()
+        {
+            hasSelfTarget = CombatTarget.TryCreate(gameObject, out selfTarget);
+        }
+
+        private CombatTarget GetSelfTarget()
+        {
+            if (!hasSelfTarget)
+            {
+                RefreshSelfTarget();
+            }
+
+            return selfTarget;
+        }
+
+        private static SkillStepTrigger MapTrigger(BuffTriggerType triggerType)
+        {
+            return triggerType == BuffTriggerType.OnHit || triggerType == BuffTriggerType.OnDamaged
+                ? SkillStepTrigger.OnHit
+                : SkillStepTrigger.OnCastStart;
         }
 
         /// <summary>
@@ -199,18 +372,17 @@ namespace CombatSystem.Core
         /// </summary>
         public struct BuffInstance
         {
-            /// <summary>Buff 的配置定义</summary>
             public BuffDefinition Definition;
-            /// <summary>当前堆叠层数</summary>
             public int Stacks;
-            /// <summary>结束时间戳，-1 表示永久</summary>
             public float EndTime;
+            public float NextTickTime;
 
-            public BuffInstance(BuffDefinition definition, int stacks, float endTime)
+            public BuffInstance(BuffDefinition definition, int stacks, float endTime, float nextTickTime)
             {
                 Definition = definition;
                 Stacks = stacks;
                 EndTime = endTime;
+                NextTickTime = nextTickTime;
             }
         }
     }
