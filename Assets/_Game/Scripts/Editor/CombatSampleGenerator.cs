@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CombatSystem.AI;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
@@ -427,6 +428,16 @@ namespace CombatSystem.Editor
 
             ConfigureUnitObject(player, assets.UnitPlayer, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
             ConfigureUnitObject(enemy, assets.UnitEnemy, assets.EventHub, targetingSystem, effectExecutor, 2, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
+
+            var enemyAI = enemy.AddComponent<CombatAIController>();
+            SetComponentReference(enemyAI, "unitRoot", enemy.GetComponent<UnitRoot>());
+            SetComponentReference(enemyAI, "skillUser", enemy.GetComponent<SkillUserComponent>());
+            SetComponentReference(enemyAI, "health", enemy.GetComponent<HealthComponent>());
+            SetComponentReference(enemyAI, "team", enemy.GetComponent<TeamComponent>());
+            SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
+            SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
+            SetComponentValue(enemyAI, "useNavMesh", false);
+            SetComponentValue(enemyAI, "moveSpeed", 2.5f);
 
             var driver = player.AddComponent<SampleCombatDriver>();
             SetComponentReference(driver, "skillUser", player.GetComponent<SkillUserComponent>());
