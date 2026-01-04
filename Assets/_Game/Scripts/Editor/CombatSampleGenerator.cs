@@ -3,10 +3,12 @@ using CombatSystem.AI;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
+using CombatSystem.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace CombatSystem.Editor
 {
@@ -414,6 +416,7 @@ namespace CombatSystem.Editor
             RemoveRootObject(scene, "CombatSystems");
             RemoveRootObject(scene, "Sample_Player");
             RemoveRootObject(scene, "Sample_Enemy");
+            RemoveRootObject(scene, "HUD");
 
             var combatSystems = new GameObject("CombatSystems");
             var targetingSystem = combatSystems.AddComponent<TargetingSystem>();
@@ -424,6 +427,7 @@ namespace CombatSystem.Editor
             SetComponentReference(effectExecutor, "projectilePool", projectilePool);
 
             var player = CreateUnitPrimitive("Sample_Player", new Vector3(0f, 0f, 0f));
+            player.tag = "Player";
             var enemy = CreateUnitPrimitive("Sample_Enemy", new Vector3(3f, 0f, 0f));
 
             ConfigureUnitObject(player, assets.UnitPlayer, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
@@ -446,6 +450,8 @@ namespace CombatSystem.Editor
             SetComponentReference(driver, "secondarySkill", assets.SkillArcaneFocus);
             SetComponentValue(driver, "autoCast", true);
             SetComponentValue(driver, "autoInterval", 2.5f);
+
+            CreateSampleHUD(assets, player.GetComponent<UnitRoot>());
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, SampleScenePath);
@@ -541,6 +547,399 @@ namespace CombatSystem.Editor
 
             SetComponentValue(team, "teamId", teamId);
         }
+
+        /// <summary>
+        /// 创建示例 HUD 系统
+        /// 包含血条、资源条、施法条、技能栏、Buff 栏、战斗日志和飘字管理器
+        /// </summary>
+        /// <param name="assets">示例资源集合</param>
+        /// <param name="playerUnit">玩家单位根组件</param>
+        private static void CreateSampleHUD(SampleAssets assets, UnitRoot playerUnit)
+        {
+            // 创建 HUD Canvas
+            var hudCanvas = CreateCanvas("HUD");
+            var hudRoot = CreateUIRect("HUDRoot", hudCanvas.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var healthBar = CreateValueBar(
+                "HealthBar",
+                hudRoot,
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(220f, 20f),
+                new Vector2(130f, -20f),
+                new Color(0f, 0f, 0f, 0.6f),
+                new Color(0.8f, 0.1f, 0.1f, 1f));
+
+            var resourceBar = CreateValueBar(
+                "ResourceBar",
+                hudRoot,
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(220f, 16f),
+                new Vector2(130f, -44f),
+                new Color(0f, 0f, 0f, 0.6f),
+                new Color(0.1f, 0.4f, 0.9f, 1f));
+
+            var castBar = CreateCastBar(hudRoot);
+
+            // 创建技能栏和 Buff 栏
+            var skillBar = CreateSkillBar(hudRoot, assets.HUDDefault != null ? assets.HUDDefault.MaxSkillSlots : 6);
+            var buffBar = CreateBuffBar(hudRoot, assets.HUDDefault != null ? assets.HUDDefault.MaxBuffSlots : 12);
+            // 创建战斗日志和飘字管理器
+            var combatLog = CreateCombatLog(hudRoot);
+            var floatingText = CreateFloatingText(hudRoot);
+
+            // 配置 HUD 控制器并连接所有 UI 组件
+            var hudController = hudCanvas.AddComponent<CombatHUDController>();
+            SetComponentReference(hudController, "eventHub", assets.EventHub);
+            SetComponentReference(hudController, "hudConfig", assets.HUDDefault);
+            SetComponentReference(hudController, "targetUnit", playerUnit);
+            SetComponentReference(hudController, "healthBar", healthBar);
+            SetComponentReference(hudController, "resourceBar", resourceBar);
+            SetComponentReference(hudController, "skillBar", skillBar);
+            SetComponentReference(hudController, "buffBar", buffBar);
+            SetComponentReference(hudController, "castBar", castBar);
+            SetComponentReference(hudController, "combatLog", combatLog);
+            SetComponentReference(hudController, "floatingText", floatingText);
+            SetComponentReference(hudController, "worldCamera", FindMainCamera());
+        }
+
+        /// <summary>
+        /// 创建 UI Canvas
+        /// 配置为屏幕空间覆盖模式，使用 1920x1080 参考分辨率
+        /// </summary>
+        /// <param name="name">Canvas 名称</param>
+        /// <returns>创建的 Canvas GameObject</returns>
+        private static GameObject CreateCanvas(string name)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            // 设置为屏幕空间覆盖模式
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            // 配置 Canvas 缩放模式，使用 1920x1080 作为参考分辨率
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+            return go;
+        }
+
+        /// <summary>
+        /// 创建 UI RectTransform
+        /// </summary>
+        /// <param name="name">UI 元素名称</param>
+        /// <param name="parent">父对象 Transform</param>
+        /// <param name="anchorMin">锚点最小值</param>
+        /// <param name="anchorMax">锚点最大值</param>
+        /// <param name="size">尺寸</param>
+        /// <param name="anchoredPos">锚定位置</param>
+        /// <returns>创建的 RectTransform</returns>
+        private static RectTransform CreateUIRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 size, Vector2 anchoredPos)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.sizeDelta = size;
+            rect.anchoredPosition = anchoredPos;
+            return rect;
+        }
+
+        /// <summary>
+        /// 创建数值条 UI（用于血条、资源条、施法条等）
+        /// 包含背景、填充条和文本显示
+        /// </summary>
+        /// <param name="name">数值条名称</param>
+        /// <param name="parent">父对象 Transform</param>
+        /// <param name="anchorMin">锚点最小值</param>
+        /// <param name="anchorMax">锚点最大值</param>
+        /// <param name="size">尺寸</param>
+        /// <param name="anchoredPos">锚定位置</param>
+        /// <param name="backgroundColor">背景颜色</param>
+        /// <param name="fillColor">填充条颜色</param>
+        /// <returns>创建的 ValueBarUI 组件</returns>
+        private static ValueBarUI CreateValueBar(
+            string name,
+            Transform parent,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 size,
+            Vector2 anchoredPos,
+            Color backgroundColor,
+            Color fillColor)
+        {
+            var root = CreateUIRect(name, parent, anchorMin, anchorMax, size, anchoredPos);
+            // 创建背景图片（禁用射线检测以优化性能）
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = GetDefaultUISprite();
+            bg.color = backgroundColor;
+            bg.raycastTarget = false;
+
+            // 创建填充条（使用水平填充模式）
+            var fillRect = CreateUIRect("Fill", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var fill = fillRect.gameObject.AddComponent<Image>();
+            fill.sprite = GetDefaultUISprite();
+            fill.color = fillColor;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = 0;
+            fill.fillAmount = 1f;
+            fill.raycastTarget = false;
+
+            // 创建数值文本显示
+            var textRect = CreateUIRect("Text", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var text = CreateText(textRect.gameObject, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
+
+            var bar = root.gameObject.AddComponent<ValueBarUI>();
+            SetComponentReference(bar, "fill", fill);
+            SetComponentReference(bar, "valueText", text);
+
+            return bar;
+        }
+
+        /// <summary>
+        /// 创建施法条 UI
+        /// 包含背景、填充条和技能名称标签
+        /// </summary>
+        private static CastBarUI CreateCastBar(Transform parent)
+        {
+            var root = CreateUIRect("CastBar", parent, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(300f, 16f), new Vector2(0f, 80f));
+            
+            // 背景
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = GetDefaultUISprite();
+            bg.color = new Color(0f, 0f, 0f, 0.6f);
+            bg.raycastTarget = false;
+
+            // 填充条
+            var fillRect = CreateUIRect("Fill", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var fill = fillRect.gameObject.AddComponent<Image>();
+            fill.sprite = GetDefaultUISprite();
+            fill.color = new Color(0.9f, 0.7f, 0.2f, 1f);
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = 0;
+            fill.fillAmount = 0f;
+            fill.raycastTarget = false;
+
+            // 技能名称标签
+            var labelRect = CreateUIRect("Label", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var label = CreateText(labelRect.gameObject, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
+
+            // 添加 CastBarUI 组件
+            var castBar = root.gameObject.AddComponent<CastBarUI>();
+            SetComponentReference(castBar, "fill", fill);
+            SetComponentReference(castBar, "label", label);
+
+            return castBar;
+        }
+
+        /// <summary>
+        /// 创建技能栏 UI
+        /// 包含多个技能槽位，每个槽位显示图标、冷却进度和快捷键
+        /// </summary>
+        /// <param name="parent">父对象 Transform</param>
+        /// <param name="slots">技能槽位数量</param>
+        /// <returns>创建的 SkillBarUI 组件</returns>
+        private static SkillBarUI CreateSkillBar(Transform parent, int slots)
+        {
+            var root = CreateUIRect("SkillBar", parent, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(320f, 56f), new Vector2(0f, 20f));
+            // 配置水平布局组件
+            var layout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 6f;
+            layout.childControlHeight = false;
+            layout.childControlWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = false;
+
+            // 创建技能槽位
+            for (int i = 0; i < slots; i++)
+            {
+                var slot = CreateUIRect($"Slot_{i + 1}", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(48f, 48f), Vector2.zero);
+                // 槽位背景
+                var slotBg = slot.gameObject.AddComponent<Image>();
+                slotBg.color = new Color(0f, 0f, 0f, 0.6f);
+                slotBg.raycastTarget = false;
+                slotBg.sprite = GetDefaultUISprite();
+                // 技能图标
+                var iconRect = CreateUIRect("Icon", slot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                var icon = iconRect.gameObject.AddComponent<Image>();
+                icon.sprite = GetDefaultUISprite();
+                icon.raycastTarget = false;
+
+                // 冷却进度遮罩（使用径向填充）
+                var cooldownRect = CreateUIRect("Cooldown", slot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                var cooldown = cooldownRect.gameObject.AddComponent<Image>();
+                cooldown.sprite = GetDefaultUISprite();
+                cooldown.color = new Color(0f, 0f, 0f, 0.6f);
+                cooldown.type = Image.Type.Filled;
+                cooldown.fillMethod = Image.FillMethod.Radial360;
+                cooldown.fillOrigin = 2;
+                cooldown.fillAmount = 0f;
+                cooldown.raycastTarget = false;
+
+                // 冷却时间文本
+                var cooldownTextRect = CreateUIRect("CooldownText", slot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                var cooldownText = CreateText(cooldownTextRect.gameObject, string.Empty, 14, TextAnchor.MiddleCenter, Color.white);
+
+                // 快捷键提示
+                var keyRect = CreateUIRect("Key", slot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, 16f), new Vector2(12f, -8f));
+                var keyText = CreateText(keyRect.gameObject, string.Empty, 10, TextAnchor.MiddleLeft, Color.white);
+
+                var slotUi = slot.gameObject.AddComponent<SkillSlotUI>();
+                SetComponentReference(slotUi, "icon", icon);
+                SetComponentReference(slotUi, "cooldownFill", cooldown);
+                SetComponentReference(slotUi, "cooldownText", cooldownText);
+                SetComponentReference(slotUi, "keyText", keyText);
+            }
+
+            return root.gameObject.AddComponent<SkillBarUI>();
+        }
+
+        /// <summary>
+        /// 创建 Buff 栏 UI
+        /// 显示 Buff/Debuff 图标、层数和剩余时间
+        /// </summary>
+        /// <param name="parent">父对象 Transform</param>
+        /// <param name="slots">Buff 槽位数量</param>
+        /// <returns>创建的 BuffBarUI 组件</returns>
+        private static BuffBarUI CreateBuffBar(Transform parent, int slots)
+        {
+            var root = CreateUIRect("BuffBar", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(320f, 36f), new Vector2(-170f, -20f));
+            // 配置水平布局组件（右上角对齐）
+            var layout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.UpperRight;
+            layout.spacing = 4f;
+            layout.childControlHeight = false;
+            layout.childControlWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = false;
+
+            // 创建 Buff 图标槽位
+            for (int i = 0; i < slots; i++)
+            {
+                var iconRoot = CreateUIRect($"Buff_{i + 1}", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 28f), Vector2.zero);
+                // Buff 图标
+                var icon = iconRoot.gameObject.AddComponent<Image>();
+                icon.sprite = GetDefaultUISprite(); // 默认图标，运行时会被 Buff 定义覆盖
+                icon.color = new Color(0f, 0f, 0f, 0.6f);
+                icon.raycastTarget = false;
+
+                // Buff 层数显示（右下角）
+                var stackRect = CreateUIRect("Stacks", iconRoot, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(18f, 14f), new Vector2(-2f, 2f));
+                var stackText = CreateText(stackRect.gameObject, string.Empty, 10, TextAnchor.LowerRight, Color.white);
+
+                // Buff 剩余时间显示（左上角）
+                var timerRect = CreateUIRect("Timer", iconRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, 14f), new Vector2(2f, -2f));
+                var timerText = CreateText(timerRect.gameObject, string.Empty, 10, TextAnchor.UpperLeft, Color.white);
+
+                var iconUi = iconRoot.gameObject.AddComponent<BuffIconUI>();
+                SetComponentReference(iconUi, "icon", icon);
+                SetComponentReference(iconUi, "stackText", stackText);
+                SetComponentReference(iconUi, "timerText", timerText);
+            }
+
+            return root.gameObject.AddComponent<BuffBarUI>();
+        }
+
+        /// <summary>
+        /// 创建战斗日志 UI
+        /// 显示战斗事件的文本记录
+        /// </summary>
+        /// <param name="parent">父对象 Transform</param>
+        /// <returns>创建的 CombatLogUI 组件</returns>
+        private static CombatLogUI CreateCombatLog(Transform parent)
+        {
+            var root = CreateUIRect("CombatLog", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(320f, 120f), new Vector2(170f, 80f));
+            // 半透明背景
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.4f);
+            bg.raycastTarget = false;
+
+            // 日志文本区域（带内边距）
+            var textRect = CreateUIRect("LogText", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            textRect.offsetMin = new Vector2(6f, 6f);
+            textRect.offsetMax = new Vector2(-6f, -6f);
+            var text = CreateText(textRect.gameObject, string.Empty, 12, TextAnchor.LowerLeft, Color.white);
+
+            var log = root.gameObject.AddComponent<CombatLogUI>();
+            SetComponentReference(log, "logText", text);
+            return log;
+        }
+
+        /// <summary>
+        /// 创建飘字管理器
+        /// 用于显示伤害数字、治疗量等战斗反馈
+        /// </summary>
+        /// <param name="parent">父对象 Transform</param>
+        /// <returns>创建的 FloatingTextManager 组件</returns>
+        private static FloatingTextManager CreateFloatingText(Transform parent)
+        {
+            var root = CreateUIRect("FloatingText", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            // 创建飘字模板（对象池预制体）
+            var template = CreateUIRect("FloatingTextTemplate", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(120f, 24f), Vector2.zero);
+            var label = CreateText(template.gameObject, "0", 16, TextAnchor.MiddleCenter, Color.white);
+            var group = template.gameObject.AddComponent<CanvasGroup>();
+            var item = template.gameObject.AddComponent<FloatingTextItem>();
+            SetComponentReference(item, "label", label);
+            SetComponentReference(item, "canvasGroup", group);
+            template.gameObject.SetActive(false); // 默认隐藏模板
+
+            var manager = root.gameObject.AddComponent<FloatingTextManager>();
+            SetComponentReference(manager, "itemPrefab", item);
+            SetComponentReference(manager, "root", root);
+            return manager;
+        }
+
+        /// <summary>
+        /// 创建 UI 文本组件
+        /// </summary>
+        /// <param name="go">目标 GameObject</param>
+        /// <param name="text">文本内容</param>
+        /// <param name="fontSize">字体大小</param>
+        /// <param name="anchor">对齐方式</param>
+        /// <param name="color">文本颜色</param>
+        /// <returns>创建的 Text 组件</returns>
+        private static Text CreateText(GameObject go, string text, int fontSize, TextAnchor anchor, Color color)
+        {
+            var uiText = go.AddComponent<Text>();
+            uiText.text = text;
+            uiText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            uiText.alignment = anchor;
+            uiText.color = color;
+            uiText.raycastTarget = false; // 禁用射线检测优化性能
+            return uiText;
+        }
+
+        /// <summary>
+        /// 查找主相机
+        /// 优先使用 MainCamera 标签，降级使用 FindObjectOfType（仅编辑器使用）
+        /// </summary>
+        /// <returns>找到的主相机，可能为 null</returns>
+        /// <summary>
+        /// 获取 Unity 内置的默认 UI Sprite
+        /// </summary>
+        private static Sprite GetDefaultUISprite()
+        {
+            return AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        }
+
+        private static Camera FindMainCamera()
+        {
+            // 优先通过标签查找
+            var cameraObject = GameObject.FindGameObjectWithTag("MainCamera");
+            if (cameraObject != null)
+            {
+                return cameraObject.GetComponent<Camera>();
+            }
+
+            // 降级方案：查找场景中的第一个 Camera（编辑器工具可接受）
+            return Object.FindObjectOfType<Camera>();
+        }
+
         private static T LoadOrCreate<T>(string path) where T : ScriptableObject
         {
             var asset = AssetDatabase.LoadAssetAtPath<T>(path);
@@ -883,6 +1282,7 @@ namespace CombatSystem.Editor
             var prop = so.FindProperty(propertyName);
             if (prop == null)
             {
+                Debug.LogWarning($"Property '{propertyName}' not found on {component.GetType().Name}");
                 return;
             }
 
