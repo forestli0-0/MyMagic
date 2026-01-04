@@ -3,6 +3,7 @@ using CombatSystem.AI;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
+using CombatSystem.Debugging;
 using CombatSystem.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -451,7 +452,7 @@ namespace CombatSystem.Editor
             SetComponentValue(driver, "autoCast", true);
             SetComponentValue(driver, "autoInterval", 2.5f);
 
-            CreateSampleHUD(assets, player.GetComponent<UnitRoot>());
+            CreateSampleHUD(assets, player.GetComponent<UnitRoot>(), projectilePool);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, SampleScenePath);
@@ -554,7 +555,7 @@ namespace CombatSystem.Editor
         /// </summary>
         /// <param name="assets">示例资源集合</param>
         /// <param name="playerUnit">玩家单位根组件</param>
-        private static void CreateSampleHUD(SampleAssets assets, UnitRoot playerUnit)
+        private static void CreateSampleHUD(SampleAssets assets, UnitRoot playerUnit, ProjectilePool projectilePool)
         {
             // 创建 HUD Canvas
             var hudCanvas = CreateCanvas("HUD");
@@ -588,6 +589,11 @@ namespace CombatSystem.Editor
             // 创建战斗日志和飘字管理器
             var combatLog = CreateCombatLog(hudRoot);
             var floatingText = CreateFloatingText(hudRoot);
+            var debugOverlay = CreateDebugOverlay(hudRoot);
+            SetComponentReference(debugOverlay, "targetUnit", playerUnit);
+            SetComponentReference(debugOverlay, "projectilePool", projectilePool);
+            SetComponentReference(debugOverlay, "floatingText", floatingText);
+            SetComponentValue(debugOverlay, "visible", true);
 
             // 配置 HUD 控制器并连接所有 UI 组件
             var hudController = hudCanvas.AddComponent<CombatHUDController>();
@@ -734,6 +740,28 @@ namespace CombatSystem.Editor
             SetComponentReference(castBar, "label", label);
 
             return castBar;
+        }
+
+        /// <summary>
+        /// 创建调试信息面板 UI
+        /// </summary>
+        private static CombatDebugOverlay CreateDebugOverlay(Transform parent)
+        {
+            var root = CreateUIRect("DebugOverlay", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(260f, 160f), new Vector2(-140f, -120f));
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = GetDefaultUISprite();
+            bg.color = new Color(0f, 0f, 0f, 0.5f);
+            bg.raycastTarget = false;
+
+            var textRect = CreateUIRect("Text", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            textRect.offsetMin = new Vector2(6f, 6f);
+            textRect.offsetMax = new Vector2(-6f, -6f);
+            var text = CreateText(textRect.gameObject, string.Empty, 12, TextAnchor.UpperLeft, Color.white);
+
+            var overlay = root.gameObject.AddComponent<CombatDebugOverlay>();
+            SetComponentReference(overlay, "outputText", text);
+            SetComponentReference(overlay, "background", bg);
+            return overlay;
         }
 
         /// <summary>

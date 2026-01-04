@@ -23,6 +23,11 @@ namespace CombatSystem.Core
         /// </summary>
         public event Action<CooldownChangedEvent> CooldownChanged;
 
+        /// <summary>
+        /// 当前正在冷却中的技能数量。
+        /// </summary>
+        public int ActiveCooldownCount => cooldownEndTimes.Count;
+
         private void Update()
         {
             if (cooldownEndTimes.Count == 0)

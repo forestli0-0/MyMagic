@@ -1,0 +1,199 @@
+using System.Text;
+using CombatSystem.Core;
+using CombatSystem.Gameplay;
+using CombatSystem.UI;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace CombatSystem.Debugging
+{
+    public class CombatDebugOverlay : MonoBehaviour
+    {
+        [SerializeField] private Text outputText;
+        [SerializeField] private Graphic background;
+        [SerializeField] private bool visible = true;
+        [SerializeField] private KeyCode toggleKey = KeyCode.F3;
+        [SerializeField] private float refreshInterval = 0.25f;
+
+        [Header("Target")]
+        [SerializeField] private UnitRoot targetUnit;
+        [SerializeField] private HealthComponent health;
+        [SerializeField] private ResourceComponent resource;
+        [SerializeField] private BuffController buffs;
+        [SerializeField] private CooldownComponent cooldown;
+        [SerializeField] private SkillUserComponent skillUser;
+
+        [Header("Systems")]
+        [SerializeField] private ProjectilePool projectilePool;
+        [SerializeField] private FloatingTextManager floatingText;
+
+        private float nextRefreshTime;
+        private float fpsTimer;
+        private int fpsFrames;
+        private float lastFps;
+        private readonly StringBuilder builder = new StringBuilder(256);
+
+        private void Awake()
+        {
+            ResolveReferences();
+            SetVisible(visible);
+        }
+
+        private void Update()
+        {
+            if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey))
+            {
+                visible = !visible;
+                SetVisible(visible);
+            }
+
+            if (!visible || outputText == null)
+            {
+                return;
+            }
+
+            fpsFrames++;
+            fpsTimer += Time.unscaledDeltaTime;
+
+            if (Time.unscaledTime >= nextRefreshTime)
+            {
+                lastFps = fpsTimer > 0f ? fpsFrames / fpsTimer : 0f;
+                fpsFrames = 0;
+                fpsTimer = 0f;
+                nextRefreshTime = Time.unscaledTime + Mathf.Max(0.05f, refreshInterval);
+                RefreshText();
+            }
+        }
+
+        private void RefreshText()
+        {
+            builder.Length = 0;
+            builder.Append("FPS: ").Append(Mathf.RoundToInt(lastFps)).Append('\n');
+
+            var unitName = targetUnit != null ? targetUnit.name : "None";
+            builder.Append("Unit: ").Append(unitName).Append('\n');
+
+            if (health != null)
+            {
+                builder.Append("HP: ")
+                    .Append(Mathf.RoundToInt(health.Current))
+                    .Append('/')
+                    .Append(Mathf.RoundToInt(health.Max))
+                    .Append('\n');
+            }
+
+            if (resource != null)
+            {
+                builder.Append("MP: ")
+                    .Append(Mathf.RoundToInt(resource.Current))
+                    .Append('/')
+                    .Append(Mathf.RoundToInt(resource.Max))
+                    .Append('\n');
+            }
+
+            if (buffs != null)
+            {
+                builder.Append("Buffs: ").Append(buffs.ActiveBuffs.Count).Append('\n');
+            }
+
+            if (skillUser != null)
+            {
+                builder.Append("Casting: ");
+                if (skillUser.IsCasting && skillUser.CurrentSkill != null)
+                {
+                    builder.Append(skillUser.CurrentSkill.DisplayName);
+                }
+                else
+                {
+                    builder.Append("None");
+                }
+
+                builder.Append('\n');
+            }
+
+            if (cooldown != null)
+            {
+                builder.Append("Cooldowns: ").Append(cooldown.ActiveCooldownCount).Append('\n');
+            }
+
+            if (projectilePool != null)
+            {
+                builder.Append("Projectiles: ")
+                    .Append(projectilePool.ActiveCount)
+                    .Append('/')
+                    .Append(projectilePool.PooledCount)
+                    .Append('\n');
+            }
+
+            if (floatingText != null)
+            {
+                builder.Append("FloatingText: ")
+                    .Append(floatingText.ActiveCount)
+                    .Append('/')
+                    .Append(floatingText.PooledCount)
+                    .Append('\n');
+            }
+
+            outputText.text = builder.ToString();
+        }
+
+        private void SetVisible(bool state)
+        {
+            if (outputText != null)
+            {
+                outputText.enabled = state;
+            }
+
+            if (background != null)
+            {
+                background.enabled = state;
+            }
+        }
+
+        private void ResolveReferences()
+        {
+            if (targetUnit == null)
+            {
+                targetUnit = FindObjectOfType<UnitRoot>();
+            }
+
+            if (targetUnit != null)
+            {
+                if (health == null)
+                {
+                    health = targetUnit.GetComponent<HealthComponent>();
+                }
+
+                if (resource == null)
+                {
+                    resource = targetUnit.GetComponent<ResourceComponent>();
+                }
+
+                if (buffs == null)
+                {
+                    buffs = targetUnit.GetComponent<BuffController>();
+                }
+
+                if (cooldown == null)
+                {
+                    cooldown = targetUnit.GetComponent<CooldownComponent>();
+                }
+
+                if (skillUser == null)
+                {
+                    skillUser = targetUnit.GetComponent<SkillUserComponent>();
+                }
+            }
+
+            if (projectilePool == null)
+            {
+                projectilePool = FindObjectOfType<ProjectilePool>();
+            }
+
+            if (floatingText == null)
+            {
+                floatingText = FindObjectOfType<FloatingTextManager>();
+            }
+        }
+    }
+}

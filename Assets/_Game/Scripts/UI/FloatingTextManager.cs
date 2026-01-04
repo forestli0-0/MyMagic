@@ -32,6 +32,11 @@ namespace CombatSystem.UI
         /// 可复用的飘字项目对象池（栈结构）
         /// </summary>
         private readonly Stack<FloatingTextItem> pool = new Stack<FloatingTextItem>(16);
+        private int totalCreated;
+
+        public int ActiveCount => active.Count;
+        public int PooledCount => pool.Count;
+        public int TotalCreated => totalCreated;
 
         private void Awake()
         {
@@ -106,7 +111,17 @@ namespace CombatSystem.UI
             }
 
             // 从对象池获取或新建实例
-            var item = pool.Count > 0 ? pool.Pop() : Instantiate(itemPrefab, root);
+            FloatingTextItem item;
+            if (pool.Count > 0)
+            {
+                item = pool.Pop();
+            }
+            else
+            {
+                item = Instantiate(itemPrefab, root);
+                totalCreated++;
+            }
+
             item.gameObject.SetActive(true);
             item.Activate(worldPosition, value, worldCamera, root);
             active.Add(item);
@@ -128,6 +143,7 @@ namespace CombatSystem.UI
                 var item = Instantiate(itemPrefab, root);
                 item.gameObject.SetActive(false);
                 pool.Push(item);
+                totalCreated++;
             }
         }
 

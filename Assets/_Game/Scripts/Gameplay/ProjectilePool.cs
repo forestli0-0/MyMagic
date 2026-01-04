@@ -17,6 +17,25 @@ namespace CombatSystem.Gameplay
     {
         // 按 Prefab 分组的对象池，Key 为 Prefab，Value 为可复用的投射物栈
         private readonly Dictionary<GameObject, Stack<ProjectileController>> pools = new Dictionary<GameObject, Stack<ProjectileController>>(8);
+        private int activeCount;
+        private int totalCreated;
+
+        public int ActiveCount => activeCount;
+        public int TotalCreated => totalCreated;
+
+        public int PooledCount
+        {
+            get
+            {
+                var count = 0;
+                foreach (var stack in pools.Values)
+                {
+                    count += stack.Count;
+                }
+
+                return count;
+            }
+        }
 
         /// <summary>
         /// 从对象池获取或创建一个投射物实例。
@@ -49,6 +68,7 @@ namespace CombatSystem.Gameplay
             {
                 // 池为空，创建新实例
                 instance = CreateInstance(definition.Prefab);
+                totalCreated++;
             }
 
             // 设置位置和朝向，激活对象
@@ -56,6 +76,7 @@ namespace CombatSystem.Gameplay
             instance.gameObject.SetActive(true);
             // 告知投射物其所属的池和 Prefab（用于归还时定位）
             instance.SetPool(this, definition.Prefab);
+            activeCount++;
             return instance;
         }
 
@@ -81,6 +102,10 @@ namespace CombatSystem.Gameplay
             // 禁用对象并放回池中
             instance.gameObject.SetActive(false);
             stack.Push(instance);
+            if (activeCount > 0)
+            {
+                activeCount--;
+            }
         }
 
         /// <summary>
@@ -104,4 +129,3 @@ namespace CombatSystem.Gameplay
         }
     }
 }
-
