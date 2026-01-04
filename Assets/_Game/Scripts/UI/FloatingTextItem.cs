@@ -26,6 +26,9 @@ namespace CombatSystem.UI
         [Tooltip("相对于世界坐标的屏幕偏移量")]
         [SerializeField] private Vector3 screenOffset = new Vector3(0f, 30f, 0f);
         
+        [Tooltip("随机水平偏移范围")]
+        [SerializeField] private float randomOffsetRange = 40f;
+        
         [Header("颜色配置")]
         [Tooltip("伤害数字颜色（红色系）")]
         [SerializeField] private Color damageColor = new Color(0.9f, 0.2f, 0.2f, 1f);
@@ -57,6 +60,11 @@ namespace CombatSystem.UI
         /// UI 根节点的 RectTransform
         /// </summary>
         private RectTransform root;
+        
+        /// <summary>
+        /// 当前飘字的随机偏移量
+        /// </summary>
+        private Vector3 randomOffset;
 
         private void Awake()
         {
@@ -76,6 +84,7 @@ namespace CombatSystem.UI
             cachedCamera = camera != null ? camera : Camera.main;
             root = rootRect;
             elapsed = 0f;
+            randomOffset = new Vector3(Random.Range(-randomOffsetRange, randomOffsetRange), 0f, 0f);
 
             if (label != null)
             {
@@ -120,7 +129,7 @@ namespace CombatSystem.UI
             }
 
             // 计算屏幕偏移：基础偏移 + 时间相关的上升距离
-            var offset = screenOffset + Vector3.up * riseSpeed * time;
+            var offset = screenOffset + randomOffset + Vector3.up * riseSpeed * time;
             
             // 将世界坐标转换为屏幕坐标
             var screenPoint = cachedCamera != null
@@ -128,7 +137,7 @@ namespace CombatSystem.UI
                 : (Vector3)worldPosition;
 
             // 将屏幕坐标转换为 UI 本地坐标
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPoint + offset, cachedCamera, out var localPoint))
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPoint + offset, null, out var localPoint))
             {
                 rectTransform.anchoredPosition = localPoint;
             }

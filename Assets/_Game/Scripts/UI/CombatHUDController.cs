@@ -231,7 +231,7 @@ namespace CombatSystem.UI
             // 处理飘字逻辑
             if (floatingText != null && hudConfig != null && hudConfig.ShowFloatingText && evt.Source != null)
             {
-                if (!Mathf.Approximately(evt.Delta, 0f))
+                if (Mathf.Abs(evt.Delta) >= 1f)
                 {
                     // 在目标位置生成伤害或治疗飘字
                     floatingText.Spawn(evt.Source.transform.position, evt.Delta);
