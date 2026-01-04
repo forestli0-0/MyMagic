@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CombatSystem.Core;
+using CombatSystem.Data;
 using UnityEngine;
 
 namespace CombatSystem.UI
@@ -27,6 +28,8 @@ namespace CombatSystem.UI
         /// 当前绑定的 Buff 控制器引用
         /// </summary>
         private BuffController buffController;
+        private readonly List<BuffDisplayData> displayBuffs = new List<BuffDisplayData>(16);
+        private readonly Dictionary<BuffDefinition, int> displayIndexByBuff = new Dictionary<BuffDefinition, int>(16);
 
         private void Awake()
         {
@@ -58,10 +61,10 @@ namespace CombatSystem.UI
                 return;
             }
 
-            var buffs = buffController.ActiveBuffs;
+            BuildDisplayList();
             // 确定实际显示数量：取配置覆盖值、外部传入值、实际 Buff 数和可用槽位数的最小值
             var limit = maxIconsOverride >= 0 ? maxIconsOverride : maxIcons;
-            var count = Mathf.Min(limit, buffs.Count, icons.Count);
+            var count = Mathf.Min(limit, displayBuffs.Count, icons.Count);
 
             for (int i = 0; i < icons.Count; i++)
             {
@@ -74,11 +77,9 @@ namespace CombatSystem.UI
                 if (i < count)
                 {
                     // 在有效范围内：绑定对应的 Buff 数据
-                    var instance = buffs[i];
-                    // 计算剩余时间，-1 表示永久 Buff
-                    var remaining = instance.EndTime > 0f ? Mathf.Max(0f, instance.EndTime - Time.time) : -1f;
+                    var entry = displayBuffs[i];
                     icon.gameObject.SetActive(true);
-                    icon.Bind(instance.Definition, instance.Stacks, remaining);
+                    icon.Bind(entry.Definition, entry.Stacks, entry.Remaining);
                 }
                 else
                 {
@@ -121,6 +122,73 @@ namespace CombatSystem.UI
             if (icons.Count == 0)
             {
                 iconRoot.GetComponentsInChildren(true, icons);
+            }
+        }
+
+        private void BuildDisplayList()
+        {
+            displayBuffs.Clear();
+            displayIndexByBuff.Clear();
+
+            var buffs = buffController.ActiveBuffs;
+            var now = Time.time;
+
+            for (int i = 0; i < buffs.Count; i++)
+            {
+                var instance = buffs[i];
+                var definition = instance.Definition;
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var stacks = Mathf.Max(1, instance.Stacks);
+                var remaining = instance.EndTime > 0f ? Mathf.Max(0f, instance.EndTime - now) : -1f;
+                var appliedTime = instance.AppliedTime;
+
+                if (displayIndexByBuff.TryGetValue(definition, out var index))
+                {
+                    var data = displayBuffs[index];
+                    data.Stacks += stacks;
+
+                    if (data.Remaining < 0f || remaining < 0f)
+                    {
+                        data.Remaining = -1f;
+                    }
+                    else if (remaining > data.Remaining)
+                    {
+                        data.Remaining = remaining;
+                    }
+
+                    if (appliedTime < data.FirstAppliedTime)
+                    {
+                        data.FirstAppliedTime = appliedTime;
+                    }
+
+                    displayBuffs[index] = data;
+                    continue;
+                }
+
+                displayIndexByBuff.Add(definition, displayBuffs.Count);
+                displayBuffs.Add(new BuffDisplayData(definition, stacks, remaining, appliedTime));
+            }
+
+            displayBuffs.Sort((a, b) => a.FirstAppliedTime.CompareTo(b.FirstAppliedTime));
+        }
+
+        private struct BuffDisplayData
+        {
+            public BuffDefinition Definition;
+            public int Stacks;
+            public float Remaining;
+            public float FirstAppliedTime;
+
+            public BuffDisplayData(BuffDefinition definition, int stacks, float remaining, float appliedTime)
+            {
+                Definition = definition;
+                Stacks = stacks;
+                Remaining = remaining;
+                FirstAppliedTime = appliedTime;
             }
         }
     }

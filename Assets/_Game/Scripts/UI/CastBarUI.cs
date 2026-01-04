@@ -21,14 +21,18 @@ namespace CombatSystem.UI
         [SerializeField] private CanvasGroup canvasGroup;
 
         /// <summary>
-        /// 施法开始的时间点
+        /// 当前阶段开始的时间点
         /// </summary>
-        private float startTime;
+        private float phaseStartTime;
         
         /// <summary>
-        /// 施法总持续时间
+        /// 当前阶段持续时间
         /// </summary>
-        private float duration;
+        private float phaseDuration;
+        private float castDuration;
+        private float channelDuration;
+        private bool isChannelPhase;
+        private SkillDefinition currentSkill;
         
         /// <summary>
         /// 施法条是否处于激活状态
@@ -44,13 +48,13 @@ namespace CombatSystem.UI
         private void Update()
         {
             // 非激活状态或无持续时间时跳过
-            if (!isActive || duration <= 0f)
+            if (!isActive || phaseDuration <= 0f)
             {
                 return;
             }
 
             // 计算施法进度（0~1）
-            var progress = Mathf.Clamp01((Time.time - startTime) / duration);
+            var progress = Mathf.Clamp01((Time.time - phaseStartTime) / phaseDuration);
             if (fill != null)
             {
                 fill.fillAmount = progress;
@@ -59,7 +63,14 @@ namespace CombatSystem.UI
             // 进度完成后自动隐藏
             if (progress >= 1f)
             {
-                Hide();
+                if (!isChannelPhase && channelDuration > 0f)
+                {
+                    StartPhase(true);
+                }
+                else
+                {
+                    Hide();
+                }
             }
         }
 
@@ -68,18 +79,20 @@ namespace CombatSystem.UI
         /// </summary>
         /// <param name="skill">正在施放的技能定义</param>
         /// <param name="castTime">施法时间（秒）</param>
-        public void Show(SkillDefinition skill, float castTime)
+        /// <param name="channelTime">引导时间（秒）</param>
+        public void Show(SkillDefinition skill, float castTime, float channelTime)
         {
-            // 无施法时间则不显示
-            if (castTime <= 0f)
+            castDuration = Mathf.Max(0f, castTime);
+            channelDuration = Mathf.Max(0f, channelTime);
+            currentSkill = skill;
+
+            // 无施法与引导时间则不显示
+            if (castDuration <= 0f && channelDuration <= 0f)
             {
                 Hide();
                 return;
             }
 
-            // 记录施法参数
-            startTime = Time.time;
-            duration = castTime;
             isActive = true;
 
             // 设置技能名称标签
@@ -88,11 +101,7 @@ namespace CombatSystem.UI
                 label.text = skill != null ? skill.DisplayName : "Casting";
             }
 
-            // 重置进度条
-            if (fill != null)
-            {
-                fill.fillAmount = 0f;
-            }
+            StartPhase(castDuration <= 0f);
 
             SetVisible(true);
         }
@@ -103,7 +112,11 @@ namespace CombatSystem.UI
         public void Hide()
         {
             isActive = false;
-            duration = 0f;
+            phaseDuration = 0f;
+            castDuration = 0f;
+            channelDuration = 0f;
+            isChannelPhase = false;
+            currentSkill = null;
 
             if (fill != null)
             {
@@ -111,6 +124,23 @@ namespace CombatSystem.UI
             }
 
             SetVisible(false);
+        }
+
+        private void StartPhase(bool channelPhase)
+        {
+            isChannelPhase = channelPhase;
+            phaseStartTime = Time.time;
+            phaseDuration = channelPhase ? channelDuration : castDuration;
+
+            if (label != null && currentSkill != null)
+            {
+                label.text = currentSkill.DisplayName;
+            }
+
+            if (fill != null)
+            {
+                fill.fillAmount = 0f;
+            }
         }
 
         /// <summary>

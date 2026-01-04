@@ -94,13 +94,15 @@ namespace CombatSystem.Core
         public UnitRoot Caster;          // 施法单位
         public SkillDefinition Skill;    // 施放技能
         public float CastTime;           // 施法时长
+        public float ChannelTime;        // 引导时长
         public bool IsChannel;           // 是否为引导技能
 
-        public SkillCastEvent(UnitRoot caster, SkillDefinition skill, float castTime, bool isChannel)
+        public SkillCastEvent(UnitRoot caster, SkillDefinition skill, float castTime, float channelTime, bool isChannel)
         {
             Caster = caster;
             Skill = skill;
             CastTime = castTime;
+            ChannelTime = channelTime;
             IsChannel = isChannel;
         }
     }

@@ -18,7 +18,6 @@ namespace CombatSystem.Core
         [SerializeField] private TargetingSystem targetingSystem;
 
         private readonly List<BuffInstance> activeBuffs = new List<BuffInstance>(16);
-        private readonly Dictionary<BuffDefinition, int> indexByBuff = new Dictionary<BuffDefinition, int>(16);
         private readonly List<int> expiredIndices = new List<int>(8);
 
         private CombatTarget selfTarget;
@@ -95,7 +94,20 @@ namespace CombatSystem.Core
         /// </summary>
         public bool HasBuff(BuffDefinition buff)
         {
-            return buff != null && indexByBuff.ContainsKey(buff);
+            if (buff == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                if (activeBuffs[i].Definition == buff)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -108,12 +120,17 @@ namespace CombatSystem.Core
                 return 0;
             }
 
-            if (indexByBuff.TryGetValue(buff, out var index))
+            var stacks = 0;
+            for (int i = 0; i < activeBuffs.Count; i++)
             {
-                return activeBuffs[index].Stacks;
+                var instance = activeBuffs[i];
+                if (instance.Definition == buff)
+                {
+                    stacks += Mathf.Max(1, instance.Stacks);
+                }
             }
 
-            return 0;
+            return stacks;
         }
 
         /// <summary>
@@ -131,44 +148,67 @@ namespace CombatSystem.Core
             var now = Time.time;
             var duration = buff.Duration;
             var tickInterval = buff.TickInterval;
+            var maxStacks = Mathf.Max(1, buff.MaxStacks);
 
-            if (indexByBuff.TryGetValue(buff, out var index))
+            if (buff.StackingRule != BuffStackingRule.Independent)
             {
-                var instance = activeBuffs[index];
-                instance.Stacks = Mathf.Clamp(instance.Stacks + 1, 1, Mathf.Max(1, buff.MaxStacks));
+                var index = FindBuffIndex(buff);
+                if (index >= 0)
+                {
+                    var instance = activeBuffs[index];
+                    instance.Stacks = Mathf.Clamp(instance.Stacks + 1, 1, maxStacks);
 
-                if (buff.StackingRule == BuffStackingRule.Refresh)
-                {
-                    instance.EndTime = duration > 0f ? now + duration : -1f;
-                    instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
-                }
-                else if (buff.StackingRule == BuffStackingRule.Extend)
-                {
-                    if (duration > 0f)
+                    if (buff.StackingRule == BuffStackingRule.Refresh)
                     {
-                        instance.EndTime = instance.EndTime > 0f ? instance.EndTime + duration : now + duration;
+                        instance.EndTime = duration > 0f ? now + duration : -1f;
+                        instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
+                    }
+                    else if (buff.StackingRule == BuffStackingRule.Extend)
+                    {
+                        if (duration > 0f)
+                        {
+                            instance.EndTime = instance.EndTime > 0f ? instance.EndTime + duration : now + duration;
+                        }
+
+                        if (instance.NextTickTime <= 0f && tickInterval > 0f)
+                        {
+                            instance.NextTickTime = now + tickInterval;
+                        }
+                    }
+                    else
+                    {
+                        instance.EndTime = duration > 0f ? now + duration : instance.EndTime;
                     }
 
-                    if (instance.NextTickTime <= 0f && tickInterval > 0f)
-                    {
-                        instance.NextTickTime = now + tickInterval;
-                    }
+                    activeBuffs[index] = instance;
+                    TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                    BuffsChanged?.Invoke();
+                    return;
                 }
-                else
+            }
+            else
+            {
+                var instanceCount = CountBuffInstances(buff);
+                if (instanceCount >= maxStacks)
                 {
-                    instance.EndTime = duration > 0f ? now + duration : instance.EndTime;
-                }
+                    if (TryGetOldestIndependentIndex(buff, out var refreshIndex))
+                    {
+                        var instance = activeBuffs[refreshIndex];
+                        instance.Stacks = 1;
+                        instance.EndTime = duration > 0f ? now + duration : -1f;
+                        instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
+                        activeBuffs[refreshIndex] = instance;
+                        TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                        BuffsChanged?.Invoke();
+                    }
 
-                activeBuffs[index] = instance;
-                TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
-                BuffsChanged?.Invoke();
-                return;
+                    return;
+                }
             }
 
             var endTime = duration > 0f ? now + duration : -1f;
             var nextTick = tickInterval > 0f ? now + tickInterval : -1f;
-            var newInstance = new BuffInstance(buff, 1, endTime, nextTick);
-            indexByBuff[buff] = activeBuffs.Count;
+            var newInstance = new BuffInstance(buff, 1, endTime, nextTick, now);
             activeBuffs.Add(newInstance);
 
             TriggerBuff(newInstance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
@@ -185,13 +225,17 @@ namespace CombatSystem.Core
                 return false;
             }
 
-            if (indexByBuff.TryGetValue(buff, out var index))
+            var removed = false;
+            for (int i = activeBuffs.Count - 1; i >= 0; i--)
             {
-                RemoveAt(index, true);
-                return true;
+                if (activeBuffs[i].Definition == buff)
+                {
+                    RemoveAt(i, true);
+                    removed = true;
+                }
             }
 
-            return false;
+            return removed;
         }
 
         public void NotifyHit(SkillRuntimeContext context, CombatTarget target)
@@ -301,15 +345,89 @@ namespace CombatSystem.Core
 
             if (index != lastIndex)
             {
-                var last = activeBuffs[lastIndex];
-                activeBuffs[index] = last;
-                indexByBuff[last.Definition] = index;
+                activeBuffs[index] = activeBuffs[lastIndex];
             }
 
             activeBuffs.RemoveAt(lastIndex);
-            indexByBuff.Remove(removed.Definition);
 
             BuffsChanged?.Invoke();
+        }
+
+        private int FindBuffIndex(BuffDefinition buff)
+        {
+            if (buff == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                if (activeBuffs[i].Definition == buff)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private int CountBuffInstances(BuffDefinition buff)
+        {
+            if (buff == null)
+            {
+                return 0;
+            }
+
+            var count = 0;
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                if (activeBuffs[i].Definition == buff)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool TryGetOldestIndependentIndex(BuffDefinition buff, out int index)
+        {
+            index = -1;
+            if (buff == null)
+            {
+                return false;
+            }
+
+            var bestEndTime = float.PositiveInfinity;
+            var foundTimed = false;
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                var instance = activeBuffs[i];
+                if (instance.Definition != buff)
+                {
+                    continue;
+                }
+
+                if (instance.EndTime > 0f)
+                {
+                    if (!foundTimed || instance.EndTime < bestEndTime)
+                    {
+                        bestEndTime = instance.EndTime;
+                        index = i;
+                        foundTimed = true;
+                    }
+
+                    continue;
+                }
+
+                if (!foundTimed && index < 0)
+                {
+                    index = i;
+                }
+            }
+
+            return index >= 0;
         }
 
         /// <summary>
@@ -376,13 +494,15 @@ namespace CombatSystem.Core
             public int Stacks;
             public float EndTime;
             public float NextTickTime;
+            public float AppliedTime;
 
-            public BuffInstance(BuffDefinition definition, int stacks, float endTime, float nextTickTime)
+            public BuffInstance(BuffDefinition definition, int stacks, float endTime, float nextTickTime, float appliedTime)
             {
                 Definition = definition;
                 Stacks = stacks;
                 EndTime = endTime;
                 NextTickTime = nextTickTime;
+                AppliedTime = appliedTime;
             }
         }
     }

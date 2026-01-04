@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using UnityEngine;
@@ -27,6 +28,43 @@ namespace CombatSystem.Gameplay
         [Tooltip("投射物对象池")]
         [SerializeField] private ProjectilePool projectilePool;
 
+        private readonly List<PendingEffect> pendingEffects = new List<PendingEffect>(16);
+
+        private void Update()
+        {
+            if (pendingEffects.Count == 0)
+            {
+                return;
+            }
+
+            var now = Time.time;
+            for (int i = pendingEffects.Count - 1; i >= 0; i--)
+            {
+                var pending = pendingEffects[i];
+                if (pending.NextTime > now)
+                {
+                    continue;
+                }
+
+                ExecuteEffectInternal(pending.Effect, pending.Context, pending.Target, pending.Trigger, false);
+
+                pending.NextTime += pending.Interval;
+                if (pending.NextTime > pending.EndTime)
+                {
+                    var lastIndex = pendingEffects.Count - 1;
+                    if (i < lastIndex)
+                    {
+                        pendingEffects[i] = pendingEffects[lastIndex];
+                    }
+                    pendingEffects.RemoveAt(lastIndex);
+                }
+                else
+                {
+                    pendingEffects[i] = pending;
+                }
+            }
+        }
+
         /// <summary>
         /// 执行单个效果。
         /// </summary>
@@ -36,35 +74,7 @@ namespace CombatSystem.Gameplay
         /// <param name="trigger">触发时机</param>
         public void ExecuteEffect(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger)
         {
-            if (effect == null)
-            {
-                return;
-            }
-
-            // 检查效果的前置条件
-            if (effect.Condition != null && !ConditionEvaluator.Evaluate(effect.Condition, context, target))
-            {
-                return;
-            }
-
-            // 如果效果定义了覆盖目标逻辑，重新收集目标
-            if (effect.OverrideTargeting != null && targetingSystem != null)
-            {
-                var overrideTargets = SimpleListPool<CombatTarget>.Get();
-                targetingSystem.CollectTargets(effect.OverrideTargeting, context.CasterUnit, target.GameObject, overrideTargets);
-
-                // 对每个新目标应用效果
-                for (int i = 0; i < overrideTargets.Count; i++)
-                {
-                    ApplyEffectInternal(effect, context, overrideTargets[i], trigger);
-                }
-
-                SimpleListPool<CombatTarget>.Release(overrideTargets);
-                return;
-            }
-
-            // 对原始目标应用效果
-            ApplyEffectInternal(effect, context, target, trigger);
+            ExecuteEffectInternal(effect, context, target, trigger, true);
         }
 
         /// <summary>
@@ -119,6 +129,72 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        private void ExecuteEffectInternal(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger, bool allowPeriodic)
+        {
+            if (effect == null)
+            {
+                return;
+            }
+
+            // 检查效果的前置条件
+            if (effect.Condition != null && !ConditionEvaluator.Evaluate(effect.Condition, context, target))
+            {
+                return;
+            }
+
+            if (allowPeriodic)
+            {
+                var duration = ModifierResolver.ApplyEffectModifiers(effect.Duration, effect, context, target, ModifierParameters.EffectDuration);
+                var interval = ModifierResolver.ApplyEffectModifiers(effect.Interval, effect, context, target, ModifierParameters.EffectInterval);
+                duration = Mathf.Max(0f, duration);
+                interval = Mathf.Max(0f, interval);
+
+                if (duration > 0f && interval > 0f)
+                {
+                    SchedulePeriodicEffect(effect, context, target, trigger, duration, interval);
+                    return;
+                }
+            }
+
+            // 如果效果定义了覆盖目标逻辑，重新收集目标
+            if (effect.OverrideTargeting != null && targetingSystem != null)
+            {
+                var overrideTargets = SimpleListPool<CombatTarget>.Get();
+                targetingSystem.CollectTargets(effect.OverrideTargeting, context.CasterUnit, target.GameObject, overrideTargets);
+
+                // 对每个新目标应用效果
+                for (int i = 0; i < overrideTargets.Count; i++)
+                {
+                    ApplyEffectInternal(effect, context, overrideTargets[i], trigger);
+                }
+
+                SimpleListPool<CombatTarget>.Release(overrideTargets);
+                return;
+            }
+
+            // 对原始目标应用效果
+            ApplyEffectInternal(effect, context, target, trigger);
+        }
+
+        private void SchedulePeriodicEffect(
+            EffectDefinition effect,
+            SkillRuntimeContext context,
+            CombatTarget target,
+            SkillStepTrigger trigger,
+            float duration,
+            float interval)
+        {
+            var startTime = Time.time;
+            var endTime = startTime + duration;
+            var nextTime = startTime + interval;
+            if (nextTime > endTime)
+            {
+                return;
+            }
+
+            pendingEffects.Add(new PendingEffect(effect, context, target, trigger, nextTime, endTime, interval));
+        }
+
         /// <summary>
         /// 施加 Buff 到目标。
         /// </summary>
@@ -134,9 +210,7 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 获取目标的 BuffController 并施加 Buff
-            var controller = target.Unit != null ? target.Unit.GetComponent<BuffController>() : target.GameObject.GetComponent<BuffController>();
-            controller?.ApplyBuff(effect.Buff);
+            target.Buffs?.ApplyBuff(effect.Buff);
         }
 
         /// <summary>
@@ -154,8 +228,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            var controller = target.Unit != null ? target.Unit.GetComponent<BuffController>() : target.GameObject.GetComponent<BuffController>();
-            controller?.RemoveBuff(effect.Buff);
+            // [性能优化] 使用 CombatTarget 缓存的 BuffController 引用
+            target.Buffs?.RemoveBuff(effect.Buff);
         }
 
         /// <summary>
@@ -308,6 +382,35 @@ namespace CombatSystem.Gameplay
 
             // 使用当前施法者释放触发的技能
             context.Caster.TryCast(effect.TriggeredSkill, target.IsValid ? target.GameObject : null);
+        }
+
+        private struct PendingEffect
+        {
+            public EffectDefinition Effect;
+            public SkillRuntimeContext Context;
+            public CombatTarget Target;
+            public SkillStepTrigger Trigger;
+            public float NextTime;
+            public float EndTime;
+            public float Interval;
+
+            public PendingEffect(
+                EffectDefinition effect,
+                SkillRuntimeContext context,
+                CombatTarget target,
+                SkillStepTrigger trigger,
+                float nextTime,
+                float endTime,
+                float interval)
+            {
+                Effect = effect;
+                Context = context;
+                Target = target;
+                Trigger = trigger;
+                NextTime = nextTime;
+                EndTime = endTime;
+                Interval = interval;
+            }
         }
     }
 }

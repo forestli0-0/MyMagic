@@ -59,6 +59,7 @@ namespace CombatSystem.Gameplay
         private bool isCasting;
         private float castEndTime;
         private float currentCastTime;
+        private float currentChannelTime;
         private SkillDefinition currentSkill;
         private bool currentIsChannel;
 
@@ -169,11 +170,12 @@ namespace CombatSystem.Gameplay
                 isCasting = false;
                 if (currentSkill != null)
                 {
-                    RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime, currentIsChannel);
+                    RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime, currentChannelTime, currentIsChannel);
                 }
 
                 currentSkill = null;
                 currentCastTime = 0f;
+                currentChannelTime = 0f;
                 currentIsChannel = false;
             }
         }
@@ -248,6 +250,7 @@ namespace CombatSystem.Gameplay
             var castTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.CastTime, skill, context, primaryTarget, ModifierParameters.SkillCastTime));
             var channelTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTime, skill, context, primaryTarget, ModifierParameters.SkillChannelTime));
             var isChannel = channelTime > 0f;
+            var totalTime = castTime + channelTime;
 
             // 扣除资源
             if (!SpendResource(skill, resourceCost))
@@ -267,7 +270,7 @@ namespace CombatSystem.Gameplay
             // 调度技能步骤
             var targetHandle = GetTargetHandle(targets);
             ScheduleSteps(skill, SkillStepTrigger.OnCastStart, now, targetHandle, context);
-            ScheduleSteps(skill, SkillStepTrigger.OnCastComplete, now + castTime, targetHandle, context);
+            ScheduleSteps(skill, SkillStepTrigger.OnCastComplete, now + totalTime, targetHandle, context);
 
             // 如果没有任何步骤引用该目标列表，立即释放
             if (targetHandle.RefCount == 0)
@@ -276,22 +279,23 @@ namespace CombatSystem.Gameplay
             }
 
             // 派发施法开始事件
-            RaiseSkillCastStarted(context, castTime, isChannel);
+            RaiseSkillCastStarted(context, castTime, channelTime, isChannel);
             buffController?.NotifySkillCast(context, primaryTarget);
 
-            // 如果有施法时间，进入施法状态
-            if (castTime > 0f)
+            // 如果有施法或引导时间，进入施法状态
+            if (totalTime > 0f)
             {
                 isCasting = true;
-                castEndTime = now + castTime;
+                castEndTime = now + totalTime;
                 currentSkill = skill;
                 currentCastTime = castTime;
+                currentChannelTime = channelTime;
                 currentIsChannel = isChannel;
             }
             else
             {
                 // 瞬发技能立即完成
-                RaiseSkillCastCompleted(context, castTime, isChannel);
+                RaiseSkillCastCompleted(context, castTime, channelTime, isChannel);
             }
 
             return true;
@@ -513,9 +517,9 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 派发技能施法开始事件。
         /// </summary>
-        private void RaiseSkillCastStarted(SkillRuntimeContext context, float castTime, bool isChannel)
+        private void RaiseSkillCastStarted(SkillRuntimeContext context, float castTime, float channelTime, bool isChannel)
         {
-            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, isChannel);
+            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, channelTime, isChannel);
             SkillCastStarted?.Invoke(evt);
             eventHub?.RaiseSkillCastStarted(evt);
         }
@@ -523,9 +527,9 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 派发技能施法完成事件。
         /// </summary>
-        private void RaiseSkillCastCompleted(SkillRuntimeContext context, float castTime, bool isChannel)
+        private void RaiseSkillCastCompleted(SkillRuntimeContext context, float castTime, float channelTime, bool isChannel)
         {
-            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, isChannel);
+            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, channelTime, isChannel);
             SkillCastCompleted?.Invoke(evt);
             eventHub?.RaiseSkillCastCompleted(evt);
         }

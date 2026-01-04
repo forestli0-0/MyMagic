@@ -260,7 +260,7 @@ namespace CombatSystem.UI
             // 如果监听目标开始施法，显示施法条
             if (castBar != null && evt.Caster == targetUnit && (hudConfig == null || hudConfig.ShowCastBar))
             {
-                castBar.Show(evt.Skill, evt.CastTime);
+                castBar.Show(evt.Skill, evt.CastTime, evt.ChannelTime);
             }
 
             // 记录到战斗日志
