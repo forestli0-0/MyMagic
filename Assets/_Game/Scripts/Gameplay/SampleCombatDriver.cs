@@ -1,4 +1,5 @@
 using CombatSystem.Data;
+using CombatSystem.UI;
 using UnityEngine;
 
 namespace CombatSystem.Gameplay
@@ -36,6 +37,11 @@ namespace CombatSystem.Gameplay
 
         private void Update()
         {
+            if (!UIRoot.IsGameplayInputAllowed())
+            {
+                return;
+            }
+
             if (skillUser == null)
             {
                 return;

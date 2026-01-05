@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
+using CombatSystem.UI;
 using UnityEngine;
 
 namespace CombatSystem.Gameplay
@@ -123,6 +124,11 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void Update()
         {
+            if (!UIRoot.IsGameplayInputAllowed())
+            {
+                return;
+            }
+
             // 必要组件检查
             if (skillUser == null || indicator == null)
             {

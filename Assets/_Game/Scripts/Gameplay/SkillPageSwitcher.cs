@@ -74,6 +74,11 @@ namespace CombatSystem.Gameplay
 
         private void Update()
         {
+            if (!UIRoot.IsGameplayInputAllowed())
+            {
+                return;
+            }
+
             if (pages == null || pages.Count == 0 || switchKey == KeyCode.None)
             {
                 return;

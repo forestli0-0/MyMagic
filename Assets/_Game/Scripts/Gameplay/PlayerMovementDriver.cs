@@ -1,4 +1,5 @@
 using CombatSystem.Core;
+using CombatSystem.UI;
 using UnityEngine;
 
 namespace CombatSystem.Gameplay
@@ -49,6 +50,11 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void Update()
         {
+            if (!UIRoot.IsGameplayInputAllowed())
+            {
+                return;
+            }
+
             if (movement == null)
             {
                 return;
