@@ -419,6 +419,8 @@ namespace CombatSystem.Editor
             RemoveRootObject(scene, "Sample_Enemy");
             RemoveRootObject(scene, "HUD");
 
+            SetupTopdownCamera();
+
             var combatSystems = new GameObject("CombatSystems");
             var targetingSystem = combatSystems.AddComponent<TargetingSystem>();
             var effectExecutor = combatSystems.AddComponent<EffectExecutor>();
@@ -985,6 +987,33 @@ namespace CombatSystem.Editor
 
             // 降级方案：查找场景中的第一个 Camera（编辑器工具可接受）
             return Object.FindObjectOfType<Camera>();
+        }
+
+        private static Camera SetupTopdownCamera()
+        {
+            var camera = FindMainCamera();
+            if (camera == null)
+            {
+                var cameraObject = new GameObject("Main Camera");
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.AddComponent<Camera>();
+                cameraObject.AddComponent<AudioListener>();
+            }
+
+
+            var target = Vector3.zero;
+            var position = new Vector3(0f, 15f, -12f);
+            var cameraTransform = camera.transform;
+            cameraTransform.position = position;
+            cameraTransform.LookAt(target);
+            if (camera.orthographic)
+            {
+                camera.orthographic = false;
+            }
+
+            camera.fieldOfView = 40f;
+
+            return camera;
         }
 
         private static T LoadOrCreate<T>(string path) where T : ScriptableObject
