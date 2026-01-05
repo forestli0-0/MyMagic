@@ -5,7 +5,7 @@ namespace CombatSystem.Gameplay
 {
     /// <summary>
     /// 技能指示器组件。
-    /// 用于在地面上绘制技能范围和方向，支持圆形和扇形两种显示模式。
+    /// 用于在地面上绘制技能范围和方向，支持圆形、扇形和矩形显示模式。
     /// 通过 LineRenderer 组件来渲染指示器图形。
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
@@ -56,6 +56,10 @@ namespace CombatSystem.Gameplay
 
         /// <summary>当前瞄准方向（水平面上的单位向量）</summary>
         private Vector3 aimDirection = Vector3.forward;
+        /// <summary>当前瞄准点</summary>
+        private Vector3 aimPoint;
+        /// <summary>是否有有效瞄准点</summary>
+        private bool hasAimPoint;
 
         /// <summary>指示器是否可见</summary>
         private bool isVisible;
@@ -178,6 +182,8 @@ namespace CombatSystem.Gameplay
             isVisible = false;
             currentSkill = null;
             currentTargeting = null;
+            hasAimPoint = false;
+            aimPoint = default;
 
             if (line != null)
             {
@@ -219,6 +225,26 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 设置瞄准点。
+        /// 当目标选择需要指定点时，用于更新指示器位置。
+        /// </summary>
+        /// <param name="point">瞄准点坐标</param>
+        public void SetAimPoint(Vector3 point)
+        {
+            aimPoint = point;
+            hasAimPoint = true;
+        }
+
+        /// <summary>
+        /// 清除瞄准点。
+        /// </summary>
+        public void ClearAimPoint()
+        {
+            hasAimPoint = false;
+            aimPoint = default;
+        }
+
+        /// <summary>
         /// 设置当前高亮的目标。
         /// 在目标脚下显示红色圆圈标记。
         /// </summary>
@@ -257,6 +283,10 @@ namespace CombatSystem.Gameplay
 
             // 更新位置：跟随锚点，加上高度偏移
             var position = anchor.position;
+            if (currentTargeting != null && currentTargeting.Origin == TargetingOrigin.TargetPoint && hasAimPoint)
+            {
+                position = aimPoint;
+            }
             transform.position = new Vector3(position.x, position.y + heightOffset, position.z);
 
             // 更新旋转：朝向瞄准方向
@@ -272,6 +302,14 @@ namespace CombatSystem.Gameplay
                 case TargetingMode.Cone:
                     // 扇形：用于锥形范围技能
                     DrawCone(GetIndicatorRange(), currentTargeting != null ? currentTargeting.Angle : 45f);
+                    break;
+                case TargetingMode.Line:
+                    // 线性矩形：用于技能射击体
+                    DrawRectangle(GetIndicatorRange(), GetIndicatorWidth(), false);
+                    break;
+                case TargetingMode.Box:
+                    // 盒形矩形：用于地面矩形范围
+                    DrawRectangle(GetIndicatorRange(), GetIndicatorWidth(), true);
                     break;
                 case TargetingMode.Self:
                     // 圆形（自身范围）：用于以自身为中心的技能
@@ -308,6 +346,19 @@ namespace CombatSystem.Gameplay
 
             // 其他技能使用Range
             return Mathf.Max(0.1f, currentTargeting.Range);
+        }
+
+        /// <summary>
+        /// 获取矩形技能的半宽度。
+        /// </summary>
+        private float GetIndicatorWidth()
+        {
+            if (currentTargeting != null && currentTargeting.Radius > 0f)
+            {
+                return Mathf.Max(0.1f, currentTargeting.Radius);
+            }
+
+            return Mathf.Max(0.1f, selfRadius);
         }
 
         /// <summary>
@@ -379,6 +430,29 @@ namespace CombatSystem.Gameplay
             }
 
             line.SetPosition(arcSegments + 2, Vector3.zero);  // 扇形终点（回到原点）
+        }
+
+        /// <summary>
+        /// 绘制矩形指示器（线性/盒形）。
+        /// </summary>
+        /// <param name="length">矩形长度</param>
+        /// <param name="halfWidth">矩形半宽</param>
+        /// <param name="centered">是否以原点为中心</param>
+        private void DrawRectangle(float length, float halfWidth, bool centered)
+        {
+            var safeLength = Mathf.Max(0.1f, length);
+            var safeHalfWidth = Mathf.Max(0.05f, halfWidth);
+            var halfLength = safeLength * 0.5f;
+
+            var zMin = centered ? -halfLength : 0f;
+            var zMax = centered ? halfLength : safeLength;
+
+            line.positionCount = 5;
+            line.SetPosition(0, new Vector3(-safeHalfWidth, 0f, zMin));
+            line.SetPosition(1, new Vector3(safeHalfWidth, 0f, zMin));
+            line.SetPosition(2, new Vector3(safeHalfWidth, 0f, zMax));
+            line.SetPosition(3, new Vector3(-safeHalfWidth, 0f, zMax));
+            line.SetPosition(4, new Vector3(-safeHalfWidth, 0f, zMin));
         }
 
         /// <summary>

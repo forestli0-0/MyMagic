@@ -14,6 +14,8 @@ namespace CombatSystem.Data
         [SerializeField] private TargetingMode mode = TargetingMode.Single;
         [Tooltip("筛选目标的团队阵营")]
         [SerializeField] private TargetTeam team = TargetTeam.Enemy;
+        [Tooltip("目标选择的原点位置")]
+        [SerializeField] private TargetingOrigin origin = TargetingOrigin.Caster;
         
         [Header("范围参数")]
         [Tooltip("最大寻找距离")]
@@ -30,6 +32,8 @@ namespace CombatSystem.Data
         [SerializeField] private TargetSort sort = TargetSort.Closest;
         [Tooltip("是否可以选中施法者自己")]
         [SerializeField] private bool includeSelf;
+        [Tooltip("没有目标时是否仍允许释放技能")]
+        [SerializeField] private bool allowEmpty;
         
         [Header("标签过滤")]
         [Tooltip("目标必须具备的标签")]
@@ -39,14 +43,15 @@ namespace CombatSystem.Data
 
         public TargetingMode Mode => mode;
         public TargetTeam Team => team;
+        public TargetingOrigin Origin => origin;
         public float Range => range;
         public float Radius => radius;
         public float Angle => angle;
         public int MaxTargets => maxTargets;
         public TargetSort Sort => sort;
         public bool IncludeSelf => includeSelf;
+        public bool AllowEmpty => allowEmpty;
         public IReadOnlyList<TagDefinition> RequiredTags => requiredTags;
         public IReadOnlyList<TagDefinition> BlockedTags => blockedTags;
     }
 }
-

@@ -59,6 +59,10 @@ namespace CombatSystem.Gameplay
         private KeyCode activeKey = KeyCode.None;
         /// <summary>上一帧的瞄准方向</summary>
         private Vector3 lastAimDirection = Vector3.forward;
+        /// <summary>上一帧的瞄准点</summary>
+        private Vector3 lastAimPoint;
+        /// <summary>是否存在有效瞄准点</summary>
+        private bool hasAimPoint;
 
         /// <summary>目标列表缓存（避免GC）</summary>
         private readonly List<CombatTarget> cachedTargets = new List<CombatTarget>(8);
@@ -111,6 +115,7 @@ namespace CombatSystem.Gameplay
 
             activeSkill = null;
             activeKey = KeyCode.None;
+            hasAimPoint = false;
         }
 
         /// <summary>
@@ -246,8 +251,17 @@ namespace CombatSystem.Gameplay
             // 尝试获取鼠标在世界空间中的瞄准点
             if (!TryGetAimPoint(out var point))
             {
+                hasAimPoint = false;
+                if (indicator != null)
+                {
+                    indicator.ClearAimPoint();
+                }
                 return;
             }
+
+            hasAimPoint = true;
+            lastAimPoint = point;
+            indicator.SetAimPoint(point);
 
             // 计算从角色位置到瞄准点的方向（忽略Y轴）
             var origin = transform.position;
@@ -294,7 +308,7 @@ namespace CombatSystem.Gameplay
             }
 
             // 查询所有候选目标（不限制数量）
-            targetingSystem.CollectAllCandidates(targeting, unitRoot, cachedTargets);
+            targetingSystem.CollectAllCandidates(targeting, unitRoot, cachedTargets, hasAimPoint, lastAimPoint, lastAimDirection);
 
             if (cachedTargets.Count == 0)
             {
@@ -327,11 +341,13 @@ namespace CombatSystem.Gameplay
             }
 
             // 获取鼠标在世界空间的位置
-            if (!TryGetAimPoint(out var mouseWorldPos))
+            if (!hasAimPoint)
             {
                 // 如果无法获取鼠标位置，返回第一个目标
                 return candidates[0].Transform;
             }
+
+            var mouseWorldPos = lastAimPoint;
 
             Transform closest = null;
             var minDistSqr = float.MaxValue;
@@ -444,6 +460,8 @@ namespace CombatSystem.Gameplay
         {
             var skill = activeSkill;
             var direction = lastAimDirection;
+            var aimPoint = lastAimPoint;
+            var hadAimPoint = hasAimPoint;
             // 保存当前选中的目标，用于传递给技能系统
             var selectedTarget = currentTarget != null ? currentTarget.gameObject : null;
 
@@ -462,7 +480,7 @@ namespace CombatSystem.Gameplay
             }
 
             // 尝试施放技能，传递选中的目标作为显式目标
-            skillUser.TryCast(skill, selectedTarget);
+            skillUser.TryCast(skill, selectedTarget, hadAimPoint, aimPoint, lastAimDirection);
         }
 
         /// <summary>
@@ -473,7 +491,9 @@ namespace CombatSystem.Gameplay
         {
             activeSkill = null;
             activeKey = KeyCode.None;
+            hasAimPoint = false;
             indicator.Hide();
+            indicator.ClearAimPoint();
             ClearTargetHighlight();
         }
 

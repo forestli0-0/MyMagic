@@ -63,6 +63,10 @@ namespace CombatSystem.Gameplay
         private float currentChannelTime;
         private SkillDefinition currentSkill;
         private bool currentIsChannel;
+        private SkillRuntimeContext currentContext;
+        private bool currentHasAimPoint;
+        private Vector3 currentAimPoint;
+        private Vector3 currentAimDirection;
 
         /// <summary>当技能开始施法时触发</summary>
         public event Action<SkillCastEvent> SkillCastStarted;
@@ -193,7 +197,10 @@ namespace CombatSystem.Gameplay
             {
                 if (currentSkill != null)
                 {
-                    RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime, currentChannelTime, currentIsChannel);
+                    var context = currentContext.Skill != null
+                        ? currentContext
+                        : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
+                    RaiseSkillCastCompleted(context, currentCastTime, currentChannelTime, currentIsChannel);
                 }
 
                 ClearCastState();
@@ -283,22 +290,65 @@ namespace CombatSystem.Gameplay
         /// <returns>若成功开始施法则返回 true</returns>
         public bool TryCast(SkillDefinition skill, GameObject explicitTarget = null)
         {
+            return TryCast(skill, explicitTarget, false, default, default);
+        }
+
+        /// <summary>
+        /// 尝试释放指定技能。
+        /// </summary>
+        /// <param name="skill">要释放的技能</param>
+        /// <param name="explicitTarget">显式指定的目标（可选）</param>
+        /// <param name="hasAimPoint">是否有瞄准点</param>
+        /// <param name="aimPoint">瞄准点</param>
+        /// <param name="aimDirection">瞄准方向</param>
+        /// <returns>若成功开始施法则返回 true</returns>
+        public bool TryCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+        {
             // 校验释放条件
             if (!CanCast(skill))
             {
                 return false;
             }
 
+            if (skill != null && skill.Targeting != null && skill.Targeting.Origin == TargetingOrigin.TargetPoint && !hasAimPoint)
+            {
+                if (explicitTarget != null)
+                {
+                    aimPoint = explicitTarget.transform.position;
+                    hasAimPoint = true;
+                }
+            }
+
+            if (aimDirection.sqrMagnitude <= 0.0001f && explicitTarget != null && unitRoot != null)
+            {
+                var dir = explicitTarget.transform.position - unitRoot.transform.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    aimDirection = dir.normalized;
+                }
+            }
+
+            if (hasAimPoint && aimDirection.sqrMagnitude <= 0.0001f && unitRoot != null)
+            {
+                var dir = aimPoint - unitRoot.transform.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    aimDirection = dir.normalized;
+                }
+            }
+
             // 收集目标
             var targets = SimpleListPool<CombatTarget>.Get();
-            if (!CollectTargets(skill, explicitTarget, targets))
+            if (!CollectTargets(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, targets))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
                 return false;
             }
 
             // 创建技能上下文
-            var context = CreateContext(skill);
+            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ResourceCost, skill, context, primaryTarget, ModifierParameters.SkillResourceCost));
             var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
@@ -347,6 +397,10 @@ namespace CombatSystem.Gameplay
                 currentCastTime = castTime;
                 currentChannelTime = channelTime;
                 currentIsChannel = isChannel;
+                currentContext = context;
+                currentHasAimPoint = hasAimPoint;
+                currentAimPoint = aimPoint;
+                currentAimDirection = aimDirection;
             }
             else
             {
@@ -367,7 +421,9 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            var context = CreateContext(currentSkill);
+            var context = currentContext.Skill != null
+                ? currentContext
+                : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
             ClearCastState();
@@ -442,7 +498,13 @@ namespace CombatSystem.Gameplay
         /// 收集技能目标。
         /// </summary>
         /// <returns>若成功收集到至少一个目标则返回 true</returns>
-        private bool CollectTargets(SkillDefinition skill, GameObject explicitTarget, List<CombatTarget> targets)
+        private bool CollectTargets(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            List<CombatTarget> targets)
         {
             // 无目标系统或无目标定义时，默认选择自身
             if (targetingSystem == null || skill.Targeting == null)
@@ -457,8 +519,13 @@ namespace CombatSystem.Gameplay
             }
 
             // 使用目标系统收集目标
-            targetingSystem.CollectTargets(skill.Targeting, unitRoot, explicitTarget, targets);
-            return targets.Count > 0;
+            targetingSystem.CollectTargets(skill.Targeting, unitRoot, explicitTarget, targets, hasAimPoint, aimPoint, aimDirection);
+            if (targets.Count > 0)
+            {
+                return true;
+            }
+
+            return skill.Targeting.AllowEmpty;
         }
 
         /// <summary>
@@ -595,9 +662,13 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 创建技能运行时上下文。
         /// </summary>
-        private SkillRuntimeContext CreateContext(SkillDefinition skill)
+        private SkillRuntimeContext CreateContext(
+            SkillDefinition skill,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
         {
-            return new SkillRuntimeContext(this, unitRoot, skill, eventHub, targetingSystem, effectExecutor);
+            return new SkillRuntimeContext(this, unitRoot, skill, eventHub, targetingSystem, effectExecutor, hasAimPoint, aimPoint, aimDirection);
         }
 
         /// <summary>
@@ -659,6 +730,10 @@ namespace CombatSystem.Gameplay
             currentCastTime = 0f;
             currentChannelTime = 0f;
             currentIsChannel = false;
+            currentContext = default;
+            currentHasAimPoint = false;
+            currentAimPoint = default;
+            currentAimDirection = default;
         }
 
         #region Target Handle Pool

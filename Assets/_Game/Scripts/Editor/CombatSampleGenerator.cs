@@ -70,6 +70,8 @@ namespace CombatSystem.Editor
             public TargetingDefinition TargetingSphereEnemy;
             public TargetingDefinition TargetingChainEnemy;
             public TargetingDefinition TargetingRandomEnemy;
+            public TargetingDefinition TargetingLineEnemy;
+            public TargetingDefinition TargetingBoxEnemy;
             public TargetingDefinition TargetingAllySingle;
 
             public ModifierDefinition ModifierSkillCost;
@@ -104,6 +106,8 @@ namespace CombatSystem.Editor
             public EffectDefinition EffectHealSmall;
             public EffectDefinition EffectRestoreMana;
             public EffectDefinition EffectDash;
+            public EffectDefinition EffectLineDamage;
+            public EffectDefinition EffectBoxDamage;
             public EffectDefinition EffectBleedTick;
             public EffectDefinition EffectApplyBleed;
             public EffectDefinition EffectPoisonTick;
@@ -127,6 +131,8 @@ namespace CombatSystem.Editor
             public SkillDefinition SkillExecute;
             public SkillDefinition SkillHeal;
             public SkillDefinition SkillDash;
+            public SkillDefinition SkillLineStrike;
+            public SkillDefinition SkillBoxField;
             public SkillDefinition SkillArcaneBolt;
             public SkillDefinition SkillShockwave;
             public SkillDefinition SkillBleedStrike;
@@ -330,6 +336,42 @@ namespace CombatSystem.Editor
                     false,
                     null,
                     null);
+
+                assets.TargetingLineEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_LineEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingLineEnemy,
+                    "Targeting_LineEnemy",
+                    "Line Enemy",
+                    TargetingMode.Line,
+                    TargetTeam.Enemy,
+                    8f,
+                    1.2f,
+                    0f,
+                    6,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.Caster,
+                    true);
+
+                assets.TargetingBoxEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_BoxEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingBoxEnemy,
+                    "Targeting_BoxEnemy",
+                    "Box Enemy",
+                    TargetingMode.Box,
+                    TargetTeam.Enemy,
+                    6f,
+                    2f,
+                    0f,
+                    6,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.TargetPoint,
+                    true);
 
                 assets.TargetingAllySingle = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_AllySingle.asset");
                 ConfigureTargeting(
@@ -599,6 +641,22 @@ namespace CombatSystem.Editor
                     MoveStyle.Dash,
                     4f,
                     10f);
+
+                assets.EffectLineDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_LineStrikeDamage.asset");
+                ConfigureEffectDamage(
+                    assets.EffectLineDamage,
+                    "Effect_LineStrikeDamage",
+                    "Line Strike Damage",
+                    16f,
+                    DamageType.Physical);
+
+                assets.EffectBoxDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_BoxFieldDamage.asset");
+                ConfigureEffectDamage(
+                    assets.EffectBoxDamage,
+                    "Effect_BoxFieldDamage",
+                    "Box Field Damage",
+                    18f,
+                    DamageType.Magical);
 
                 assets.EffectBleedTick = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_BleedTickDamage.asset");
                 ConfigureEffectDamage(
@@ -1034,6 +1092,48 @@ namespace CombatSystem.Editor
                         Effects = new Object[] { assets.EffectDash }
                     });
 
+                assets.SkillLineStrike = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_LineStrike.asset");
+                ConfigureSkill(
+                    assets.SkillLineStrike,
+                    "Skill_LineStrike",
+                    "Line Strike",
+                    ResourceType.Mana,
+                    6f,
+                    5f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingLineEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectLineDamage }
+                    });
+
+                assets.SkillBoxField = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_BoxField.asset");
+                ConfigureSkill(
+                    assets.SkillBoxField,
+                    "Skill_BoxField",
+                    "Box Field",
+                    ResourceType.Mana,
+                    8f,
+                    7f,
+                    0.1f,
+                    0f,
+                    false,
+                    true,
+                    assets.TargetingBoxEnemy,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastComplete,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectBoxDamage }
+                    });
+
                 assets.SkillArcaneBolt = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_ArcaneBolt.asset");
                 ConfigureSkill(
                     assets.SkillArcaneBolt,
@@ -1406,6 +1506,19 @@ namespace CombatSystem.Editor
                         assets.SkillChainLightning,
                         assets.SkillRandomShot,
                         assets.SkillShockwave,
+                        assets.SkillArcaneBolt,
+                        assets.SkillDash
+                    }
+                },
+                new SkillPageData
+                {
+                    Name = "Skillshots",
+                    Skills = new Object[]
+                    {
+                        assets.SkillLineStrike,
+                        assets.SkillBoxField,
+                        assets.SkillRandomShot,
+                        assets.SkillFireball,
                         assets.SkillArcaneBolt,
                         assets.SkillDash
                     }
@@ -2103,18 +2216,22 @@ namespace CombatSystem.Editor
             TargetSort sort,
             bool includeSelf,
             Object[] requiredTags,
-            Object[] blockedTags)
+            Object[] blockedTags,
+            TargetingOrigin origin = TargetingOrigin.Caster,
+            bool allowEmpty = false)
         {
             var so = new SerializedObject(targeting);
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("mode").enumValueIndex = (int)mode;
             so.FindProperty("team").enumValueIndex = (int)team;
+            so.FindProperty("origin").enumValueIndex = (int)origin;
             so.FindProperty("range").floatValue = range;
             so.FindProperty("radius").floatValue = radius;
             so.FindProperty("angle").floatValue = angle;
             so.FindProperty("maxTargets").intValue = maxTargets;
             so.FindProperty("sort").enumValueIndex = (int)sort;
             so.FindProperty("includeSelf").boolValue = includeSelf;
+            so.FindProperty("allowEmpty").boolValue = allowEmpty;
             SetObjectList(so.FindProperty("requiredTags"), requiredTags);
             SetObjectList(so.FindProperty("blockedTags"), blockedTags);
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -2568,6 +2685,8 @@ namespace CombatSystem.Editor
                 assets.SkillExecute,
                 assets.SkillHeal,
                 assets.SkillDash,
+                assets.SkillLineStrike,
+                assets.SkillBoxField,
                 assets.SkillArcaneBolt,
                 assets.SkillShockwave,
                 assets.SkillBleedStrike,
@@ -2605,6 +2724,8 @@ namespace CombatSystem.Editor
                 assets.EffectHealSmall,
                 assets.EffectRestoreMana,
                 assets.EffectDash,
+                assets.EffectLineDamage,
+                assets.EffectBoxDamage,
                 assets.EffectBleedTick,
                 assets.EffectApplyBleed,
                 assets.EffectPoisonTick,
@@ -2642,6 +2763,8 @@ namespace CombatSystem.Editor
                 assets.TargetingSphereEnemy,
                 assets.TargetingChainEnemy,
                 assets.TargetingRandomEnemy,
+                assets.TargetingLineEnemy,
+                assets.TargetingBoxEnemy,
                 assets.TargetingAllySingle
             });
             SetObjectList(so.FindProperty("aiProfiles"), new Object[] { assets.AIBasic });

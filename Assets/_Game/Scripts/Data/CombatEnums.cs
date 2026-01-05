@@ -144,7 +144,18 @@ namespace CombatSystem.Data
         Sphere,     // 球形/圆形范围
         Cone,       // 锥形范围
         Chain,      // 链式（如连锁闪电）
-        Random      // 范围随机
+        Random,     // 范围随机
+        Line,       // 线性/矩形范围
+        Box         // 盒形/矩形范围
+    }
+
+    /// <summary>
+    /// 目标区域的原点类型。
+    /// </summary>
+    public enum TargetingOrigin
+    {
+        Caster,     // 施法者位置
+        TargetPoint // 鼠标/指定点
     }
 
     /// <summary>

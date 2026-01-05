@@ -10,7 +10,7 @@ namespace CombatSystem.Gameplay
     /// </summary>
     /// <remarks>
     /// 核心功能：
-    /// - 支持多种选择模式：Self（自身）、Single（单体）、Cone（锥形）、Sphere（球形）、Random（随机）、Chain（链式）
+    /// - 支持多种选择模式：Self（自身）、Single（单体）、Cone（锥形）、Sphere（球形）、Random（随机）、Chain（链式）、Line（线性）、Box（矩形）
     /// - 支持阵营过滤：敌方、友方、任意
     /// - 支持标签过滤：必需标签、排除标签
     /// - 支持多种排序策略：最近、最远、血量最低/最高
@@ -49,7 +49,17 @@ namespace CombatSystem.Gameplay
         /// <param name="caster">施法者单位</param>
         /// <param name="explicitTarget">显式指定的目标（如玩家点击选中的敌人）</param>
         /// <param name="results">输出结果列表，调用前会被清空</param>
-        public void CollectTargets(TargetingDefinition definition, UnitRoot caster, GameObject explicitTarget, List<CombatTarget> results)
+        /// <param name="hasAimPoint">是否有瞄准点</param>
+        /// <param name="aimPoint">瞄准点</param>
+        /// <param name="aimDirection">瞄准方向</param>
+        public void CollectTargets(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            GameObject explicitTarget,
+            List<CombatTarget> results,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
         {
             if (results == null)
             {
@@ -67,6 +77,8 @@ namespace CombatSystem.Gameplay
 
             // 判断是否可以选中自身
             var includeSelf = definition.IncludeSelf || definition.Team == TargetTeam.Self;
+            var origin = ResolveOrigin(definition, caster, explicitTarget, hasAimPoint, aimPoint);
+            var forward = ResolveForward(caster, origin, aimDirection);
 
             // 根据选择模式分发到不同的处理逻辑
             switch (definition.Mode)
@@ -81,20 +93,28 @@ namespace CombatSystem.Gameplay
                     {
                         return;
                     }
-                    SelectSingle(definition, caster, includeSelf, results);
+                    SelectSingle(definition, caster, includeSelf, origin, forward, results);
                     return;
                 case TargetingMode.Cone:
                     // 锥形模式：在前方锥形区域内选择目标
-                    CollectArea(definition, caster, includeSelf, results, true);
+                    CollectArea(definition, caster, includeSelf, origin, forward, results, true);
                     return;
                 case TargetingMode.Sphere:
                 case TargetingMode.Random:
                     // 球形/随机/链式模式：在球形区域内选择目标
-                    CollectArea(definition, caster, includeSelf, results, false);
+                    CollectArea(definition, caster, includeSelf, origin, forward, results, false);
+                    return;
+                case TargetingMode.Line:
+                    // 线性模式：沿方向的矩形区域
+                    CollectLine(definition, caster, includeSelf, origin, forward, results);
+                    return;
+                case TargetingMode.Box:
+                    // 盒形模式：中心为原点的矩形区域
+                    CollectBox(definition, caster, includeSelf, origin, forward, results);
                     return;
                 case TargetingMode.Chain:
                     // 链式模式：先选定首目标，再依次跳跃
-                    CollectChainTargets(definition, caster, explicitTarget, includeSelf, results);
+                    CollectChainTargets(definition, caster, explicitTarget, includeSelf, origin, forward, results);
                     return;
                 default:
                     AddSelf(caster, results);
@@ -109,7 +129,16 @@ namespace CombatSystem.Gameplay
         /// <param name="definition">目标选择配置</param>
         /// <param name="caster">施法者单位</param>
         /// <param name="results">输出结果列表，调用前会被清空</param>
-        public void CollectAllCandidates(TargetingDefinition definition, UnitRoot caster, List<CombatTarget> results)
+        /// <param name="hasAimPoint">是否有瞄准点</param>
+        /// <param name="aimPoint">瞄准点</param>
+        /// <param name="aimDirection">瞄准方向</param>
+        public void CollectAllCandidates(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            List<CombatTarget> results,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
         {
             if (results == null)
             {
@@ -131,18 +160,79 @@ namespace CombatSystem.Gameplay
             }
 
             var includeSelf = definition.IncludeSelf || definition.Team == TargetTeam.Self;
-            var origin = caster.transform.position;
+            var origin = ResolveOrigin(definition, caster, null, hasAimPoint, aimPoint);
+            var forward = ResolveForward(caster, origin, aimDirection);
 
-            // 锥形模式使用角度过滤
-            var useCone = definition.Mode == TargetingMode.Cone;
+            switch (definition.Mode)
+            {
+                case TargetingMode.Line:
+                    CollectBoxCandidates(definition, caster, includeSelf, origin, forward, false, results);
+                    return;
+                case TargetingMode.Box:
+                    CollectBoxCandidates(definition, caster, includeSelf, origin, forward, true, results);
+                    return;
+                default:
+                    // 锥形模式使用角度过滤
+                    var useCone = definition.Mode == TargetingMode.Cone;
 
-            // 获取范围
-            var range = useCone || definition.Mode == TargetingMode.Sphere
-                ? GetAreaRange(definition)
-                : Mathf.Max(0f, definition.Range);
+                    // 获取范围
+                    var range = useCone || definition.Mode == TargetingMode.Sphere
+                        ? GetAreaRange(definition)
+                        : Mathf.Max(0f, definition.Range);
 
-            // 收集所有候选目标
-            CollectCandidates(definition, caster, includeSelf, origin, range, useCone, results);
+                    // 收集所有候选目标
+                    CollectCandidates(definition, caster, includeSelf, origin, range, useCone, forward, results);
+                    return;
+            }
+        }
+
+        private Vector3 ResolveOrigin(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint)
+        {
+            var origin = caster != null ? caster.transform.position : transform.position;
+            if (definition != null && definition.Origin == TargetingOrigin.TargetPoint)
+            {
+                if (hasAimPoint)
+                {
+                    origin = aimPoint;
+                }
+                else if (explicitTarget != null)
+                {
+                    origin = explicitTarget.transform.position;
+                }
+            }
+
+            return origin;
+        }
+
+        private Vector3 ResolveForward(UnitRoot caster, Vector3 origin, Vector3 aimDirection)
+        {
+            var forward = caster != null ? caster.transform.forward : transform.forward;
+            if (aimDirection.sqrMagnitude > 0.0001f)
+            {
+                forward = aimDirection;
+            }
+            else if (caster != null)
+            {
+                var dir = origin - caster.transform.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    forward = dir.normalized;
+                }
+            }
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude > 0.0001f)
+            {
+                forward.Normalize();
+            }
+
+            return forward;
         }
 
         /// <summary>
@@ -233,14 +323,19 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 单体模式：从候选目标中选择最优的一个。
         /// </summary>
-        private void SelectSingle(TargetingDefinition definition, UnitRoot caster, bool includeSelf, List<CombatTarget> results)
+        private void SelectSingle(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            List<CombatTarget> results)
         {
-            var origin = caster != null ? caster.transform.position : transform.position;
             var range = Mathf.Max(0f, definition.Range);
 
             // 从对象池获取临时列表
             var candidates = SimpleListPool<CombatTarget>.Get();
-            CollectCandidates(definition, caster, includeSelf, origin, range, false, candidates);
+            CollectCandidates(definition, caster, includeSelf, origin, range, false, forward, candidates);
 
             if (candidates.Count > 0)
             {
@@ -269,28 +364,67 @@ namespace CombatSystem.Gameplay
         /// 区域模式：收集球形或锥形范围内的多个目标。
         /// </summary>
         /// <param name="useCone">是否使用锥形检测</param>
-        private void CollectArea(TargetingDefinition definition, UnitRoot caster, bool includeSelf, List<CombatTarget> results, bool useCone)
+        private void CollectArea(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            List<CombatTarget> results,
+            bool useCone)
         {
-            var origin = caster != null ? caster.transform.position : transform.position;
             var range = GetAreaRange(definition);
             // 随机模式强制使用随机排序
             var sort = definition.Mode == TargetingMode.Random ? TargetSort.Random : definition.Sort;
 
             var candidates = SimpleListPool<CombatTarget>.Get();
-            CollectCandidates(definition, caster, includeSelf, origin, range, useCone, candidates);
+            CollectCandidates(definition, caster, includeSelf, origin, range, useCone, forward, candidates);
             SelectTargets(definition, sort, origin, candidates, results);
             SimpleListPool<CombatTarget>.Release(candidates);
         }
 
-        private void CollectChainTargets(TargetingDefinition definition, UnitRoot caster, GameObject explicitTarget, bool includeSelf, List<CombatTarget> results)
+        private void CollectLine(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            List<CombatTarget> results)
+        {
+            var candidates = SimpleListPool<CombatTarget>.Get();
+            CollectBoxCandidates(definition, caster, includeSelf, origin, forward, false, candidates);
+            SelectTargets(definition, definition.Sort, origin, candidates, results);
+            SimpleListPool<CombatTarget>.Release(candidates);
+        }
+
+        private void CollectBox(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            List<CombatTarget> results)
+        {
+            var candidates = SimpleListPool<CombatTarget>.Get();
+            CollectBoxCandidates(definition, caster, includeSelf, origin, forward, true, candidates);
+            SelectTargets(definition, definition.Sort, origin, candidates, results);
+            SimpleListPool<CombatTarget>.Release(candidates);
+        }
+
+        private void CollectChainTargets(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            GameObject explicitTarget,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            List<CombatTarget> results)
         {
             var range = Mathf.Max(0f, definition.Range);
             if (range <= 0f)
             {
                 return;
             }
-
-            var origin = caster != null ? caster.transform.position : transform.position;
             var hasExplicit = false;
             var explicitCombatTarget = default(CombatTarget);
 
@@ -307,7 +441,7 @@ namespace CombatSystem.Gameplay
             }
 
             var candidates = SimpleListPool<CombatTarget>.Get();
-            CollectCandidates(definition, caster, includeSelf, origin, range, false, candidates);
+            CollectCandidates(definition, caster, includeSelf, origin, range, false, forward, candidates);
 
             var maxTargets = Mathf.Max(1, definition.MaxTargets);
             var first = default(CombatTarget);
@@ -349,6 +483,77 @@ namespace CombatSystem.Gameplay
             SimpleListPool<CombatTarget>.Release(candidates);
         }
 
+        private void CollectBoxCandidates(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            bool includeSelf,
+            Vector3 origin,
+            Vector3 forward,
+            bool centered,
+            List<CombatTarget> candidates)
+        {
+            var length = Mathf.Max(0f, definition.Range);
+            if (length <= 0f)
+            {
+                return;
+            }
+
+            var halfWidth = Mathf.Max(0.1f, definition.Radius);
+            var halfLength = length * 0.5f;
+            var halfHeight = Mathf.Max(1f, definition.Radius);
+
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = caster != null ? caster.transform.forward : transform.forward;
+            }
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = Vector3.forward;
+            }
+
+            forward.Normalize();
+
+            var center = origin;
+            if (!centered)
+            {
+                center += forward * halfLength;
+            }
+
+            center.y += halfHeight;
+
+            var halfExtents = new Vector3(halfWidth, halfHeight, halfLength);
+            var rotation = Quaternion.LookRotation(forward);
+            var count = Physics.OverlapBoxNonAlloc(center, halfExtents, overlapBuffer, rotation, targetLayers);
+
+            for (int i = 0; i < count; i++)
+            {
+                var collider = overlapBuffer[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                if (!CombatTarget.TryCreate(collider.gameObject, out var target))
+                {
+                    continue;
+                }
+
+                if (!IsValidTarget(caster, definition, target, includeSelf))
+                {
+                    continue;
+                }
+
+                if (ContainsTarget(candidates, target))
+                {
+                    continue;
+                }
+
+                candidates.Add(target);
+            }
+        }
+
         /// <summary>
         /// 收集球形范围内的所有候选目标。
         /// </summary>
@@ -363,6 +568,7 @@ namespace CombatSystem.Gameplay
             Vector3 origin,
             float range,
             bool useCone,
+            Vector3 forward,
             List<CombatTarget> candidates)
         {
             if (range <= 0f)
@@ -372,7 +578,15 @@ namespace CombatSystem.Gameplay
 
             // 使用预分配缓冲区进行球形重叠检测
             var count = Physics.OverlapSphereNonAlloc(origin, range, overlapBuffer, targetLayers);
-            var forward = caster != null ? caster.transform.forward : transform.forward;
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = caster != null ? caster.transform.forward : transform.forward;
+            }
+            forward.y = 0f;
+            if (forward.sqrMagnitude > 0.0001f)
+            {
+                forward.Normalize();
+            }
             // 锥形检测的最小点积阈值（角度越小，阈值越高）
             var minDot = useCone ? Mathf.Cos(Mathf.Deg2Rad * Mathf.Clamp(definition.Angle, 0f, 180f) * 0.5f) : -1f;
 

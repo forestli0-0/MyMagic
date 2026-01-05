@@ -1,5 +1,6 @@
 using CombatSystem.Core;
 using CombatSystem.Data;
+using UnityEngine;
 
 namespace CombatSystem.Gameplay
 {
@@ -11,6 +12,9 @@ namespace CombatSystem.Gameplay
         public readonly CombatEventHub EventHub;
         public readonly TargetingSystem Targeting;
         public readonly EffectExecutor Executor;
+        public readonly bool HasAimPoint;
+        public readonly Vector3 AimPoint;
+        public readonly Vector3 AimDirection;
 
         public SkillRuntimeContext(
             SkillUserComponent caster,
@@ -18,7 +22,10 @@ namespace CombatSystem.Gameplay
             SkillDefinition skill,
             CombatEventHub eventHub,
             TargetingSystem targeting,
-            EffectExecutor executor)
+            EffectExecutor executor,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
         {
             Caster = caster;
             CasterUnit = casterUnit;
@@ -26,6 +33,9 @@ namespace CombatSystem.Gameplay
             EventHub = eventHub;
             Targeting = targeting;
             Executor = executor;
+            HasAimPoint = hasAimPoint;
+            AimPoint = aimPoint;
+            AimDirection = aimDirection;
         }
     }
 }

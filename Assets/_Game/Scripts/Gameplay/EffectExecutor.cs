@@ -89,7 +89,14 @@ namespace CombatSystem.Gameplay
             if (effect.OverrideTargeting != null && targetingSystem != null)
             {
                 var overrideTargets = SimpleListPool<CombatTarget>.Get();
-                targetingSystem.CollectTargets(effect.OverrideTargeting, context.CasterUnit, target.GameObject, overrideTargets);
+                targetingSystem.CollectTargets(
+                    effect.OverrideTargeting,
+                    context.CasterUnit,
+                    target.GameObject,
+                    overrideTargets,
+                    context.HasAimPoint,
+                    context.AimPoint,
+                    context.AimDirection);
 
                 // 对每个新目标应用效果
                 for (int i = 0; i < overrideTargets.Count; i++)
@@ -409,7 +416,12 @@ namespace CombatSystem.Gameplay
             }
 
             // 使用当前施法者释放触发的技能
-            context.Caster.TryCast(effect.TriggeredSkill, target.IsValid ? target.GameObject : null);
+            context.Caster.TryCast(
+                effect.TriggeredSkill,
+                target.IsValid ? target.GameObject : null,
+                context.HasAimPoint,
+                context.AimPoint,
+                context.AimDirection);
         }
 
         private struct PendingEffect
