@@ -70,6 +70,8 @@ namespace CombatSystem.Gameplay
         public event Action<SkillCastEvent> SkillCastCompleted;
         /// <summary>当技能施法被打断时触发</summary>
         public event Action<SkillCastEvent> SkillCastInterrupted;
+        /// <summary>当技能列表发生变化时触发</summary>
+        public event Action SkillsChanged;
 
         /// <summary>是否正在施法中</summary>
         public bool IsCasting => isCasting;
@@ -236,6 +238,41 @@ namespace CombatSystem.Gameplay
                     runtimeSkills.Add(skill);
                 }
             }
+
+            SkillsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 覆盖当前技能列表（用于快速切换技能分页）。
+        /// </summary>
+        /// <param name="newSkills">新的技能列表</param>
+        /// <param name="includeBasicAttack">是否自动包含普攻</param>
+        public void SetSkills(IReadOnlyList<SkillDefinition> newSkills, bool includeBasicAttack)
+        {
+            runtimeSkills.Clear();
+
+            if (includeBasicAttack)
+            {
+                var basic = BasicAttack;
+                if (basic != null)
+                {
+                    runtimeSkills.Add(basic);
+                }
+            }
+
+            if (newSkills != null)
+            {
+                for (int i = 0; i < newSkills.Count; i++)
+                {
+                    var skill = newSkills[i];
+                    if (skill != null && !runtimeSkills.Contains(skill))
+                    {
+                        runtimeSkills.Add(skill);
+                    }
+                }
+            }
+
+            SkillsChanged?.Invoke();
         }
 
         /// <summary>

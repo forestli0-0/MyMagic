@@ -35,6 +35,8 @@ namespace CombatSystem.UI
         /// </summary>
         private CooldownComponent cooldown;
 
+        private int lastMaxSlots;
+
         private void Awake()
         {
             // 初始化时收集子节点中的槽位组件
@@ -49,12 +51,23 @@ namespace CombatSystem.UI
         /// <param name="maxSlots">最大槽位数量</param>
         public void Bind(SkillUserComponent user, CooldownComponent cooldownComponent, int maxSlots)
         {
+            if (skillUser != null)
+            {
+                skillUser.SkillsChanged -= HandleSkillsChanged;
+            }
+
             skillUser = user;
             cooldown = cooldownComponent;
+            lastMaxSlots = maxSlots;
             
             if (cooldown == null)
             {
                 Debug.LogWarning($"[SkillBarUI] CooldownComponent 为空，技能冷却显示将无法正常工作", this);
+            }
+
+            if (skillUser != null)
+            {
+                skillUser.SkillsChanged += HandleSkillsChanged;
             }
             
             CollectSlots();
@@ -100,6 +113,19 @@ namespace CombatSystem.UI
                     slot.RefreshCooldown(cooldown);
                 }
             }
+        }
+
+        private void OnDisable()
+        {
+            if (skillUser != null)
+            {
+                skillUser.SkillsChanged -= HandleSkillsChanged;
+            }
+        }
+
+        private void HandleSkillsChanged()
+        {
+            RebuildSlots(lastMaxSlots);
         }
 
         /// <summary>

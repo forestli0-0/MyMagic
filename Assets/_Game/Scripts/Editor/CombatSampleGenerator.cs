@@ -1329,6 +1329,7 @@ namespace CombatSystem.Editor
             RemoveRootObject(scene, "CombatSystems");
             RemoveRootObject(scene, "Sample_Player");
             RemoveRootObject(scene, "Sample_Enemy");
+            RemoveRootObject(scene, "Sample_Enemies");
             RemoveRootObject(scene, "HUD");
 
             SetupTopdownCamera();
@@ -1343,21 +1344,27 @@ namespace CombatSystem.Editor
 
             var player = CreateUnitPrimitive("Sample_Player", new Vector3(0f, 0f, 0f));
             player.tag = "Player";
-            var enemy = CreateUnitPrimitive("Sample_Enemy", new Vector3(3f, 0f, 0f));
-
             ConfigureUnitObject(player, assets.UnitPlayer, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
-            ConfigureUnitObject(enemy, assets.UnitEnemy, assets.EventHub, targetingSystem, effectExecutor, 2, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
 
-            var enemyAI = enemy.AddComponent<CombatAIController>();
-            SetComponentReference(enemyAI, "unitRoot", enemy.GetComponent<UnitRoot>());
-            SetComponentReference(enemyAI, "skillUser", enemy.GetComponent<SkillUserComponent>());
-            SetComponentReference(enemyAI, "health", enemy.GetComponent<HealthComponent>());
-            SetComponentReference(enemyAI, "movement", enemy.GetComponent<MovementComponent>());
-            SetComponentReference(enemyAI, "team", enemy.GetComponent<TeamComponent>());
-            SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
-            SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
-            SetComponentValue(enemyAI, "useNavMesh", false);
-            SetComponentValue(enemyAI, "moveSpeed", 2.5f);
+            var enemyGroup = new GameObject("Sample_Enemies");
+            var enemyPositions = BuildEnemyPositions(6, 4.5f);
+            for (int i = 0; i < enemyPositions.Length; i++)
+            {
+                var enemy = CreateUnitPrimitive($"Sample_Enemy_{i + 1}", enemyPositions[i]);
+                enemy.transform.SetParent(enemyGroup.transform, true);
+                ConfigureUnitObject(enemy, assets.UnitEnemy, assets.EventHub, targetingSystem, effectExecutor, 2, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
+
+                var enemyAI = enemy.AddComponent<CombatAIController>();
+                SetComponentReference(enemyAI, "unitRoot", enemy.GetComponent<UnitRoot>());
+                SetComponentReference(enemyAI, "skillUser", enemy.GetComponent<SkillUserComponent>());
+                SetComponentReference(enemyAI, "health", enemy.GetComponent<HealthComponent>());
+                SetComponentReference(enemyAI, "movement", enemy.GetComponent<MovementComponent>());
+                SetComponentReference(enemyAI, "team", enemy.GetComponent<TeamComponent>());
+                SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
+                SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
+                SetComponentValue(enemyAI, "useNavMesh", false);
+                SetComponentValue(enemyAI, "moveSpeed", 2.5f);
+            }
 
             var playerMove = player.AddComponent<PlayerMovementDriver>();
             SetComponentReference(playerMove, "movement", player.GetComponent<MovementComponent>());
@@ -1380,7 +1387,56 @@ namespace CombatSystem.Editor
             SetComponentReference(indicatorDriver, "unitRoot", player.GetComponent<UnitRoot>());
             SetComponentValue(indicatorDriver, "rotateCasterToAim", true);
 
-            CreateSampleHUD(assets, player.GetComponent<UnitRoot>(), projectilePool);
+            var skillBar = CreateSampleHUD(assets, player.GetComponent<UnitRoot>(), projectilePool);
+
+            var pageSwitcher = player.AddComponent<SkillPageSwitcher>();
+            SetComponentReference(pageSwitcher, "skillUser", player.GetComponent<SkillUserComponent>());
+            SetComponentReference(pageSwitcher, "skillBar", skillBar);
+            SetComponentValue(pageSwitcher, "slotsPerPage", assets.HUDDefault != null ? assets.HUDDefault.MaxSkillSlots : 6);
+            SetComponentValue(pageSwitcher, "includeBasicAttack", false);
+            SetComponentValue(pageSwitcher, "wrapPages", true);
+            ConfigureSkillPages(pageSwitcher, 0, new SkillPageData[]
+            {
+                new SkillPageData
+                {
+                    Name = "AOE & Targeting",
+                    Skills = new Object[]
+                    {
+                        assets.SkillCleave,
+                        assets.SkillChainLightning,
+                        assets.SkillRandomShot,
+                        assets.SkillShockwave,
+                        assets.SkillArcaneBolt,
+                        assets.SkillDash
+                    }
+                },
+                new SkillPageData
+                {
+                    Name = "Buffs & DOT",
+                    Skills = new Object[]
+                    {
+                        assets.SkillBleedStrike,
+                        assets.SkillPoisonDart,
+                        assets.SkillStoneSkin,
+                        assets.SkillMagicWard,
+                        assets.SkillQuickCast,
+                        assets.SkillTimeWarp
+                    }
+                },
+                new SkillPageData
+                {
+                    Name = "Utility",
+                    Skills = new Object[]
+                    {
+                        assets.SkillHeal,
+                        assets.SkillManaSurge,
+                        assets.SkillSummonTotem,
+                        assets.SkillTriggerFocus,
+                        assets.SkillExecute,
+                        assets.SkillFireball
+                    }
+                }
+            });
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, SampleScenePath);
@@ -1405,6 +1461,19 @@ namespace CombatSystem.Editor
             go.name = name;
             go.transform.position = position;
             return go;
+        }
+
+        private static Vector3[] BuildEnemyPositions(int count, float radius)
+        {
+            var result = new Vector3[Mathf.Max(1, count)];
+            var step = Mathf.PI * 2f / result.Length;
+            for (int i = 0; i < result.Length; i++)
+            {
+                var angle = step * i;
+                result[i] = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+            }
+
+            return result;
         }
 
         private static void ConfigureUnitObject(
@@ -1488,7 +1557,7 @@ namespace CombatSystem.Editor
         /// </summary>
         /// <param name="assets">示例资源集合</param>
         /// <param name="playerUnit">玩家单位根组件</param>
-        private static void CreateSampleHUD(SampleAssets assets, UnitRoot playerUnit, ProjectilePool projectilePool)
+        private static SkillBarUI CreateSampleHUD(SampleAssets assets, UnitRoot playerUnit, ProjectilePool projectilePool)
         {
             // 创建 HUD Canvas
             var hudCanvas = CreateCanvas("HUD");
@@ -1541,6 +1610,8 @@ namespace CombatSystem.Editor
             SetComponentReference(hudController, "combatLog", combatLog);
             SetComponentReference(hudController, "floatingText", floatingText);
             SetComponentReference(hudController, "worldCamera", FindMainCamera());
+
+            return skillBar;
         }
 
         /// <summary>
@@ -2575,6 +2646,36 @@ namespace CombatSystem.Editor
             });
             SetObjectList(so.FindProperty("aiProfiles"), new Object[] { assets.AIBasic });
             SetObjectList(so.FindProperty("hudConfigs"), new Object[] { assets.HUDDefault });
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private struct SkillPageData
+        {
+            public string Name;
+            public Object[] Skills;
+        }
+
+        private static void ConfigureSkillPages(SkillPageSwitcher switcher, int initialPage, SkillPageData[] pages)
+        {
+            var so = new SerializedObject(switcher);
+            so.FindProperty("initialPage").intValue = Mathf.Max(0, initialPage);
+
+            var list = so.FindProperty("pages");
+            if (pages == null || pages.Length == 0)
+            {
+                list.arraySize = 0;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            list.arraySize = pages.Length;
+            for (int i = 0; i < pages.Length; i++)
+            {
+                var page = list.GetArrayElementAtIndex(i);
+                page.FindPropertyRelative("name").stringValue = pages[i].Name ?? string.Empty;
+                SetObjectList(page.FindPropertyRelative("skills"), pages[i].Skills);
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
