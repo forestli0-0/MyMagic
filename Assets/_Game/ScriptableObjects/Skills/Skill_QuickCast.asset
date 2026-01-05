@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423d4e9b41e544a48bd5f4c93619d8bf, type: 3}
+  m_Name: Skill_QuickCast
+  m_EditorClassIdentifier: 
+  id: Skill_QuickCast
+  displayName: Quick Cast
+  icon: {fileID: 0}
+  resourceType: 0
+  resourceCost: 8
+  cooldown: 12
+  castTime: 0.1
+  channelTime: 0
+  canMoveWhileCasting: 0
+  canRotateWhileCasting: 1
+  targeting: {fileID: 11400000, guid: b09f3e999e6bfa34ea7ef9d4b4efc0f8, type: 2}
+  tags:
+  - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}
+  steps:
+  - trigger: 1
+    delay: 0
+    condition: {fileID: 0}
+    animationTrigger: 
+    vfxPrefab: {fileID: 0}
+    sfx: {fileID: 0}
+    effects:
+    - {fileID: 11400000, guid: f58dde4ddf7ac97468255407c1f399aa, type: 2}

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfba16f1c3106cd40957233da6ed1223, type: 3}
+  m_Name: Condition_TargetLowHealth
+  m_EditorClassIdentifier: 
+  id: Condition_TargetLowHealth
+  displayName: Target Low Health
+  op: 0
+  entries:
+  - type: 4
+    subject: 1
+    chance: 0
+    tag: {fileID: 0}
+    buff: {fileID: 0}
+    threshold: 0.3

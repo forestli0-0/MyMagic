@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f148c1a43f72bc489198a6dac902647, type: 3}
+  m_Name: Projectile_ArcaneBolt
+  m_EditorClassIdentifier: 
+  id: Projectile_ArcaneBolt
+  displayName: Arcane Bolt
+  prefab: {fileID: 5230172455147454662, guid: 5a3e95747d189484886f09ac625ad627, type: 3}
+  speed: 12
+  lifetime: 3
+  hitRadius: 0.2
+  homing: 0
+  homingTurnSpeed: 0
+  pierce: 0
+  maxPierce: 1
+  onHitEffects:
+  - {fileID: 11400000, guid: 425f221bc865a96498a67e4eec7eb275, type: 2}
