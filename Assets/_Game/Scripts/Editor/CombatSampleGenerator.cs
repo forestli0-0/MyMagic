@@ -438,11 +438,18 @@ namespace CombatSystem.Editor
             SetComponentReference(enemyAI, "unitRoot", enemy.GetComponent<UnitRoot>());
             SetComponentReference(enemyAI, "skillUser", enemy.GetComponent<SkillUserComponent>());
             SetComponentReference(enemyAI, "health", enemy.GetComponent<HealthComponent>());
+            SetComponentReference(enemyAI, "movement", enemy.GetComponent<MovementComponent>());
             SetComponentReference(enemyAI, "team", enemy.GetComponent<TeamComponent>());
             SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
             SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
             SetComponentValue(enemyAI, "useNavMesh", false);
             SetComponentValue(enemyAI, "moveSpeed", 2.5f);
+
+            var playerMove = player.AddComponent<PlayerMovementDriver>();
+            SetComponentReference(playerMove, "movement", player.GetComponent<MovementComponent>());
+            SetComponentReference(playerMove, "viewCamera", FindMainCamera());
+            SetComponentValue(playerMove, "moveSpeed", 6f);
+            SetComponentValue(playerMove, "useCameraYaw", true);
 
             var driver = player.AddComponent<SampleCombatDriver>();
             SetComponentReference(driver, "skillUser", player.GetComponent<SkillUserComponent>());
@@ -500,6 +507,8 @@ namespace CombatSystem.Editor
             var buffController = unitObject.AddComponent<BuffController>();
             var team = unitObject.AddComponent<TeamComponent>();
             var skillUser = unitObject.AddComponent<SkillUserComponent>();
+            var characterController = unitObject.AddComponent<CharacterController>();
+            var movement = unitObject.AddComponent<MovementComponent>();
 
             SetComponentReference(unitRoot, "unitDefinition", definition);
             SetComponentReference(unitRoot, "eventHub", eventHub);
@@ -545,6 +554,9 @@ namespace CombatSystem.Editor
             SetComponentReference(skillUser, "buffController", buffController);
             SetComponentReference(skillUser, "targetingSystem", targetingSystem);
             SetComponentReference(skillUser, "effectExecutor", effectExecutor);
+
+            SetComponentReference(movement, "controller", characterController);
+            SetComponentReference(movement, "skillUser", skillUser);
 
             SetComponentValue(team, "teamId", teamId);
         }

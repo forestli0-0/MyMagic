@@ -32,6 +32,8 @@ namespace CombatSystem.AI
         [SerializeField] private SkillUserComponent skillUser;
         [Tooltip("生命组件")]
         [SerializeField] private HealthComponent health;
+        [Tooltip("移动组件")]
+        [SerializeField] private MovementComponent movement;
         [Tooltip("队伍组件")]
         [SerializeField] private TeamComponent team;
         [Tooltip("目标选择系统")]
@@ -95,6 +97,7 @@ namespace CombatSystem.AI
             unitRoot = GetComponent<UnitRoot>();
             skillUser = GetComponent<SkillUserComponent>();
             health = GetComponent<HealthComponent>();
+            movement = GetComponent<MovementComponent>();
             team = GetComponent<TeamComponent>();
             navAgent = GetComponent<NavMeshAgent>();
         }
@@ -140,6 +143,11 @@ namespace CombatSystem.AI
 
             // 每帧执行状态行为
             UpdateState();
+
+            if (useNavMesh && navAgent != null && movement != null)
+            {
+                navAgent.nextPosition = transform.position;
+            }
         }
 
         /// <summary>
@@ -452,11 +460,21 @@ namespace CombatSystem.AI
             var destination = currentTarget.Transform.position;
             if (useNavMesh && navAgent != null)
             {
-                navAgent.updateRotation = CanRotateWhileCasting();
                 navAgent.speed = moveSpeed;
                 navAgent.stoppingDistance = Mathf.Max(stoppingDistance, selectedMinRange);
                 navAgent.isStopped = false;
                 navAgent.SetDestination(destination);
+
+                if (movement != null)
+                {
+                    navAgent.nextPosition = transform.position;
+                    movement.SetMoveVelocity(navAgent.desiredVelocity);
+                }
+                else
+                {
+                    navAgent.updateRotation = CanRotateWhileCasting();
+                }
+
                 return;
             }
 
@@ -485,11 +503,21 @@ namespace CombatSystem.AI
 
             if (useNavMesh && navAgent != null)
             {
-                navAgent.updateRotation = CanRotateWhileCasting();
                 navAgent.speed = moveSpeed;
                 navAgent.stoppingDistance = 0f;
                 navAgent.isStopped = false;
                 navAgent.SetDestination(destination);
+
+                if (movement != null)
+                {
+                    navAgent.nextPosition = transform.position;
+                    movement.SetMoveVelocity(navAgent.desiredVelocity);
+                }
+                else
+                {
+                    navAgent.updateRotation = CanRotateWhileCasting();
+                }
+
                 return;
             }
 
@@ -508,10 +536,21 @@ namespace CombatSystem.AI
             var distance = delta.magnitude;
             if (distance <= Mathf.Max(0.01f, stopDistance))
             {
+                if (movement != null)
+                {
+                    movement.Stop();
+                }
+
                 return;
             }
 
             var direction = delta / distance;
+            if (movement != null)
+            {
+                movement.SetMoveInput(direction, moveSpeed);
+                return;
+            }
+
             transform.position = origin + direction * moveSpeed * Time.deltaTime;
 
             // 面向移动方向
@@ -527,6 +566,11 @@ namespace CombatSystem.AI
         /// </summary>
         private void StopMovement()
         {
+            if (movement != null)
+            {
+                movement.Stop();
+            }
+
             if (useNavMesh && navAgent != null)
             {
                 if (!navAgent.isStopped)
@@ -537,6 +581,11 @@ namespace CombatSystem.AI
                 if (navAgent.hasPath)
                 {
                     navAgent.ResetPath();
+                }
+
+                if (movement != null)
+                {
+                    navAgent.nextPosition = transform.position;
                 }
             }
         }
@@ -803,6 +852,11 @@ namespace CombatSystem.AI
                 health = GetComponent<HealthComponent>();
             }
 
+            if (movement == null)
+            {
+                movement = GetComponent<MovementComponent>();
+            }
+
             if (team == null)
             {
                 team = GetComponent<TeamComponent>();
@@ -811,6 +865,12 @@ namespace CombatSystem.AI
             if (navAgent == null)
             {
                 navAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (navAgent != null && movement != null)
+            {
+                navAgent.updatePosition = false;
+                navAgent.updateRotation = false;
             }
 
             // 从 UnitDefinition 加载 AI 配置

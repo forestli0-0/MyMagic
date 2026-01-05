@@ -139,7 +139,8 @@ namespace CombatSystem.Gameplay
                 case EffectType.Move:
                     // 位移效果
                     var moveDistance = ModifierResolver.ApplyEffectModifiers(effect.MoveDistance, effect, context, target, ModifierParameters.EffectMoveDistance);
-                    ApplyMove(moveDistance, effect, context, target);
+                    var moveSpeed = ModifierResolver.ApplyEffectModifiers(effect.MoveSpeed, effect, context, target, ModifierParameters.EffectMoveSpeed);
+                    ApplyMove(moveDistance, moveSpeed, effect, context, target);
                     break;
                 case EffectType.Resource:
                     // 资源操作（法力等）
@@ -294,7 +295,7 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 应用位移效果（击退/拉拽/冲刺）。
         /// </summary>
-        private static void ApplyMove(float moveDistance, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
+        private static void ApplyMove(float moveDistance, float moveSpeed, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
             if (target.Transform == null || moveDistance == 0f)
             {
@@ -326,7 +327,23 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 直接位移（简化实现，实际应该用 MovementComponent）
+            var mover = target.Unit != null ? target.Unit.GetComponent<MovementComponent>() : target.GameObject.GetComponent<MovementComponent>();
+            if (mover != null)
+            {
+                var rotate = effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap;
+                if (moveSpeed > 0f)
+                {
+                    mover.ApplyForcedMove(direction, moveDistance, moveSpeed, rotate);
+                }
+                else
+                {
+                    mover.ApplyInstantMove(direction * moveDistance);
+                }
+
+                return;
+            }
+
+            // 直接位移（兼容未接入 MovementComponent 的目标）
             target.Transform.position += direction * moveDistance;
         }
 
