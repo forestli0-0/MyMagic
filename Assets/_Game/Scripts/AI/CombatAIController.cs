@@ -150,8 +150,11 @@ namespace CombatSystem.AI
             // 正在施法时保持施法状态
             if (skillUser != null && skillUser.IsCasting)
             {
-                currentState = AIState.CastSkill;
-                return;
+                if (!skillUser.CanMoveWhileCasting)
+                {
+                    currentState = AIState.CastSkill;
+                    return;
+                }
             }
 
             // 验证并获取目标
@@ -209,6 +212,13 @@ namespace CombatSystem.AI
         /// </summary>
         private void UpdateState()
         {
+            if (skillUser != null && skillUser.IsCasting && !skillUser.CanMoveWhileCasting)
+            {
+                StopMovement();
+                currentState = AIState.CastSkill;
+                return;
+            }
+
             switch (currentState)
             {
                 case AIState.Idle:
@@ -233,10 +243,10 @@ namespace CombatSystem.AI
                     break;
 
                 case AIState.Attack:
-                    // 攻击：停止移动并尝试释放技能
-                    StopMovement();
+                    // 攻击：尝试释放技能
                     if (!hasTarget)
                     {
+                        StopMovement();
                         currentState = AIState.Idle;
                         return;
                     }
@@ -247,11 +257,22 @@ namespace CombatSystem.AI
                         return;
                     }
 
+                    if (skillUser == null || !skillUser.IsCasting || !skillUser.CanMoveWhileCasting)
+                    {
+                        StopMovement();
+                    }
+
                     TryCastSelectedSkill();
                     break;
 
                 case AIState.CastSkill:
                     // 施法：等待施法完成
+                    if (skillUser != null && skillUser.CanMoveWhileCasting)
+                    {
+                        currentState = AIState.Attack;
+                        break;
+                    }
+
                     StopMovement();
                     if (skillUser == null || !skillUser.IsCasting)
                     {
@@ -431,6 +452,7 @@ namespace CombatSystem.AI
             var destination = currentTarget.Transform.position;
             if (useNavMesh && navAgent != null)
             {
+                navAgent.updateRotation = CanRotateWhileCasting();
                 navAgent.speed = moveSpeed;
                 navAgent.stoppingDistance = Mathf.Max(stoppingDistance, selectedMinRange);
                 navAgent.isStopped = false;
@@ -463,6 +485,7 @@ namespace CombatSystem.AI
 
             if (useNavMesh && navAgent != null)
             {
+                navAgent.updateRotation = CanRotateWhileCasting();
                 navAgent.speed = moveSpeed;
                 navAgent.stoppingDistance = 0f;
                 navAgent.isStopped = false;
@@ -492,7 +515,7 @@ namespace CombatSystem.AI
             transform.position = origin + direction * moveSpeed * Time.deltaTime;
 
             // 面向移动方向
-            if (direction.sqrMagnitude > 0.001f)
+            if (direction.sqrMagnitude > 0.001f && CanRotateWhileCasting())
             {
                 var rotation = Quaternion.LookRotation(direction);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, turnSpeed * Time.deltaTime);
@@ -516,6 +539,11 @@ namespace CombatSystem.AI
                     navAgent.ResetPath();
                 }
             }
+        }
+
+        private bool CanRotateWhileCasting()
+        {
+            return skillUser == null || !skillUser.IsCasting || skillUser.CanRotateWhileCasting;
         }
 
         #endregion
@@ -551,7 +579,11 @@ namespace CombatSystem.AI
             // 尝试释放技能
             if (skillUser.TryCast(selectedSkill, currentTarget.GameObject))
             {
-                currentState = AIState.CastSkill;
+                if (!skillUser.CanMoveWhileCasting)
+                {
+                    currentState = AIState.CastSkill;
+                }
+
                 selectedSkill = null;
             }
         }

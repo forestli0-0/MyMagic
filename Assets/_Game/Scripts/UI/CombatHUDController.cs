@@ -123,6 +123,7 @@ namespace CombatSystem.UI
                 eventHub.CooldownChanged += HandleCooldownChanged;
                 eventHub.SkillCastStarted += HandleSkillCastStarted;
                 eventHub.SkillCastCompleted += HandleSkillCastCompleted;
+                eventHub.SkillCastInterrupted += HandleSkillCastInterrupted;
             }
 
             if (targetBuffs != null)
@@ -140,6 +141,7 @@ namespace CombatSystem.UI
                 eventHub.CooldownChanged -= HandleCooldownChanged;
                 eventHub.SkillCastStarted -= HandleSkillCastStarted;
                 eventHub.SkillCastCompleted -= HandleSkillCastCompleted;
+                eventHub.SkillCastInterrupted -= HandleSkillCastInterrupted;
             }
 
             if (targetBuffs != null)
@@ -276,6 +278,20 @@ namespace CombatSystem.UI
             if (castBar != null && evt.Caster == targetUnit)
             {
                 castBar.Hide();
+            }
+        }
+
+        private void HandleSkillCastInterrupted(SkillCastEvent evt)
+        {
+            if (castBar != null && evt.Caster == targetUnit)
+            {
+                castBar.Hide();
+            }
+
+            if (combatLog != null && hudConfig != null && hudConfig.ShowCombatLog && evt.Skill != null)
+            {
+                var name = evt.Caster != null ? evt.Caster.name : "Unit";
+                combatLog.AddEntry($"{name} 的 {evt.Skill.DisplayName} 被打断");
             }
         }
 

@@ -89,9 +89,12 @@ namespace CombatSystem.Gameplay
                     return;
                 case TargetingMode.Sphere:
                 case TargetingMode.Random:
-                case TargetingMode.Chain:
                     // 球形/随机/链式模式：在球形区域内选择目标
                     CollectArea(definition, caster, includeSelf, results, false);
+                    return;
+                case TargetingMode.Chain:
+                    // 链式模式：先选定首目标，再依次跳跃
+                    CollectChainTargets(definition, caster, explicitTarget, includeSelf, results);
                     return;
                 default:
                     AddSelf(caster, results);
@@ -233,6 +236,73 @@ namespace CombatSystem.Gameplay
             var candidates = SimpleListPool<CombatTarget>.Get();
             CollectCandidates(definition, caster, includeSelf, origin, range, useCone, candidates);
             SelectTargets(definition, sort, origin, candidates, results);
+            SimpleListPool<CombatTarget>.Release(candidates);
+        }
+
+        private void CollectChainTargets(TargetingDefinition definition, UnitRoot caster, GameObject explicitTarget, bool includeSelf, List<CombatTarget> results)
+        {
+            var range = Mathf.Max(0f, definition.Range);
+            if (range <= 0f)
+            {
+                return;
+            }
+
+            var origin = caster != null ? caster.transform.position : transform.position;
+            var hasExplicit = false;
+            var explicitCombatTarget = default(CombatTarget);
+
+            if (explicitTarget != null && CombatTarget.TryCreate(explicitTarget, out explicitCombatTarget))
+            {
+                if (IsValidTarget(caster, definition, explicitCombatTarget, includeSelf))
+                {
+                    hasExplicit = true;
+                    if (explicitCombatTarget.Transform != null)
+                    {
+                        origin = explicitCombatTarget.Transform.position;
+                    }
+                }
+            }
+
+            var candidates = SimpleListPool<CombatTarget>.Get();
+            CollectCandidates(definition, caster, includeSelf, origin, range, false, candidates);
+
+            var maxTargets = Mathf.Max(1, definition.MaxTargets);
+            var first = default(CombatTarget);
+
+            if (hasExplicit)
+            {
+                first = explicitCombatTarget;
+            }
+            else if (!TrySelectInitialChainTarget(definition.Sort, origin, candidates, out first))
+            {
+                SimpleListPool<CombatTarget>.Release(candidates);
+                return;
+            }
+
+            if (!first.IsValid)
+            {
+                SimpleListPool<CombatTarget>.Release(candidates);
+                return;
+            }
+
+            results.Add(first);
+            RemoveCandidate(candidates, first);
+
+            var chainRangeSqr = range * range;
+            var last = first;
+
+            while (results.Count < maxTargets)
+            {
+                if (!TrySelectNextChainTarget(definition.Sort, last.Transform != null ? last.Transform.position : origin, candidates, chainRangeSqr, out var next))
+                {
+                    break;
+                }
+
+                results.Add(next);
+                RemoveCandidate(candidates, next);
+                last = next;
+            }
+
             SimpleListPool<CombatTarget>.Release(candidates);
         }
 
@@ -405,6 +475,81 @@ namespace CombatSystem.Gameplay
             return best;
         }
 
+        private static bool TrySelectInitialChainTarget(TargetSort sort, Vector3 origin, List<CombatTarget> candidates, out CombatTarget target)
+        {
+            target = default;
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            if (sort == TargetSort.Random)
+            {
+                target = candidates[Random.Range(0, candidates.Count)];
+                return target.IsValid;
+            }
+
+            if (sort == TargetSort.None)
+            {
+                target = candidates[0];
+                return target.IsValid;
+            }
+
+            target = SelectBestCandidate(sort, origin, candidates);
+            return target.IsValid;
+        }
+
+        private static bool TrySelectNextChainTarget(TargetSort sort, Vector3 origin, List<CombatTarget> candidates, float rangeSqr, out CombatTarget target)
+        {
+            target = default;
+            var found = false;
+            var bestMetric = float.MaxValue;
+            var randomCount = 0;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var candidate = candidates[i];
+                if (candidate.Transform == null)
+                {
+                    continue;
+                }
+
+                var distSqr = (candidate.Transform.position - origin).sqrMagnitude;
+                if (distSqr > rangeSqr)
+                {
+                    continue;
+                }
+
+                if (sort == TargetSort.Random)
+                {
+                    randomCount++;
+                    if (Random.Range(0, randomCount) == 0)
+                    {
+                        target = candidate;
+                        found = true;
+                    }
+
+                    continue;
+                }
+
+                if (sort == TargetSort.None)
+                {
+                    target = candidate;
+                    return true;
+                }
+
+                var metric = GetMetric(sort, origin, candidate);
+                if (!found || metric < bestMetric)
+                {
+                    bestMetric = metric;
+                    target = candidate;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
         /// <summary>
         /// 根据排序类型计算目标的排序指标。
         /// </summary>
@@ -470,6 +615,24 @@ namespace CombatSystem.Gameplay
             }
 
             return false;
+        }
+
+        private static void RemoveCandidate(List<CombatTarget> list, CombatTarget target)
+        {
+            if (!target.IsValid)
+            {
+                return;
+            }
+
+            var instanceId = target.GameObject.GetInstanceID();
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].GameObject.GetInstanceID() == instanceId)
+                {
+                    list.RemoveAt(i);
+                    return;
+                }
+            }
         }
 
         private static float GetAreaRange(TargetingDefinition definition)

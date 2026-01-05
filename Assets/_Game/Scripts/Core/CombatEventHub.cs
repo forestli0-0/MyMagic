@@ -26,6 +26,8 @@ namespace CombatSystem.Core
         public event Action<SkillCastEvent> SkillCastStarted;
         /// <summary> 当技能完成施放时触发 </summary>
         public event Action<SkillCastEvent> SkillCastCompleted;
+        /// <summary> 当技能施法被打断时触发 </summary>
+        public event Action<SkillCastEvent> SkillCastInterrupted;
 
         // --- 广播方法 (由 Component 调用) ---
 
@@ -36,6 +38,7 @@ namespace CombatSystem.Core
         public void RaiseCooldownChanged(CooldownChangedEvent evt) => CooldownChanged?.Invoke(evt);
         public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
         public void RaiseSkillCastCompleted(SkillCastEvent evt) => SkillCastCompleted?.Invoke(evt);
+        public void RaiseSkillCastInterrupted(SkillCastEvent evt) => SkillCastInterrupted?.Invoke(evt);
 
         private void OnDisable()
         {
@@ -47,6 +50,7 @@ namespace CombatSystem.Core
             CooldownChanged = null;
             SkillCastStarted = null;
             SkillCastCompleted = null;
+            SkillCastInterrupted = null;
         }
     }
 }

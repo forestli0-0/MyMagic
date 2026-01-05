@@ -41,6 +41,12 @@ namespace CombatSystem.Gameplay
             for (int i = pendingEffects.Count - 1; i >= 0; i--)
             {
                 var pending = pendingEffects[i];
+                if (!pending.Target.IsValid)
+                {
+                    pendingEffects.RemoveAt(i);
+                    continue;
+                }
+
                 if (pending.NextTime > now)
                 {
                     continue;
@@ -74,6 +80,27 @@ namespace CombatSystem.Gameplay
         /// <param name="trigger">触发时机</param>
         public void ExecuteEffect(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger)
         {
+            if (effect == null)
+            {
+                return;
+            }
+
+            // 如果效果定义了覆盖目标逻辑，重新收集目标
+            if (effect.OverrideTargeting != null && targetingSystem != null)
+            {
+                var overrideTargets = SimpleListPool<CombatTarget>.Get();
+                targetingSystem.CollectTargets(effect.OverrideTargeting, context.CasterUnit, target.GameObject, overrideTargets);
+
+                // 对每个新目标应用效果
+                for (int i = 0; i < overrideTargets.Count; i++)
+                {
+                    ExecuteEffectInternal(effect, context, overrideTargets[i], trigger, true);
+                }
+
+                SimpleListPool<CombatTarget>.Release(overrideTargets);
+                return;
+            }
+
             ExecuteEffectInternal(effect, context, target, trigger, true);
         }
 
@@ -154,22 +181,6 @@ namespace CombatSystem.Gameplay
                     SchedulePeriodicEffect(effect, context, target, trigger, duration, interval);
                     return;
                 }
-            }
-
-            // 如果效果定义了覆盖目标逻辑，重新收集目标
-            if (effect.OverrideTargeting != null && targetingSystem != null)
-            {
-                var overrideTargets = SimpleListPool<CombatTarget>.Get();
-                targetingSystem.CollectTargets(effect.OverrideTargeting, context.CasterUnit, target.GameObject, overrideTargets);
-
-                // 对每个新目标应用效果
-                for (int i = 0; i < overrideTargets.Count; i++)
-                {
-                    ApplyEffectInternal(effect, context, overrideTargets[i], trigger);
-                }
-
-                SimpleListPool<CombatTarget>.Release(overrideTargets);
-                return;
             }
 
             // 对原始目标应用效果

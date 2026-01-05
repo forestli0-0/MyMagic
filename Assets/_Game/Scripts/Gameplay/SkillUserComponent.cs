@@ -57,6 +57,7 @@ namespace CombatSystem.Gameplay
 
         // 施法状态
         private bool isCasting;
+        private float castStartTime;
         private float castEndTime;
         private float currentCastTime;
         private float currentChannelTime;
@@ -67,6 +68,8 @@ namespace CombatSystem.Gameplay
         public event Action<SkillCastEvent> SkillCastStarted;
         /// <summary>当技能施法完成时触发</summary>
         public event Action<SkillCastEvent> SkillCastCompleted;
+        /// <summary>当技能施法被打断时触发</summary>
+        public event Action<SkillCastEvent> SkillCastInterrupted;
 
         /// <summary>是否正在施法中</summary>
         public bool IsCasting => isCasting;
@@ -76,6 +79,12 @@ namespace CombatSystem.Gameplay
         public IReadOnlyList<SkillDefinition> Skills => runtimeSkills;
         /// <summary>获取普通攻击技能</summary>
         public SkillDefinition BasicAttack => basicAttackOverride != null ? basicAttackOverride : unitRoot?.Definition?.BasicAttack;
+        /// <summary>施法中是否允许移动</summary>
+        public bool CanMoveWhileCasting => !isCasting || (currentSkill != null && currentSkill.CanMoveWhileCasting);
+        /// <summary>施法中是否允许旋转</summary>
+        public bool CanRotateWhileCasting => !isCasting || (currentSkill != null && currentSkill.CanRotateWhileCasting);
+        /// <summary>是否处于引导阶段</summary>
+        public bool IsChanneling => isCasting && currentChannelTime > 0f && Time.time >= castStartTime + currentCastTime;
 
         private void Reset()
         {
@@ -137,6 +146,19 @@ namespace CombatSystem.Gameplay
             {
                 eventHub = unitRoot.EventHub;
             }
+
+            if (health != null)
+            {
+                health.Died += HandleUnitDied;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (health != null)
+            {
+                health.Died -= HandleUnitDied;
+            }
         }
 
         /// <summary>
@@ -167,16 +189,12 @@ namespace CombatSystem.Gameplay
             // 检查施法是否完成
             if (isCasting && Time.time >= castEndTime)
             {
-                isCasting = false;
                 if (currentSkill != null)
                 {
                     RaiseSkillCastCompleted(CreateContext(currentSkill), currentCastTime, currentChannelTime, currentIsChannel);
                 }
 
-                currentSkill = null;
-                currentCastTime = 0f;
-                currentChannelTime = 0f;
-                currentIsChannel = false;
+                ClearCastState();
             }
         }
 
@@ -286,6 +304,7 @@ namespace CombatSystem.Gameplay
             if (totalTime > 0f)
             {
                 isCasting = true;
+                castStartTime = now;
                 castEndTime = now + totalTime;
                 currentSkill = skill;
                 currentCastTime = castTime;
@@ -299,6 +318,31 @@ namespace CombatSystem.Gameplay
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 打断当前施法（不会触发 OnCastComplete 相关步骤）。
+        /// </summary>
+        public bool InterruptCast()
+        {
+            if (!isCasting || currentSkill == null)
+            {
+                return false;
+            }
+
+            var context = CreateContext(currentSkill);
+            ClearPendingSteps(currentSkill);
+            RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
+            ClearCastState();
+            return true;
+        }
+
+        /// <summary>
+        /// 主动取消当前施法。
+        /// </summary>
+        public bool CancelCast()
+        {
+            return InterruptCast();
         }
 
         /// <summary>
@@ -350,6 +394,11 @@ namespace CombatSystem.Gameplay
         internal void NotifyProjectileHit(SkillRuntimeContext context, CombatTarget target)
         {
             ScheduleTriggeredSteps(context, SkillStepTrigger.OnProjectileHit, target);
+        }
+
+        private void HandleUnitDied(HealthComponent source)
+        {
+            InterruptCast();
         }
 
         /// <summary>
@@ -532,6 +581,47 @@ namespace CombatSystem.Gameplay
             var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, channelTime, isChannel);
             SkillCastCompleted?.Invoke(evt);
             eventHub?.RaiseSkillCastCompleted(evt);
+        }
+
+        private void RaiseSkillCastInterrupted(SkillRuntimeContext context, float castTime, float channelTime, bool isChannel)
+        {
+            var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, channelTime, isChannel);
+            SkillCastInterrupted?.Invoke(evt);
+            eventHub?.RaiseSkillCastInterrupted(evt);
+        }
+
+        private void ClearPendingSteps(SkillDefinition skill)
+        {
+            if (skill == null || pendingSteps.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = pendingSteps.Count - 1; i >= 0; i--)
+            {
+                var pending = pendingSteps[i];
+                if (pending.Context.Caster != this || pending.Context.Skill != skill)
+                {
+                    continue;
+                }
+
+                if (pending.Trigger == SkillStepTrigger.OnCastStart || pending.Trigger == SkillStepTrigger.OnCastComplete)
+                {
+                    ReleaseHandle(pending.Targets);
+                    pendingSteps.RemoveAt(i);
+                }
+            }
+        }
+
+        private void ClearCastState()
+        {
+            isCasting = false;
+            castStartTime = 0f;
+            castEndTime = 0f;
+            currentSkill = null;
+            currentCastTime = 0f;
+            currentChannelTime = 0f;
+            currentIsChannel = false;
         }
 
         #region Target Handle Pool

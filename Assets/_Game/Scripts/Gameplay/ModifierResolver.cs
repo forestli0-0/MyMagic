@@ -42,6 +42,10 @@ namespace CombatSystem.Gameplay
         public const string EffectMoveSpeed = "Effect.MoveSpeed";
         /// <summary>目标侧抗性参数（用于伤害减免）</summary>
         public const string EffectResistance = "Effect.Resistance";
+        /// <summary>目标侧物理抗性参数</summary>
+        public const string EffectResistancePhysical = "Effect.Resistance.Physical";
+        /// <summary>目标侧魔法抗性参数</summary>
+        public const string EffectResistanceMagical = "Effect.Resistance.Magical";
     }
 
     /// <summary>
@@ -187,6 +191,11 @@ namespace CombatSystem.Gameplay
                 return amount;
             }
 
+            if (effect.DamageType == DamageType.True)
+            {
+                return amount;
+            }
+
             var targetBuffs = GetBuffController(target);
             if (targetBuffs == null || targetBuffs.ActiveBuffs.Count == 0)
             {
@@ -199,6 +208,21 @@ namespace CombatSystem.Gameplay
                 targetBuffs.ActiveBuffs,
                 ModifierTargetType.Effect,
                 ModifierParameters.EffectResistance,
+                null,
+                tags,
+                context,
+                target,
+                ModifierScope.Target);
+
+            var typeParameter = effect.DamageType == DamageType.Physical
+                ? ModifierParameters.EffectResistancePhysical
+                : ModifierParameters.EffectResistanceMagical;
+
+            resistance = ApplyModifiers(
+                resistance,
+                targetBuffs.ActiveBuffs,
+                ModifierTargetType.Effect,
+                typeParameter,
                 null,
                 tags,
                 context,
