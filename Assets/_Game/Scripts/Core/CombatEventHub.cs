@@ -28,6 +28,10 @@ namespace CombatSystem.Core
         public event Action<SkillCastEvent> SkillCastCompleted;
         /// <summary> 当技能施法被打断时触发 </summary>
         public event Action<SkillCastEvent> SkillCastInterrupted;
+        /// <summary> 当玩家或系统切换当前目标时触发 </summary>
+        public event Action<HealthComponent> TargetChanged;
+        /// <summary> 当玩家或系统清除当前目标时触发 </summary>
+        public event Action TargetCleared;
 
         // --- 广播方法 (由 Component 调用) ---
 
@@ -39,6 +43,8 @@ namespace CombatSystem.Core
         public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
         public void RaiseSkillCastCompleted(SkillCastEvent evt) => SkillCastCompleted?.Invoke(evt);
         public void RaiseSkillCastInterrupted(SkillCastEvent evt) => SkillCastInterrupted?.Invoke(evt);
+        public void RaiseTargetChanged(HealthComponent target) => TargetChanged?.Invoke(target);
+        public void RaiseTargetCleared() => TargetCleared?.Invoke();
 
         private void OnDisable()
         {
@@ -51,6 +57,8 @@ namespace CombatSystem.Core
             SkillCastStarted = null;
             SkillCastCompleted = null;
             SkillCastInterrupted = null;
+            TargetChanged = null;
+            TargetCleared = null;
         }
     }
 }

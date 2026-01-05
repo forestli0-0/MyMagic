@@ -105,5 +105,17 @@ namespace CombatSystem.UI
                 }
             }
         }
+
+        /// <summary>
+        /// 运行时动态配置 UI 组件引用。
+        /// 用于在代码中动态创建 ValueBarUI 时设置填充图片和文本组件。
+        /// </summary>
+        /// <param name="fillImage">填充 Image 组件</param>
+        /// <param name="text">数值文本组件</param>
+        public void Configure(Image fillImage, Text text)
+        {
+            fill = fillImage;
+            valueText = text;
+        }
     }
 }

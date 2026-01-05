@@ -25,6 +25,8 @@ namespace CombatSystem.Gameplay
         [SerializeField] private TargetingSystem targetingSystem;
         [Tooltip("单位根组件引用")]
         [SerializeField] private UnitRoot unitRoot;
+        [Tooltip("战斗事件中心")]
+        [SerializeField] private CombatEventHub eventHub;
 
         [Header("Aiming")]
         [Tooltip("释放技能时是否旋转角色朝向瞄准方向")]
@@ -97,6 +99,11 @@ namespace CombatSystem.Gameplay
                 viewCamera = Camera.main;
             }
 
+            if (eventHub == null && unitRoot != null)
+            {
+                eventHub = unitRoot.EventHub;
+            }
+
             // 设置指示器的锚点为当前物体
             if (indicator != null)
             {
@@ -117,6 +124,14 @@ namespace CombatSystem.Gameplay
             activeSkill = null;
             activeKey = KeyCode.None;
             hasAimPoint = false;
+        }
+
+        private void OnEnable()
+        {
+            if (eventHub == null && unitRoot != null)
+            {
+                eventHub = unitRoot.EventHub;
+            }
         }
 
         /// <summary>
@@ -392,6 +407,7 @@ namespace CombatSystem.Gameplay
             {
                 currentTarget = target;
                 indicator.SetHighlightTarget(currentTarget);
+                NotifyTargetChanged(currentTarget);
             }
         }
 
@@ -400,14 +416,19 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void ClearTargetHighlight()
         {
-            if (currentTarget != null)
+            if (currentTarget == null)
             {
-                currentTarget = null;
-                if (indicator != null)
-                {
-                    indicator.SetHighlightTarget(null);
-                }
+                return;
             }
+
+            currentTarget = null;
+            if (indicator != null)
+            {
+                indicator.SetHighlightTarget(null);
+            }
+
+            // 复用 NotifyTargetChanged 通知目标清除事件
+            NotifyTargetChanged(null);
         }
 
         /// <summary>
@@ -501,6 +522,26 @@ namespace CombatSystem.Gameplay
             indicator.Hide();
             indicator.ClearAimPoint();
             ClearTargetHighlight();
+        }
+
+        private void NotifyTargetChanged(Transform target)
+        {
+            if (eventHub == null)
+            {
+                return;
+            }
+
+            if (target == null)
+            {
+                eventHub.RaiseTargetCleared();
+                return;
+            }
+
+            var health = target.GetComponentInParent<HealthComponent>();
+            if (health != null)
+            {
+                eventHub.RaiseTargetChanged(health);
+            }
         }
 
         #endregion

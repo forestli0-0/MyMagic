@@ -159,6 +159,11 @@ namespace CombatSystem.Editor
                 SetSerialized(pauseHotkey, "pauseModal", pauseModal);
             }
 
+            if (root.HudCanvas != null)
+            {
+                BuildUnitHealthBars(root.HudCanvas);
+            }
+
             if (mainMenu != null)
             {
                 SetSerialized(uiManager, "initialScreen", mainMenu);
@@ -279,6 +284,43 @@ namespace CombatSystem.Editor
         private static void AssignCanvasGroup(UIModalBase modal, CanvasGroup group)
         {
             SetSerialized(modal, "canvasGroup", group);
+        }
+
+        private static void BuildUnitHealthBars(Canvas hudCanvas)
+        {
+            var barsRoot = FindOrCreateChild(hudCanvas.transform, "UnitBarsRoot");
+            var rect = barsRoot.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = barsRoot.AddComponent<RectTransform>();
+            }
+
+            StretchRect(rect);
+
+            var manager = barsRoot.GetComponent<UnitHealthBarManager>();
+            if (manager == null)
+            {
+                manager = barsRoot.AddComponent<UnitHealthBarManager>();
+            }
+
+            SetSerialized(manager, "barsRoot", rect);
+        }
+
+        private static GameObject FindOrCreateChild(Transform parent, string name)
+        {
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (child.name == name)
+                {
+                    return child.gameObject;
+                }
+            }
+
+            var go = new GameObject(name, typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(go, $"Create {name}");
+            go.transform.SetParent(parent, false);
+            return go;
         }
 
         private static void EnsureCanvasGroup(UIScreenBase screen)
