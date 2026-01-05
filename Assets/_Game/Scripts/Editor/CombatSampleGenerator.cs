@@ -451,13 +451,20 @@ namespace CombatSystem.Editor
             SetComponentValue(playerMove, "moveSpeed", 6f);
             SetComponentValue(playerMove, "useCameraYaw", true);
 
-            var driver = player.AddComponent<SampleCombatDriver>();
-            SetComponentReference(driver, "skillUser", player.GetComponent<SkillUserComponent>());
-            SetComponentReference(driver, "target", enemy.transform);
-            SetComponentReference(driver, "primarySkill", assets.SkillFireball);
-            SetComponentReference(driver, "secondarySkill", assets.SkillArcaneFocus);
-            SetComponentValue(driver, "autoCast", true);
-            SetComponentValue(driver, "autoInterval", 2.5f);
+            var indicatorRoot = new GameObject("SkillIndicator");
+            indicatorRoot.transform.SetParent(player.transform, false);
+            var indicatorLine = indicatorRoot.AddComponent<LineRenderer>();
+            var indicator = indicatorRoot.AddComponent<SkillIndicator>();
+            SetComponentReference(indicator, "line", indicatorLine);
+            SetComponentReference(indicator, "anchor", player.transform);
+
+            var indicatorDriver = player.AddComponent<PlayerSkillIndicatorDriver>();
+            SetComponentReference(indicatorDriver, "skillUser", player.GetComponent<SkillUserComponent>());
+            SetComponentReference(indicatorDriver, "indicator", indicator);
+            SetComponentReference(indicatorDriver, "viewCamera", FindMainCamera());
+            SetComponentReference(indicatorDriver, "targetingSystem", targetingSystem);
+            SetComponentReference(indicatorDriver, "unitRoot", player.GetComponent<UnitRoot>());
+            SetComponentValue(indicatorDriver, "rotateCasterToAim", true);
 
             CreateSampleHUD(assets, player.GetComponent<UnitRoot>(), projectilePool);
 

@@ -103,6 +103,49 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 收集技能范围内的所有有效候选目标（不限制数量）。
+        /// 用于技能指示器预览时的目标选择。
+        /// </summary>
+        /// <param name="definition">目标选择配置</param>
+        /// <param name="caster">施法者单位</param>
+        /// <param name="results">输出结果列表，调用前会被清空</param>
+        public void CollectAllCandidates(TargetingDefinition definition, UnitRoot caster, List<CombatTarget> results)
+        {
+            if (results == null)
+            {
+                return;
+            }
+
+            results.Clear();
+
+            if (definition == null || caster == null)
+            {
+                return;
+            }
+
+            // 自身模式不需要收集候选
+            if (definition.Mode == TargetingMode.Self)
+            {
+                AddSelf(caster, results);
+                return;
+            }
+
+            var includeSelf = definition.IncludeSelf || definition.Team == TargetTeam.Self;
+            var origin = caster.transform.position;
+
+            // 锥形模式使用角度过滤
+            var useCone = definition.Mode == TargetingMode.Cone;
+
+            // 获取范围
+            var range = useCone || definition.Mode == TargetingMode.Sphere
+                ? GetAreaRange(definition)
+                : Mathf.Max(0f, definition.Range);
+
+            // 收集所有候选目标
+            CollectCandidates(definition, caster, includeSelf, origin, range, useCone, results);
+        }
+
+        /// <summary>
         /// 验证目标是否满足选择条件。
         /// </summary>
         /// <param name="caster">施法者单位</param>
