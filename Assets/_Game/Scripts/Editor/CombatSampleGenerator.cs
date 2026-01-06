@@ -1422,10 +1422,7 @@ namespace CombatSystem.Editor
         {
             EnsureFolder("Assets", "Scenes");
 
-            var existingScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(SampleScenePath);
-            var scene = existingScene != null
-                ? EditorSceneManager.OpenScene(SampleScenePath, OpenSceneMode.Single)
-                : EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
             RemoveRootObject(scene, "CombatSystems");
             RemoveRootObject(scene, "Sample_Player");
@@ -1846,6 +1843,7 @@ namespace CombatSystem.Editor
             var panel = CreateUIRect("Panel", modalRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 320f), Vector2.zero);
             var panelBg = panel.gameObject.AddComponent<Image>();
             panelBg.sprite = GetDefaultUISprite();
+            panelBg.type = Image.Type.Sliced;
             panelBg.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
             panelBg.raycastTarget = true;
 
@@ -1886,6 +1884,7 @@ namespace CombatSystem.Editor
             var buttonRect = CreateUIRect($"Button_{label.Replace(" ", "")}", parent, Vector2.zero, Vector2.zero, new Vector2(380f, 48f), Vector2.zero);
             var buttonBg = buttonRect.gameObject.AddComponent<Image>();
             buttonBg.sprite = GetDefaultUISprite();
+            buttonBg.type = Image.Type.Sliced;
             buttonBg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
             buttonBg.raycastTarget = true;
 
@@ -1971,6 +1970,7 @@ namespace CombatSystem.Editor
             // 创建背景图片（禁用射线检测以优化性能）
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = GetDefaultUISprite();
+            bg.type = Image.Type.Sliced;
             bg.color = backgroundColor;
             bg.raycastTarget = false;
 
@@ -2007,6 +2007,7 @@ namespace CombatSystem.Editor
             // 背景
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = GetDefaultUISprite();
+            bg.type = Image.Type.Sliced;
             bg.color = new Color(0f, 0f, 0f, 0.6f);
             bg.raycastTarget = false;
 
@@ -2042,6 +2043,7 @@ namespace CombatSystem.Editor
             root.pivot = new Vector2(1f, 1f);
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = GetDefaultUISprite();
+            bg.type = Image.Type.Sliced;
             bg.color = new Color(0f, 0f, 0f, 0.5f);
             bg.raycastTarget = false;
 
@@ -2084,6 +2086,7 @@ namespace CombatSystem.Editor
                 slotBg.color = new Color(0f, 0f, 0f, 0.6f);
                 slotBg.raycastTarget = false;
                 slotBg.sprite = GetDefaultUISprite();
+                slotBg.type = Image.Type.Sliced;
                 // 技能图标
                 var iconRect = CreateUIRect("Icon", slot, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 var icon = iconRect.gameObject.AddComponent<Image>();
@@ -2177,7 +2180,10 @@ namespace CombatSystem.Editor
             var root = CreateUIRect("CombatLog", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(320f, 120f), new Vector2(10f, 10f));
             root.pivot = new Vector2(0f, 0f);
             // 半透明背景
+            // 半透明背景
             var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = GetDefaultUISprite();
+            bg.type = Image.Type.Sliced;
             bg.color = new Color(0f, 0f, 0f, 0.4f);
             bg.raycastTarget = false;
 

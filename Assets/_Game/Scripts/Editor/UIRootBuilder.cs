@@ -374,6 +374,7 @@ namespace CombatSystem.Editor
             {
                 NormalizeHudRoot(existingController.transform, hudCanvas.transform);
                 WireCombatHudFromRoot(existingController, existingController.transform);
+                EnsureHudBackgroundsSliced(existingController.transform, sprite);
                 TryWireCombatHud(existingController);
                 CleanupDuplicateHudRoots(hudCanvas, existingController);
                 return;
@@ -398,6 +399,7 @@ namespace CombatSystem.Editor
                 }
 
                 WireCombatHudFromRoot(existing, hudRoot.transform);
+                EnsureHudBackgroundsSliced(hudRoot.transform, sprite);
                 TryWireCombatHud(existing);
                 CleanupDuplicateHudRoots(hudCanvas, existing);
                 return;
@@ -461,6 +463,7 @@ namespace CombatSystem.Editor
                 SetSerialized(debugOverlay, "visible", true);
             }
 
+            EnsureHudBackgroundsSliced(hudRoot.transform, sprite);
             CleanupDuplicateHudRoots(hudCanvas, controller);
         }
 
@@ -694,6 +697,31 @@ namespace CombatSystem.Editor
             if (floatingText != null)
             {
                 SetSerializedIfNull(controller, "floatingText", floatingText);
+            }
+        }
+
+        private static void EnsureHudBackgroundsSliced(Transform root, Sprite defaultSprite)
+        {
+            if (root == null || defaultSprite == null)
+            {
+                return;
+            }
+
+            EnsureSlicedBackground(FindChildRecursive(root, "CombatLog"), defaultSprite);
+            EnsureSlicedBackground(FindChildRecursive(root, "DebugOverlay"), defaultSprite);
+        }
+
+        private static void EnsureSlicedBackground(Transform target, Sprite defaultSprite)
+        {
+            if (target == null || defaultSprite == null)
+            {
+                return;
+            }
+
+            var image = target.GetComponent<Image>();
+            if (image != null && image.sprite == defaultSprite && image.type != Image.Type.Sliced)
+            {
+                image.type = Image.Type.Sliced;
             }
         }
 
@@ -1077,6 +1105,7 @@ namespace CombatSystem.Editor
             bg.color = new Color(0f, 0f, 0f, 0.4f);
             bg.raycastTarget = false;
             bg.sprite = sprite;
+            bg.type = Image.Type.Sliced;
 
             var textRect = CreateHudRect("LogText", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             textRect.offsetMin = new Vector2(6f, 6f);
@@ -1115,6 +1144,7 @@ namespace CombatSystem.Editor
             root.anchoredPosition = new Vector2(-10f, -10f);
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = sprite;
+            bg.type = Image.Type.Sliced;
             bg.color = new Color(0f, 0f, 0f, 0.5f);
             bg.raycastTarget = false;
 
