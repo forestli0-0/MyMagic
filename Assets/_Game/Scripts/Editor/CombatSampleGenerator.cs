@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CombatSystem.Editor
@@ -1431,6 +1432,7 @@ namespace CombatSystem.Editor
             RemoveRootObject(scene, "Sample_Enemy");
             RemoveRootObject(scene, "Sample_Enemies");
             RemoveRootObject(scene, "HUD");
+            RemoveRootObject(scene, "EventSystem");  // 删除旧的事件系统，后面会重新创建
 
             SetupTopdownCamera();
 
@@ -1487,11 +1489,21 @@ namespace CombatSystem.Editor
             SetComponentReference(indicatorDriver, "unitRoot", player.GetComponent<UnitRoot>());
             SetComponentValue(indicatorDriver, "rotateCasterToAim", true);
 
-            var skillBar = CreateSampleHUD(assets, player.GetComponent<UnitRoot>(), projectilePool);
+            var skillBar = BuildUISystemHud(assets, player.GetComponent<UnitRoot>(), projectilePool);
+
+            // 确保 EventSystem 存在（用于 UI 交互）
+            EnsureEventSystem();
 
             var pageSwitcher = player.AddComponent<SkillPageSwitcher>();
             SetComponentReference(pageSwitcher, "skillUser", player.GetComponent<SkillUserComponent>());
-            SetComponentReference(pageSwitcher, "skillBar", skillBar);
+            if (skillBar != null)
+            {
+                SetComponentReference(pageSwitcher, "skillBar", skillBar);
+            }
+            else
+            {
+                Debug.LogWarning("[CombatSampleGenerator] SkillBarUI not found, SkillPageSwitcher UI binding skipped.");
+            }
             SetComponentValue(pageSwitcher, "slotsPerPage", assets.HUDDefault != null ? assets.HUDDefault.MaxSkillSlots : 6);
             SetComponentValue(pageSwitcher, "includeBasicAttack", false);
             SetComponentValue(pageSwitcher, "wrapPages", true);
@@ -1665,8 +1677,84 @@ namespace CombatSystem.Editor
         }
 
         /// <summary>
+        /// 使用 UI 系统构建 HUD，并返回 HUD 技能栏引用。
+        /// </summary>
+        private static SkillBarUI BuildUISystemHud(SampleAssets assets, UnitRoot playerUnit, ProjectilePool projectilePool)
+        {
+            var uiRoot = Object.FindFirstObjectByType<UIRoot>();
+            if (uiRoot == null)
+            {
+                UIRootBuilder.CreateUIRoot();
+                uiRoot = Object.FindFirstObjectByType<UIRoot>();
+            }
+
+            UIRootBuilder.BuildBasicUI();
+
+            if (uiRoot == null)
+            {
+                Debug.LogWarning("[CombatSampleGenerator] UIRoot not found after Build Basic UI.");
+                return null;
+            }
+
+            var hudController = uiRoot.GetComponentInChildren<CombatHUDController>(true);
+            if (hudController == null)
+            {
+                hudController = Object.FindFirstObjectByType<CombatHUDController>();
+            }
+
+            if (hudController == null)
+            {
+                Debug.LogWarning("[CombatSampleGenerator] CombatHUDController not found after Build Basic UI.");
+                return null;
+            }
+
+            if (playerUnit != null)
+            {
+                SetComponentReference(hudController, "targetUnit", playerUnit);
+            }
+
+            if (assets.EventHub != null)
+            {
+                SetComponentReference(hudController, "eventHub", assets.EventHub);
+            }
+
+            if (assets.HUDDefault != null)
+            {
+                SetComponentReference(hudController, "hudConfig", assets.HUDDefault);
+            }
+
+            var worldCamera = FindMainCamera();
+            if (worldCamera != null)
+            {
+                SetComponentReference(hudController, "worldCamera", worldCamera);
+            }
+
+            var debugOverlay = hudController.GetComponentInChildren<CombatDebugOverlay>(true);
+            if (debugOverlay != null)
+            {
+                if (playerUnit != null)
+                {
+                    SetComponentReference(debugOverlay, "targetUnit", playerUnit);
+                }
+
+                if (projectilePool != null)
+                {
+                    SetComponentReference(debugOverlay, "projectilePool", projectilePool);
+                }
+            }
+
+            var skillBar = hudController.GetComponentInChildren<SkillBarUI>(true);
+            if (skillBar == null)
+            {
+                Debug.LogWarning("[CombatSampleGenerator] SkillBarUI not found under CombatHUDController.");
+            }
+
+            return skillBar;
+        }
+
+        /// <summary>
         /// 创建示例 HUD 系统
-        /// 包含血条、资源条、施法条、技能栏、Buff 栏、战斗日志和飘字管理器
+        /// 包含血条、资源条、施法条、技能栏、Buff 栏、战斗日志、飘字管理器和暂停菜单
         /// </summary>
         /// <param name="assets">示例资源集合</param>
         /// <param name="playerUnit">玩家单位根组件</param>
@@ -1724,7 +1812,93 @@ namespace CombatSystem.Editor
             SetComponentReference(hudController, "floatingText", floatingText);
             SetComponentReference(hudController, "worldCamera", FindMainCamera());
 
+            // 添加 UIManager 并创建暂停菜单
+            var uiManager = hudCanvas.AddComponent<UIManager>();
+            var pauseModal = CreatePauseMenu(hudCanvas.transform);
+            SetComponentReference(pauseModal, "uiManager", uiManager);
+
+            // 添加暂停热键组件
+            var pauseHotkey = hudCanvas.AddComponent<PauseMenuHotkey>();
+            SetComponentReference(pauseHotkey, "uiManager", uiManager);
+            SetComponentReference(pauseHotkey, "pauseModal", pauseModal);
+            SetComponentValue(pauseHotkey, "toggleKey", KeyCode.Escape);
+            SetComponentValue(pauseHotkey, "onlyWhenGameplayScreen", false);
+
             return skillBar;
+        }
+
+        /// <summary>
+        /// 创建暂停菜单 Modal
+        /// 包含继续、保存、设置、返回主菜单按钮
+        /// </summary>
+        private static PauseMenuModal CreatePauseMenu(Transform parent)
+        {
+            // 创建 Modal 根对象
+            var modalRect = CreateUIRect("PauseMenuModal", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            modalRect.gameObject.SetActive(false); // 默认隐藏
+            
+            // 暗色背景遮罩
+            var background = modalRect.gameObject.AddComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0.7f);
+            background.raycastTarget = true;
+
+            // 中央面板
+            var panel = CreateUIRect("Panel", modalRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 320f), Vector2.zero);
+            var panelBg = panel.gameObject.AddComponent<Image>();
+            panelBg.sprite = GetDefaultUISprite();
+            panelBg.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+            panelBg.raycastTarget = true;
+
+            // 垂直布局
+            var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(20, 20, 20, 20);
+            layout.spacing = 10f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+
+            // 标题
+            var titleRect = CreateUIRect("Title", panel, Vector2.zero, Vector2.zero, new Vector2(380f, 50f), Vector2.zero);
+            var titleText = CreateText(titleRect.gameObject, "PAUSED", 30, TextAnchor.MiddleCenter, Color.white);
+            var titleLayout = titleRect.gameObject.AddComponent<LayoutElement>();
+            titleLayout.preferredHeight = 50f;
+
+            // 创建按钮
+            CreatePauseMenuButton(panel, "Resume");
+            CreatePauseMenuButton(panel, "Save Game");
+            CreatePauseMenuButton(panel, "Settings");
+            CreatePauseMenuButton(panel, "Main Menu");
+
+            // 添加 PauseMenuModal 组件
+            var modal = modalRect.gameObject.AddComponent<PauseMenuModal>();
+            var canvasGroup = modalRect.gameObject.AddComponent<CanvasGroup>();
+            
+            return modal;
+        }
+
+        /// <summary>
+        /// 创建暂停菜单按钮
+        /// </summary>
+        private static Button CreatePauseMenuButton(Transform parent, string label)
+        {
+            var buttonRect = CreateUIRect($"Button_{label.Replace(" ", "")}", parent, Vector2.zero, Vector2.zero, new Vector2(380f, 48f), Vector2.zero);
+            var buttonBg = buttonRect.gameObject.AddComponent<Image>();
+            buttonBg.sprite = GetDefaultUISprite();
+            buttonBg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            buttonBg.raycastTarget = true;
+
+            var button = buttonRect.gameObject.AddComponent<Button>();
+            button.targetGraphic = buttonBg;
+
+            var buttonLayout = buttonRect.gameObject.AddComponent<LayoutElement>();
+            buttonLayout.preferredHeight = 48f;
+
+            var textRect = CreateUIRect("Label", buttonRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            CreateText(textRect.gameObject, label, 20, TextAnchor.MiddleCenter, Color.white);
+
+            return button;
         }
 
         /// <summary>
@@ -1864,7 +2038,8 @@ namespace CombatSystem.Editor
         /// </summary>
         private static CombatDebugOverlay CreateDebugOverlay(Transform parent)
         {
-            var root = CreateUIRect("DebugOverlay", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(260f, 160f), new Vector2(-140f, -120f));
+            var root = CreateUIRect("DebugOverlay", parent, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(260f, 160f), new Vector2(-10f, -10f));
+            root.pivot = new Vector2(1f, 1f);
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = GetDefaultUISprite();
             bg.color = new Color(0f, 0f, 0f, 0.5f);
@@ -1998,7 +2173,9 @@ namespace CombatSystem.Editor
         /// <returns>创建的 CombatLogUI 组件</returns>
         private static CombatLogUI CreateCombatLog(Transform parent)
         {
-            var root = CreateUIRect("CombatLog", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(320f, 120f), new Vector2(170f, 80f));
+            // 设置 pivot 为左下角 (0, 0) 以便正确对齐
+            var root = CreateUIRect("CombatLog", parent, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(320f, 120f), new Vector2(10f, 10f));
+            root.pivot = new Vector2(0f, 0f);
             // 半透明背景
             var bg = root.gameObject.AddComponent<Image>();
             bg.color = new Color(0f, 0f, 0f, 0.4f);
@@ -2863,6 +3040,20 @@ namespace CombatSystem.Editor
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// 确保场景中存在 EventSystem
+        /// 用于处理 UI 交互事件
+        /// </summary>
+        private static void EnsureEventSystem()
+        {
+            if (Object.FindFirstObjectByType<EventSystem>() != null)
+            {
+                return;
+            }
+
+            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
         }
     }
 }

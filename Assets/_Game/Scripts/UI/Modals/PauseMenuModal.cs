@@ -1,3 +1,4 @@
+using CombatSystem.Persistence;
 using UnityEngine;
 
 namespace CombatSystem.UI
@@ -8,6 +9,10 @@ namespace CombatSystem.UI
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIScreenBase mainMenuScreen;
         [SerializeField] private UIModalBase settingsModal;
+        [SerializeField] private UIScreenBase settingsScreen;
+
+        [Header("Save")]
+        [SerializeField] private SaveGameManager saveManager;
 
         private void Reset()
         {
@@ -24,9 +29,46 @@ namespace CombatSystem.UI
 
         public void OpenSettings()
         {
-            if (uiManager != null && settingsModal != null)
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            if (settingsModal != null)
             {
                 uiManager.PushModal(settingsModal);
+                return;
+            }
+
+            if (settingsScreen != null)
+            {
+                uiManager.CloseAllModals();
+
+                if (settingsScreen is SettingsScreen screen)
+                {
+                    screen.RequestPauseGameplay(true);
+                    screen.RequestStackBack();
+                }
+
+                uiManager.PushScreen(settingsScreen);
+            }
+        }
+
+        public void SaveGame()
+        {
+            if (saveManager == null)
+            {
+                saveManager = FindFirstObjectByType<SaveGameManager>();
+            }
+
+            if (saveManager == null)
+            {
+                return;
+            }
+
+            if (!saveManager.SaveCurrent())
+            {
+                saveManager.SaveCurrentOrNew(null);
             }
         }
 

@@ -1,3 +1,4 @@
+using CombatSystem.Persistence;
 using UnityEngine;
 
 namespace CombatSystem.UI
@@ -10,12 +11,20 @@ namespace CombatSystem.UI
         [SerializeField] private UIScreenBase settingsScreen;
         [SerializeField] private UIScreenBase inGameScreen;
 
+        [Header("Save")]
+        [SerializeField] private SaveGameManager saveManager;
+
         private void Reset()
         {
             inputMode = UIInputMode.UI;
             if (uiManager == null)
             {
                 uiManager = FindFirstObjectByType<UIManager>();
+            }
+
+            if (saveManager == null)
+            {
+                saveManager = FindFirstObjectByType<SaveGameManager>();
             }
         }
 
@@ -53,6 +62,17 @@ namespace CombatSystem.UI
 
         public void ContinueGame()
         {
+            if (saveManager == null)
+            {
+                saveManager = FindFirstObjectByType<SaveGameManager>();
+            }
+
+            if (saveManager != null && saveManager.TryLoadLatest())
+            {
+                StartNewGame();
+                return;
+            }
+
             StartNewGame();
         }
 
