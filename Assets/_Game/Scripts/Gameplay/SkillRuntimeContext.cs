@@ -15,6 +15,7 @@ namespace CombatSystem.Gameplay
         public readonly bool HasAimPoint;
         public readonly Vector3 AimPoint;
         public readonly Vector3 AimDirection;
+        public readonly GameObject ExplicitTarget;
 
         public SkillRuntimeContext(
             SkillUserComponent caster,
@@ -25,7 +26,8 @@ namespace CombatSystem.Gameplay
             EffectExecutor executor,
             bool hasAimPoint = false,
             Vector3 aimPoint = default,
-            Vector3 aimDirection = default)
+            Vector3 aimDirection = default,
+            GameObject explicitTarget = null)
         {
             Caster = caster;
             CasterUnit = casterUnit;
@@ -36,6 +38,7 @@ namespace CombatSystem.Gameplay
             HasAimPoint = hasAimPoint;
             AimPoint = aimPoint;
             AimDirection = aimDirection;
+            ExplicitTarget = explicitTarget;
         }
     }
 }

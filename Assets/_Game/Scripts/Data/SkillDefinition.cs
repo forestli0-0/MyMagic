@@ -25,6 +25,21 @@ namespace CombatSystem.Data
         [SerializeField] private float channelTime;
         [SerializeField] private bool canMoveWhileCasting;
         [SerializeField] private bool canRotateWhileCasting = true;
+
+        // 施法节奏与输入缓冲配置
+        [Header("Cast Flow")]
+        [Tooltip("Post-cast recovery time")]
+        [SerializeField] private float postCastTime;
+        [Tooltip("Global cooldown duration")]
+        [SerializeField] private float gcdDuration;
+        [Tooltip("Channel tick interval (0 = no ticks)")]
+        [SerializeField] private float channelTickInterval;
+        [Tooltip("Input queue window before cast ends")]
+        [SerializeField] private float queueWindow;
+        [Tooltip("How to handle multiple queued inputs")]
+        [SerializeField] private SkillQueuePolicy queuePolicy = SkillQueuePolicy.Replace;
+        [Tooltip("Target snapshot behavior for this skill")]
+        [SerializeField] private TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart;
         
         [Header("逻辑与筛选")]
         [Tooltip("该技能寻找目标的方式")]
@@ -44,6 +59,12 @@ namespace CombatSystem.Data
         public float ChannelTime => channelTime;
         public bool CanMoveWhileCasting => canMoveWhileCasting;
         public bool CanRotateWhileCasting => canRotateWhileCasting;
+        public float PostCastTime => postCastTime;
+        public float GcdDuration => gcdDuration;
+        public float ChannelTickInterval => channelTickInterval;
+        public float QueueWindow => queueWindow;
+        public SkillQueuePolicy QueuePolicy => queuePolicy;
+        public TargetSnapshotPolicy TargetSnapshotPolicy => targetSnapshotPolicy;
         public TargetingDefinition Targeting => targeting;
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<SkillStep> Steps => steps;
@@ -71,4 +92,3 @@ namespace CombatSystem.Data
         public List<EffectDefinition> effects = new List<EffectDefinition>(); // 该步骤产生的所有直接效果
     }
 }
-

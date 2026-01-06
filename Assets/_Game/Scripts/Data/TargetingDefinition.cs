@@ -41,6 +41,15 @@ namespace CombatSystem.Data
         [Tooltip("如果目标具备这些标签，则会被排除在外")]
         [SerializeField] private List<TagDefinition> blockedTags = new List<TagDefinition>();
 
+        // 命中校验与视线检测配置
+        [Header("Validation")]
+        [Tooltip("How to validate targets at execution time")]
+        [SerializeField] private HitValidationPolicy hitValidation = HitValidationPolicy.AliveOnly;
+        [Tooltip("Line of sight mask used by validation")]
+        [SerializeField] private LayerMask lineOfSightMask = ~0;
+        [Tooltip("Line of sight ray height offset")]
+        [SerializeField] private float lineOfSightHeight = 1.5f;
+
         public TargetingMode Mode => mode;
         public TargetTeam Team => team;
         public TargetingOrigin Origin => origin;
@@ -53,5 +62,8 @@ namespace CombatSystem.Data
         public bool AllowEmpty => allowEmpty;
         public IReadOnlyList<TagDefinition> RequiredTags => requiredTags;
         public IReadOnlyList<TagDefinition> BlockedTags => blockedTags;
+        public HitValidationPolicy HitValidation => hitValidation;
+        public LayerMask LineOfSightMask => lineOfSightMask;
+        public float LineOfSightHeight => lineOfSightHeight;
     }
 }

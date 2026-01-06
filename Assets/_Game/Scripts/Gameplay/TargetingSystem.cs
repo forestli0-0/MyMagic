@@ -186,6 +186,95 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        /// <summary>
+        /// 检查目标是否仍在目标选择形状内（用于命中校验）。
+        /// </summary>
+        public bool IsWithinTargetingShape(
+            TargetingDefinition definition,
+            UnitRoot caster,
+            CombatTarget target,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection)
+        {
+            if (definition == null || !target.IsValid || target.Transform == null)
+            {
+                return false;
+            }
+
+            // 基于当前目标定义重新计算形状范围
+            var origin = ResolveOrigin(definition, caster, explicitTarget, hasAimPoint, aimPoint);
+            var forward = ResolveForward(caster, origin, aimDirection);
+
+            switch (definition.Mode)
+            {
+                case TargetingMode.Self:
+                    return caster != null && (target.Unit == caster || target.GameObject == caster.gameObject);
+                case TargetingMode.Single:
+                    return IsWithinRange(origin, target.Transform.position, definition.Range);
+                case TargetingMode.Cone:
+                    return IsWithinCone(origin, forward, target.Transform.position, GetAreaRange(definition), definition.Angle);
+                case TargetingMode.Sphere:
+                case TargetingMode.Random:
+                case TargetingMode.Chain:
+                    return IsWithinRange(origin, target.Transform.position, GetAreaRange(definition));
+                case TargetingMode.Line:
+                    return IsWithinBox(origin, forward, target.Transform.position, definition.Range, definition.Radius, false);
+                case TargetingMode.Box:
+                    return IsWithinBox(origin, forward, target.Transform.position, definition.Range, definition.Radius, true);
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// 检查目标与施法者之间的视线是否被阻挡。
+        /// </summary>
+        public bool HasLineOfSight(TargetingDefinition definition, UnitRoot caster, CombatTarget target)
+        {
+            if (definition == null || target.Transform == null)
+            {
+                return true;
+            }
+
+            var mask = definition.LineOfSightMask;
+            if (mask == 0)
+            {
+                return true;
+            }
+
+            // 使用统一高度发射射线，避免地面起伏导致误判
+            var origin = caster != null ? caster.transform.position : transform.position;
+            var height = definition.LineOfSightHeight;
+            var originPos = origin + Vector3.up * height;
+            var targetPos = target.Transform.position + Vector3.up * height;
+            var delta = targetPos - originPos;
+            var distance = delta.magnitude;
+
+            if (distance <= 0.001f)
+            {
+                return true;
+            }
+
+            var direction = delta / distance;
+            if (Physics.Raycast(originPos, direction, out var hit, distance, mask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider != null)
+                {
+                    var hitTransform = hit.collider.transform;
+                    if (hitTransform == target.Transform || hitTransform.IsChildOf(target.Transform))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
         private Vector3 ResolveOrigin(
             TargetingDefinition definition,
             UnitRoot caster,
@@ -900,6 +989,76 @@ namespace CombatSystem.Gameplay
             }
 
             return Mathf.Max(0f, definition.Range);
+        }
+
+        private static bool IsWithinRange(Vector3 origin, Vector3 target, float range)
+        {
+            if (range <= 0f)
+            {
+                return true;
+            }
+
+            var delta = target - origin;
+            delta.y = 0f;
+            return delta.sqrMagnitude <= range * range;
+        }
+
+        private static bool IsWithinCone(Vector3 origin, Vector3 forward, Vector3 target, float range, float angle)
+        {
+            if (!IsWithinRange(origin, target, range))
+            {
+                return false;
+            }
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = Vector3.forward;
+            }
+
+            forward.Normalize();
+
+            var toTarget = target - origin;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude <= 0.0001f)
+            {
+                return true;
+            }
+
+            toTarget.Normalize();
+            var minDot = Mathf.Cos(Mathf.Deg2Rad * Mathf.Clamp(angle, 0f, 180f) * 0.5f);
+            return Vector3.Dot(forward, toTarget) >= minDot;
+        }
+
+        private static bool IsWithinBox(Vector3 origin, Vector3 forward, Vector3 target, float length, float halfWidth, bool centered)
+        {
+            var safeLength = Mathf.Max(0f, length);
+            if (safeLength <= 0f)
+            {
+                return false;
+            }
+
+            var safeHalfWidth = Mathf.Max(0.1f, halfWidth);
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = Vector3.forward;
+            }
+
+            forward.Normalize();
+            var right = new Vector3(forward.z, 0f, -forward.x);
+
+            var delta = target - origin;
+            delta.y = 0f;
+
+            var z = Vector3.Dot(delta, forward);
+            var x = Vector3.Dot(delta, right);
+
+            var halfLength = safeLength * 0.5f;
+            var zMin = centered ? -halfLength : 0f;
+            var zMax = centered ? halfLength : safeLength;
+
+            return x >= -safeHalfWidth && x <= safeHalfWidth && z >= zMin && z <= zMax;
         }
 
         /// <summary>

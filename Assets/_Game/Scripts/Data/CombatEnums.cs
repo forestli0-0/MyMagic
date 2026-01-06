@@ -25,10 +25,11 @@ namespace CombatSystem.Data
     /// </summary>
     public enum SkillStepTrigger
     {
-        OnCastStart,        // 施法开始
-        OnCastComplete,     // 施法完成
-        OnHit,              // 命中时（直接命中）
-        OnProjectileHit     // 投射物命中时
+        OnCastStart = 0,        // 施法开始
+        OnCastComplete = 1,     // 施法完成
+        OnHit = 2,              // 命中时（直接命中）
+        OnProjectileHit = 3,    // 投射物命中时
+        OnChannelTick = 4       // 引导中周期触发
     }
 
     /// <summary>
@@ -191,5 +192,35 @@ namespace CombatSystem.Data
         Leap,       // 跳跃
         Knockback,  // 击退
         Pull        // 拉取
+    }
+
+    /// <summary>
+    /// 技能输入缓冲策略。
+    /// </summary>
+    public enum SkillQueuePolicy
+    {
+        Replace,    // 替换已有队列
+        Ignore      // 忽略新的请求
+    }
+
+    /// <summary>
+    /// 目标快照策略。
+    /// </summary>
+    public enum TargetSnapshotPolicy
+    {
+        AtCastStart,     // 施法开始时快照
+        AtCastComplete,  // 施法完成/引导阶段重新选择
+        PerStep          // 每个步骤执行时重新选择
+    }
+
+    /// <summary>
+    /// 命中校验策略。
+    /// </summary>
+    public enum HitValidationPolicy
+    {
+        None,               // 不校验
+        AliveOnly,          // 只校验存活
+        InRange,            // 校验范围/形状
+        InRangeAndLoS       // 校验范围并检查视线
     }
 }

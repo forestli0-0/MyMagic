@@ -9,6 +9,7 @@ namespace CombatSystem.UI
         [SerializeField] private UIScreenBase initialScreen;
         [SerializeField] private bool hideAllScreensOnStart = true;
         [SerializeField] private bool hideHudOnStart = true;
+        [SerializeField] private bool pauseGameplayOnUiScreens = true;
 
         [Header("Roots")]
         [SerializeField] private Transform screensRoot;
@@ -23,6 +24,8 @@ namespace CombatSystem.UI
         private UIInputMode inputMode = UIInputMode.Gameplay;
         private int pauseCount;
         private float cachedTimeScale = 1f;
+        private float screenCachedTimeScale = 1f;
+        private bool pausedByScreen;
         private bool initialized;
 
         public event Action<UIInputMode> InputModeChanged;
@@ -260,6 +263,7 @@ namespace CombatSystem.UI
             if (modalStack.Count > 0)
             {
                 SetInputMode(UIInputMode.UI);
+                UpdateScreenPauseState();
                 return;
             }
 
@@ -268,6 +272,8 @@ namespace CombatSystem.UI
             {
                 SetInputMode(screen.InputMode);
             }
+
+            UpdateScreenPauseState();
         }
 
         private void SetInputMode(UIInputMode mode)
@@ -308,6 +314,44 @@ namespace CombatSystem.UI
             if (Mathf.Approximately(Time.timeScale, 0f))
             {
                 Time.timeScale = Mathf.Max(0f, cachedTimeScale);
+            }
+        }
+
+        private void UpdateScreenPauseState()
+        {
+            if (!pauseGameplayOnUiScreens)
+            {
+                return;
+            }
+
+            if (modalStack.Count > 0)
+            {
+                return;
+            }
+
+            var screen = screenStack.Peek();
+            var shouldPause = screen != null && screen.InputMode == UIInputMode.UI;
+
+            if (shouldPause)
+            {
+                if (!pausedByScreen)
+                {
+                    screenCachedTimeScale = Time.timeScale;
+                    if (!Mathf.Approximately(Time.timeScale, 0f))
+                    {
+                        Time.timeScale = 0f;
+                    }
+
+                    pausedByScreen = true;
+                }
+
+                return;
+            }
+
+            if (pausedByScreen)
+            {
+                Time.timeScale = Mathf.Max(0f, screenCachedTimeScale);
+                pausedByScreen = false;
             }
         }
 

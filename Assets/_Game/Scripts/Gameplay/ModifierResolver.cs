@@ -28,6 +28,14 @@ namespace CombatSystem.Gameplay
         public const string SkillCastTime = "Skill.CastTime";
         /// <summary>技能引导时间</summary>
         public const string SkillChannelTime = "Skill.ChannelTime";
+        /// <summary>技能后摇时间</summary>
+        public const string SkillPostCastTime = "Skill.PostCastTime";
+        /// <summary>技能公共冷却</summary>
+        public const string SkillGcdDuration = "Skill.GcdDuration";
+        /// <summary>技能引导 Tick 间隔</summary>
+        public const string SkillChannelTickInterval = "Skill.ChannelTickInterval";
+        /// <summary>技能输入缓冲窗口</summary>
+        public const string SkillQueueWindow = "Skill.QueueWindow";
 
         // ========== 效果参数 ==========
         /// <summary>效果数值（伤害/治疗量）</summary>

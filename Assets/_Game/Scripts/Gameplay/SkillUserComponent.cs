@@ -63,10 +63,20 @@ namespace CombatSystem.Gameplay
         private float currentChannelTime;
         private SkillDefinition currentSkill;
         private bool currentIsChannel;
+        private float currentPostCastTime;
+        private float currentQueueWindow;
         private SkillRuntimeContext currentContext;
         private bool currentHasAimPoint;
         private Vector3 currentAimPoint;
         private Vector3 currentAimDirection;
+        // 后摇结束时间，未到此时间不可继续施法
+        private float recoveryEndTime;
+        // 公共冷却结束时间，未到此时间不可继续施法
+        private float gcdEndTime;
+        // 是否存在已排队的技能请求
+        private bool hasQueuedCast;
+        // 单槽技能请求队列（用于输入缓冲）
+        private QueuedCast queuedCast;
 
         /// <summary>当技能开始施法时触发</summary>
         public event Action<SkillCastEvent> SkillCastStarted;
@@ -205,6 +215,12 @@ namespace CombatSystem.Gameplay
 
                 ClearCastState();
             }
+
+            if (!isCasting)
+            {
+                // 施法结束后尝试消耗输入缓冲
+                TryConsumeQueuedCast();
+            }
         }
 
         /// <summary>
@@ -304,9 +320,19 @@ namespace CombatSystem.Gameplay
         /// <returns>若成功开始施法则返回 true</returns>
         public bool TryCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
         {
-            // 校验释放条件
+            if (skill == null)
+            {
+                return false;
+            }
+
             if (!CanCast(skill))
             {
+                // 施法/后摇/GCD期间允许进入输入缓冲
+                if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+                {
+                    return false;
+                }
+
                 return false;
             }
 
@@ -348,12 +374,16 @@ namespace CombatSystem.Gameplay
             }
 
             // 创建技能上下文
-            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection);
+            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ResourceCost, skill, context, primaryTarget, ModifierParameters.SkillResourceCost));
             var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
             var castTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.CastTime, skill, context, primaryTarget, ModifierParameters.SkillCastTime));
             var channelTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTime, skill, context, primaryTarget, ModifierParameters.SkillChannelTime));
+            var postCastTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.PostCastTime, skill, context, primaryTarget, ModifierParameters.SkillPostCastTime));
+            var gcdDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.GcdDuration, skill, context, primaryTarget, ModifierParameters.SkillGcdDuration));
+            var channelTickInterval = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTickInterval, skill, context, primaryTarget, ModifierParameters.SkillChannelTickInterval));
+            var queueWindow = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.QueueWindow, skill, context, primaryTarget, ModifierParameters.SkillQueueWindow));
             var isChannel = channelTime > 0f;
             var totalTime = castTime + channelTime;
 
@@ -372,10 +402,18 @@ namespace CombatSystem.Gameplay
 
             var now = Time.time;
 
+            if (gcdDuration > 0f)
+            {
+                // 公共冷却可能被更长的技能覆盖
+                gcdEndTime = Mathf.Max(gcdEndTime, now + gcdDuration);
+            }
+
             // 调度技能步骤
             var targetHandle = GetTargetHandle(targets);
             ScheduleSteps(skill, SkillStepTrigger.OnCastStart, now, targetHandle, context);
             ScheduleSteps(skill, SkillStepTrigger.OnCastComplete, now + totalTime, targetHandle, context);
+            // 引导期间的周期步骤
+            ScheduleChannelTicks(skill, now, castTime, channelTime, channelTickInterval, targetHandle, context);
 
             // 如果没有任何步骤引用该目标列表，立即释放
             if (targetHandle.RefCount == 0)
@@ -386,6 +424,9 @@ namespace CombatSystem.Gameplay
             // 派发施法开始事件
             RaiseSkillCastStarted(context, castTime, channelTime, isChannel);
             buffController?.NotifySkillCast(context, primaryTarget);
+
+            currentQueueWindow = queueWindow;
+            currentPostCastTime = postCastTime;
 
             // 如果有施法或引导时间，进入施法状态
             if (totalTime > 0f)
@@ -401,10 +442,14 @@ namespace CombatSystem.Gameplay
                 currentHasAimPoint = hasAimPoint;
                 currentAimPoint = aimPoint;
                 currentAimDirection = aimDirection;
+                // 后摇锁定开始于施法结束
+                recoveryEndTime = castEndTime + postCastTime;
             }
             else
             {
                 // 瞬发技能立即完成
+                // 瞬发也会进入后摇锁定
+                recoveryEndTime = now + postCastTime;
                 RaiseSkillCastCompleted(context, castTime, channelTime, isChannel);
             }
 
@@ -426,6 +471,7 @@ namespace CombatSystem.Gameplay
                 : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
+            recoveryEndTime = Time.time + Mathf.Max(0f, currentPostCastTime);
             ClearCastState();
             return true;
         }
@@ -451,8 +497,8 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            // 不能在施法中释放其他技能
-            if (isCasting)
+            // 施法/后摇/GCD 期间不可释放
+            if (IsLockedOut())
             {
                 return false;
             }
@@ -471,6 +517,116 @@ namespace CombatSystem.Gameplay
 
             // 检查资源
             return HasResource(skill, skill.ResourceCost);
+        }
+
+        private bool IsLockedOut()
+        {
+            // 施法/后摇/GCD 任一命中则锁定
+            if (isCasting)
+            {
+                return true;
+            }
+
+            if (Time.time < recoveryEndTime)
+            {
+                return true;
+            }
+
+            return Time.time < gcdEndTime;
+        }
+
+        private bool CanCastIgnoringLockouts(SkillDefinition skill)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            if (health != null && !health.IsAlive)
+            {
+                return false;
+            }
+
+            if (cooldown != null && !cooldown.IsReady(skill))
+            {
+                return false;
+            }
+
+            return HasResource(skill, skill.ResourceCost);
+        }
+
+        private bool TryQueueCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+        {
+            if (skill == null || !CanCastIgnoringLockouts(skill))
+            {
+                return false;
+            }
+
+            if (!IsWithinQueueWindow())
+            {
+                return false;
+            }
+
+            if (hasQueuedCast && skill.QueuePolicy == SkillQueuePolicy.Ignore)
+            {
+                return false;
+            }
+
+            queuedCast = new QueuedCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            hasQueuedCast = true;
+            return true;
+        }
+
+        private bool IsWithinQueueWindow()
+        {
+            if (currentQueueWindow <= 0f)
+            {
+                return false;
+            }
+
+            var endTime = GetQueueWindowEndTime();
+            if (endTime <= 0f)
+            {
+                return false;
+            }
+
+            // 在技能结束前的窗口期允许缓存输入
+            return Time.time >= endTime - currentQueueWindow;
+        }
+
+        private float GetQueueWindowEndTime()
+        {
+            if (isCasting)
+            {
+                // 以施法结束为窗口基准
+                return castEndTime;
+            }
+
+            return Mathf.Max(recoveryEndTime, gcdEndTime);
+        }
+
+        private void TryConsumeQueuedCast()
+        {
+            if (!hasQueuedCast)
+            {
+                return;
+            }
+
+            if (IsLockedOut())
+            {
+                return;
+            }
+
+            // 锁定结束后立即执行队列
+            var request = queuedCast;
+            hasQueuedCast = false;
+            queuedCast = default;
+            if (request.Skill == null)
+            {
+                return;
+            }
+
+            TryCast(request.Skill, request.ExplicitTarget, request.HasAimPoint, request.AimPoint, request.AimDirection);
         }
 
         /// <summary>
@@ -506,6 +662,11 @@ namespace CombatSystem.Gameplay
             Vector3 aimDirection,
             List<CombatTarget> targets)
         {
+            if (skill == null)
+            {
+                return false;
+            }
+
             // 无目标系统或无目标定义时，默认选择自身
             if (targetingSystem == null || skill.Targeting == null)
             {
@@ -579,6 +740,153 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        private void ScheduleChannelTicks(
+            SkillDefinition skill,
+            float castStart,
+            float castTime,
+            float channelTime,
+            float tickInterval,
+            TargetListHandle targets,
+            SkillRuntimeContext context)
+        {
+            if (skill == null || channelTime <= 0f || tickInterval <= 0f)
+            {
+                return;
+            }
+
+            // 只有配置了 OnChannelTick 步骤才需要调度
+            if (!HasSteps(skill, SkillStepTrigger.OnChannelTick))
+            {
+                return;
+            }
+
+            var startTime = castStart + castTime;
+            var endTime = startTime + channelTime;
+            var nextTime = startTime + tickInterval;
+
+            if (nextTime > endTime)
+            {
+                return;
+            }
+
+            while (nextTime <= endTime)
+            {
+                // 每个 Tick 都对应一次步骤调度
+                ScheduleSteps(skill, SkillStepTrigger.OnChannelTick, nextTime, targets, context);
+                nextTime += tickInterval;
+            }
+        }
+
+        private static bool HasSteps(SkillDefinition skill, SkillStepTrigger trigger)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            var steps = skill.Steps;
+            if (steps == null || steps.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                if (step != null && step.trigger == trigger)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ShouldReselectTargets(SkillDefinition skill, SkillStepTrigger trigger)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            // 命中触发不再重新选目标
+            if (trigger == SkillStepTrigger.OnHit || trigger == SkillStepTrigger.OnProjectileHit)
+            {
+                return false;
+            }
+
+            switch (skill.TargetSnapshotPolicy)
+            {
+                case TargetSnapshotPolicy.PerStep:
+                    return true;
+                case TargetSnapshotPolicy.AtCastComplete:
+                    return trigger != SkillStepTrigger.OnCastStart;
+                case TargetSnapshotPolicy.AtCastStart:
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsTargetValidForStep(SkillRuntimeContext context, SkillStepTrigger trigger, CombatTarget target)
+        {
+            if (!target.IsValid)
+            {
+                return false;
+            }
+
+            var targeting = context.Skill != null ? context.Skill.Targeting : null;
+            if (targeting == null)
+            {
+                return true;
+            }
+
+            var policy = targeting.HitValidation;
+            if (policy == HitValidationPolicy.None)
+            {
+                return true;
+            }
+
+            if (policy >= HitValidationPolicy.AliveOnly && target.Health != null && !target.Health.IsAlive)
+            {
+                return false;
+            }
+
+            // 命中触发已在物理/命中路径校验，无需重复
+            if (trigger == SkillStepTrigger.OnHit || trigger == SkillStepTrigger.OnProjectileHit)
+            {
+                return true;
+            }
+
+            if (targetingSystem == null)
+            {
+                return true;
+            }
+
+            if (policy == HitValidationPolicy.InRange || policy == HitValidationPolicy.InRangeAndLoS)
+            {
+                // 形状范围校验
+                if (!targetingSystem.IsWithinTargetingShape(
+                        targeting,
+                        context.CasterUnit,
+                        target,
+                        context.ExplicitTarget,
+                        context.HasAimPoint,
+                        context.AimPoint,
+                        context.AimDirection))
+                {
+                    return false;
+                }
+
+                if (policy == HitValidationPolicy.InRangeAndLoS
+                    && !targetingSystem.HasLineOfSight(targeting, context.CasterUnit, target))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// 执行单个技能步骤，对所有目标应用效果。
         /// </summary>
@@ -590,8 +898,7 @@ namespace CombatSystem.Gameplay
             }
 
             var step = pending.Step;
-            var targets = pending.Targets.Targets;
-            if (targets == null || targets.Count == 0)
+            if (step == null)
             {
                 return;
             }
@@ -602,12 +909,46 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            var context = pending.Context;
+            var targets = pending.Targets.Targets;
+            var useSnapshot = true;
+
+            if (ShouldReselectTargets(context.Skill, pending.Trigger))
+            {
+                var refreshed = SimpleListPool<CombatTarget>.Get();
+                if (CollectTargets(context.Skill, context.ExplicitTarget, context.HasAimPoint, context.AimPoint, context.AimDirection, refreshed))
+                {
+                    targets = refreshed;
+                    useSnapshot = false;
+                }
+                else
+                {
+                    SimpleListPool<CombatTarget>.Release(refreshed);
+                    return;
+                }
+            }
+
+            if (targets == null || targets.Count == 0)
+            {
+                if (!useSnapshot)
+                {
+                    SimpleListPool<CombatTarget>.Release(targets);
+                }
+
+                return;
+            }
+
             // 遍历所有目标
             for (int i = 0; i < targets.Count; i++)
             {
                 var target = targets[i];
+                if (!IsTargetValidForStep(context, pending.Trigger, target))
+                {
+                    continue;
+                }
+
                 // 检查步骤级别的条件
-                if (step.condition != null && !ConditionEvaluator.Evaluate(step.condition, pending.Context, target))
+                if (step.condition != null && !ConditionEvaluator.Evaluate(step.condition, context, target))
                 {
                     continue;
                 }
@@ -615,8 +956,13 @@ namespace CombatSystem.Gameplay
                 // 对该目标执行所有效果
                 for (int j = 0; j < effects.Count; j++)
                 {
-                    effectExecutor.ExecuteEffect(effects[j], pending.Context, target, pending.Trigger);
+                    effectExecutor.ExecuteEffect(effects[j], context, target, pending.Trigger);
                 }
+            }
+
+            if (!useSnapshot)
+            {
+                SimpleListPool<CombatTarget>.Release(targets);
             }
         }
 
@@ -666,9 +1012,10 @@ namespace CombatSystem.Gameplay
             SkillDefinition skill,
             bool hasAimPoint = false,
             Vector3 aimPoint = default,
-            Vector3 aimDirection = default)
+            Vector3 aimDirection = default,
+            GameObject explicitTarget = null)
         {
-            return new SkillRuntimeContext(this, unitRoot, skill, eventHub, targetingSystem, effectExecutor, hasAimPoint, aimPoint, aimDirection);
+            return new SkillRuntimeContext(this, unitRoot, skill, eventHub, targetingSystem, effectExecutor, hasAimPoint, aimPoint, aimDirection, explicitTarget);
         }
 
         /// <summary>
@@ -713,7 +1060,9 @@ namespace CombatSystem.Gameplay
                     continue;
                 }
 
-                if (pending.Trigger == SkillStepTrigger.OnCastStart || pending.Trigger == SkillStepTrigger.OnCastComplete)
+                if (pending.Trigger == SkillStepTrigger.OnCastStart
+                    || pending.Trigger == SkillStepTrigger.OnCastComplete
+                    || pending.Trigger == SkillStepTrigger.OnChannelTick)
                 {
                     ReleaseHandle(pending.Targets);
                     pendingSteps.RemoveAt(i);
@@ -730,6 +1079,7 @@ namespace CombatSystem.Gameplay
             currentCastTime = 0f;
             currentChannelTime = 0f;
             currentIsChannel = false;
+            currentPostCastTime = 0f;
             currentContext = default;
             currentHasAimPoint = false;
             currentAimPoint = default;
@@ -794,6 +1144,27 @@ namespace CombatSystem.Gameplay
         #endregion
 
         #region Internal Types
+        /// <summary>
+        /// 排队的技能释放请求。
+        /// </summary>
+        private struct QueuedCast
+        {
+            public SkillDefinition Skill;
+            public GameObject ExplicitTarget;
+            public bool HasAimPoint;
+            public Vector3 AimPoint;
+            public Vector3 AimDirection;
+
+            public QueuedCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+            {
+                Skill = skill;
+                ExplicitTarget = explicitTarget;
+                HasAimPoint = hasAimPoint;
+                AimPoint = aimPoint;
+                AimDirection = aimDirection;
+            }
+        }
+
         /// <summary>
         /// 待执行的技能步骤数据。
         /// </summary>
