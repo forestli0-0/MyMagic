@@ -24,7 +24,7 @@ namespace CombatSystem.Core
     /// - OnApply: Buff 应用时
     /// - OnExpire: Buff 到期时
     /// - OnTick: 周期性触发
-    /// - OnHit/OnDamaged/OnSkillCast/OnKill: 战斗事件触发
+    /// - OnHit/OnDamaged/OnSkillCast/OnAttack/OnKill: 战斗事件触发
     /// </remarks>
     public class BuffController : MonoBehaviour
     {
@@ -438,6 +438,16 @@ namespace CombatSystem.Core
         public void NotifySkillCast(SkillRuntimeContext context, CombatTarget target)
         {
             TriggerBuffs(BuffTriggerType.OnSkillCast, context, target);
+        }
+
+        /// <summary>
+        /// 通知：开始普攻时触发。
+        /// </summary>
+        /// <param name="context">技能运行时上下文</param>
+        /// <param name="target">普攻目标</param>
+        public void NotifyAttack(SkillRuntimeContext context, CombatTarget target)
+        {
+            TriggerBuffs(BuffTriggerType.OnAttack, context, target);
         }
 
         /// <summary>

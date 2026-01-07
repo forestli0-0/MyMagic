@@ -40,7 +40,8 @@ namespace CombatSystem.Gameplay
                 ApplyVamp(effect, context, appliedDamage);
             }
 
-            var notifySkillHit = trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
+            var canTriggerOnHit = CanTriggerOnHit(effect, context);
+            var notifySkillHit = canTriggerOnHit && trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
             var notifyBuffHit = trigger != SkillStepTrigger.OnHit;
 
             if (notifySkillHit)
@@ -51,7 +52,10 @@ namespace CombatSystem.Gameplay
             if (notifyBuffHit)
             {
                 var casterBuffs = context.CasterBuffs;
-                casterBuffs?.NotifyHit(context, target);
+                if (canTriggerOnHit)
+                {
+                    casterBuffs?.NotifyHit(context, target);
+                }
 
                 var attackerTarget = default(CombatTarget);
                 if (context.CasterUnit != null)
@@ -155,6 +159,21 @@ namespace CombatSystem.Gameplay
 
             return Random.value < critChance;
         }
+
+        private static bool CanTriggerOnHit(EffectDefinition effect, SkillRuntimeContext context)
+        {
+            if (effect == null)
+            {
+                return false;
+            }
+
+
+            if (context.Caster != null && context.Caster.IsBasicAttackSkill(context.Skill))
+            {
+                return true;
+            }
+
+            return effect.TriggersOnHit;
+        }
     }
 }
-

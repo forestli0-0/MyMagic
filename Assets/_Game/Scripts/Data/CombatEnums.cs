@@ -46,7 +46,8 @@ namespace CombatSystem.Data
         Resource,       // 资源变更（加/减法力等）
         Summon,         // 召唤
         TriggerSkill,   // 触发另一个技能
-        Shield          // 护盾
+        Shield,         // 护盾
+        ResetBasicAttack // 重置普攻冷却/后摇
     }
 
     /// <summary>
@@ -133,7 +134,8 @@ namespace CombatSystem.Data
         OnHit,          // 命中敌人时
         OnDamaged,      // 受到伤害时
         OnSkillCast,    // 释放技能时
-        OnKill          // 击杀时
+        OnKill,         // 击杀时
+        OnAttack        // 普攻开始时
     }
 
     /// <summary>

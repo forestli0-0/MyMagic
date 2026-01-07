@@ -433,6 +433,10 @@ namespace CombatSystem.Gameplay
             // 派发施法开始事件
             RaiseSkillCastStarted(context, castTime, channelTime, isChannel);
             buffController?.NotifySkillCast(context, primaryTarget);
+            if (IsBasicAttackSkill(skill))
+            {
+                buffController?.NotifyAttack(context, primaryTarget);
+            }
 
             currentQueueWindow = queueWindow;
             currentPostCastTime = postCastTime;
@@ -491,6 +495,23 @@ namespace CombatSystem.Gameplay
         public bool CancelCast()
         {
             return InterruptCast();
+        }
+
+        /// <summary>
+        /// 重置普攻冷却与后摇，用于普攻重置类效果。
+        /// </summary>
+        /// <returns>若成功重置则返回 true，无普攻技能时返回 false</returns>
+        public bool ResetBasicAttack()
+        {
+            var basic = BasicAttack;
+            if (basic == null)
+            {
+                return false;
+            }
+
+            cooldown?.ClearCooldown(basic);
+            recoveryEndTime = Mathf.Min(recoveryEndTime, Time.time);
+            return true;
         }
 
         /// <summary>
@@ -1121,7 +1142,12 @@ namespace CombatSystem.Gameplay
             currentAimDirection = default;
         }
 
-        private bool IsBasicAttackSkill(SkillDefinition skill)
+        /// <summary>
+        /// 检查指定技能是否为普攻技能。
+        /// </summary>
+        /// <param name="skill">要检查的技能</param>
+        /// <returns>若为普攻技能则返回 true</returns>
+        public bool IsBasicAttackSkill(SkillDefinition skill)
         {
             if (skill == null)
             {

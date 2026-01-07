@@ -19,6 +19,7 @@ namespace CombatSystem.Gameplay
     /// - Resource: 资源操作（回复/消耗）
     /// - Summon: 召唤单位
     /// - TriggerSkill: 触发另一个技能
+    /// - ResetBasicAttack: 重置普攻冷却/后摇
     /// </remarks>
     public class EffectExecutor : MonoBehaviour
     {
@@ -164,6 +165,10 @@ namespace CombatSystem.Gameplay
                 case EffectType.TriggerSkill:
                     // 触发另一个技能
                     TriggerSkill(effect, context, target);
+                    break;
+                case EffectType.ResetBasicAttack:
+                    // 重置普攻冷却/后摇
+                    ResetBasicAttack(context);
                     break;
             }
         }
@@ -464,6 +469,11 @@ namespace CombatSystem.Gameplay
                 context.HasAimPoint,
                 context.AimPoint,
                 context.AimDirection);
+        }
+
+        private static void ResetBasicAttack(SkillRuntimeContext context)
+        {
+            context.Caster?.ResetBasicAttack();
         }
 
         private struct PendingEffect

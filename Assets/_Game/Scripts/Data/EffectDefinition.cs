@@ -40,6 +40,10 @@ namespace CombatSystem.Data
         [Tooltip("暴击倍率的属性来源（可选）")]
         [SerializeField] private StatDefinition critMultiplierStat;
 
+        [Header("Hit Triggers")]
+        [Tooltip("Whether this damage can trigger OnHit logic (non-basic attacks must opt in)")]
+        [SerializeField] private bool triggersOnHit;
+
         [Header("位移相关")]
         [SerializeField] private MoveStyle moveStyle;
         [SerializeField] private float moveDistance;
@@ -79,6 +83,7 @@ namespace CombatSystem.Data
         public float CritMultiplier => critMultiplier;
         public StatDefinition CritChanceStat => critChanceStat;
         public StatDefinition CritMultiplierStat => critMultiplierStat;
+        public bool TriggersOnHit => triggersOnHit;
         public BuffDefinition Buff => buff;
         public ProjectileDefinition Projectile => projectile;
         public SkillDefinition TriggeredSkill => triggeredSkill;
