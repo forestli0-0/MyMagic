@@ -24,6 +24,22 @@ namespace CombatSystem.Data
         [Tooltip("伤害属性分类")]
         [SerializeField] private DamageType damageType;
 
+        [Header("Scaling & Crit")]
+        [Tooltip("用于伤害/治疗缩放的属性（可选）")]
+        [SerializeField] private StatDefinition scalingStat;
+        [Tooltip("缩放系数：Final = Value + Stat * Ratio")]
+        [SerializeField] private float scalingRatio;
+        [Tooltip("该效果是否可暴击")]
+        [SerializeField] private bool canCrit = true;
+        [Tooltip("暴击概率（0-1）")]
+        [SerializeField] private float critChance;
+        [Tooltip("暴击倍率（>=1）")]
+        [SerializeField] private float critMultiplier = 2f;
+        [Tooltip("暴击概率的属性来源（可选）")]
+        [SerializeField] private StatDefinition critChanceStat;
+        [Tooltip("暴击倍率的属性来源（可选）")]
+        [SerializeField] private StatDefinition critMultiplierStat;
+
         [Header("位移相关")]
         [SerializeField] private MoveStyle moveStyle;
         [SerializeField] private float moveDistance;
@@ -56,6 +72,13 @@ namespace CombatSystem.Data
         public MoveStyle MoveStyle => moveStyle;
         public float MoveDistance => moveDistance;
         public float MoveSpeed => moveSpeed;
+        public StatDefinition ScalingStat => scalingStat;
+        public float ScalingRatio => scalingRatio;
+        public bool CanCrit => canCrit;
+        public float CritChance => critChance;
+        public float CritMultiplier => critMultiplier;
+        public StatDefinition CritChanceStat => critChanceStat;
+        public StatDefinition CritMultiplierStat => critMultiplierStat;
         public BuffDefinition Buff => buff;
         public ProjectileDefinition Projectile => projectile;
         public SkillDefinition TriggeredSkill => triggeredSkill;

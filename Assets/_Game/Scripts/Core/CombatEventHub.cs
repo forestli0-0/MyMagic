@@ -16,6 +16,8 @@ namespace CombatSystem.Core
         public event Action<StatChangedEvent> StatChanged;
         /// <summary> 当单位血量发生变化时触发 </summary>
         public event Action<HealthChangedEvent> HealthChanged;
+        /// <summary> 当单位护盾发生变化时触发 </summary>
+        public event Action<ShieldChangedEvent> ShieldChanged;
         /// <summary> 当单位死亡时触发 </summary>
         public event Action<HealthComponent> UnitDied;
         /// <summary> 当单位资源（如法力）发生变化时触发 </summary>
@@ -37,6 +39,7 @@ namespace CombatSystem.Core
 
         public void RaiseStatChanged(StatChangedEvent evt) => StatChanged?.Invoke(evt);
         public void RaiseHealthChanged(HealthChangedEvent evt) => HealthChanged?.Invoke(evt);
+        public void RaiseShieldChanged(ShieldChangedEvent evt) => ShieldChanged?.Invoke(evt);
         public void RaiseUnitDied(HealthComponent source) => UnitDied?.Invoke(source);
         public void RaiseResourceChanged(ResourceChangedEvent evt) => ResourceChanged?.Invoke(evt);
         public void RaiseCooldownChanged(CooldownChangedEvent evt) => CooldownChanged?.Invoke(evt);
@@ -51,6 +54,7 @@ namespace CombatSystem.Core
             // 运行时清理，防止在编辑器切换或关闭时产生事件残留导致 NullReference
             StatChanged = null;
             HealthChanged = null;
+            ShieldChanged = null;
             UnitDied = null;
             ResourceChanged = null;
             CooldownChanged = null;

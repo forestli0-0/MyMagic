@@ -33,6 +33,12 @@ namespace CombatSystem.Data
         [Tooltip("Buff 在特定时机触发的效果")]
         [SerializeField] private List<BuffTrigger> triggers = new List<BuffTrigger>();
 
+        [Header("控制状态")]
+        [Tooltip("该 Buff 施加的控制效果")]
+        [SerializeField] private List<ControlType> controlEffects = new List<ControlType>();
+        [Tooltip("该 Buff 提供的控制免疫")]
+        [SerializeField] private List<ControlType> controlImmunities = new List<ControlType>();
+
         public Sprite Icon => icon;
         public bool IsDebuff => isDebuff;
         public float Duration => duration;
@@ -42,6 +48,8 @@ namespace CombatSystem.Data
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<ModifierDefinition> Modifiers => modifiers;
         public IReadOnlyList<BuffTrigger> Triggers => triggers;
+        public IReadOnlyList<ControlType> ControlEffects => controlEffects;
+        public IReadOnlyList<ControlType> ControlImmunities => controlImmunities;
     }
 
     /// <summary>
@@ -60,4 +68,3 @@ namespace CombatSystem.Data
         public List<EffectDefinition> effects = new List<EffectDefinition>();
     }
 }
-

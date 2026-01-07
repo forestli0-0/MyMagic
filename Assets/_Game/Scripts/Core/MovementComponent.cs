@@ -1,3 +1,4 @@
+using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
 
@@ -31,6 +32,8 @@ namespace CombatSystem.Core
 
         [Tooltip("技能使用组件，用于检测施法状态")]
         [SerializeField] private SkillUserComponent skillUser;
+        [Tooltip("Buff 控制器，用于控制状态判定")]
+        [SerializeField] private BuffController buffController;
 
         [Header("移动设置")]
         [Tooltip("基础移动速度（单位/秒）")]
@@ -94,6 +97,7 @@ namespace CombatSystem.Core
         {
             controller = GetComponent<CharacterController>();
             skillUser = GetComponent<SkillUserComponent>();
+            buffController = GetComponent<BuffController>();
         }
 
         /// <summary>
@@ -109,6 +113,11 @@ namespace CombatSystem.Core
             if (skillUser == null)
             {
                 skillUser = GetComponent<SkillUserComponent>();
+            }
+
+            if (buffController == null)
+            {
+                buffController = GetComponent<BuffController>();
             }
         }
 
@@ -257,7 +266,7 @@ namespace CombatSystem.Core
         private void ProcessNormalMove(float deltaTime)
         {
             // 检查是否允许移动（施法时可能被限制）
-            var canMove = skillUser == null || !skillUser.IsCasting || skillUser.CanMoveWhileCasting;
+            var canMove = (skillUser == null || !skillUser.IsCasting || skillUser.CanMoveWhileCasting) && !IsMovementBlocked();
 
             if (hasMoveInput && canMove)
             {
@@ -307,7 +316,7 @@ namespace CombatSystem.Core
         {
             // 检查是否允许旋转（施法时可能被限制）
             var canRotate = skillUser == null || !skillUser.IsCasting || skillUser.CanRotateWhileCasting;
-            if (!canRotate)
+            if (!canRotate || IsMovementBlocked())
             {
                 return;
             }
@@ -321,6 +330,36 @@ namespace CombatSystem.Core
 
             var rotation = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+        }
+
+        private bool IsMovementBlocked()
+        {
+            if (buffController == null)
+            {
+                return false;
+            }
+
+            if (HasControl(ControlType.Stun) || HasControl(ControlType.Root) || HasControl(ControlType.Fear))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool HasControl(ControlType type)
+        {
+            if (buffController == null)
+            {
+                return false;
+            }
+
+            if (buffController.HasControlImmunity(type))
+            {
+                return false;
+            }
+
+            return buffController.HasControl(type);
         }
 
         #endregion

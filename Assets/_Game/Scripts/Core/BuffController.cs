@@ -78,6 +78,62 @@ namespace CombatSystem.Core
         /// </summary>
         public IReadOnlyList<BuffInstance> ActiveBuffs => activeBuffs;
 
+        /// <summary>
+        /// 是否存在指定控制效果。
+        /// </summary>
+        public bool HasControl(ControlType type)
+        {
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                var definition = activeBuffs[i].Definition;
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var controls = definition.ControlEffects;
+                if (controls == null || controls.Count == 0)
+                {
+                    continue;
+                }
+
+                if (ContainsControl(controls, type))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 是否存在指定控制免疫。
+        /// </summary>
+        public bool HasControlImmunity(ControlType type)
+        {
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                var definition = activeBuffs[i].Definition;
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var immunities = definition.ControlImmunities;
+                if (immunities == null || immunities.Count == 0)
+                {
+                    continue;
+                }
+
+                if (ContainsControl(immunities, type))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         #endregion
 
         #region Unity 生命周期
@@ -687,6 +743,19 @@ namespace CombatSystem.Core
             return triggerType == BuffTriggerType.OnHit || triggerType == BuffTriggerType.OnDamaged
                 ? SkillStepTrigger.OnHit
                 : SkillStepTrigger.OnCastStart;
+        }
+
+        private static bool ContainsControl(IReadOnlyList<ControlType> controls, ControlType type)
+        {
+            for (int i = 0; i < controls.Count; i++)
+            {
+                if (controls[i] == type)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         #endregion

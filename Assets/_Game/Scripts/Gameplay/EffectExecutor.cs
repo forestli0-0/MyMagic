@@ -153,6 +153,10 @@ namespace CombatSystem.Gameplay
                     // 资源操作（法力等）
                     ApplyResource(effectValue, effect, target);
                     break;
+                case EffectType.Shield:
+                    // 护盾效果
+                    ApplyShield(effectValue, effect, target);
+                    break;
                 case EffectType.Summon:
                     // 召唤单位
                     Summon(effect, context, target);
@@ -276,8 +280,13 @@ namespace CombatSystem.Gameplay
             var spawnPosition = context.CasterUnit != null ? context.CasterUnit.transform.position : transform.position;
             var direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : transform.forward;
 
-            // 如果有明确目标，朝向目标
-            if (target.IsValid)
+            // 优先使用瞄准方向（支持 EZ Q 等方向型技能）
+            if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
+            {
+                direction = context.AimDirection;
+            }
+            // 其次使用明确目标
+            else if (target.IsValid && target.Transform != null)
             {
                 var toTarget = target.Transform.position - spawnPosition;
                 if (toTarget.sqrMagnitude > 0.01f)
@@ -325,8 +334,15 @@ namespace CombatSystem.Gameplay
             }
             else
             {
-                // 冲刺等：使用施法者朝向
-                direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : target.Transform.forward;
+                // 冲刺等：优先使用瞄准方向（支持 EZ E 等方向位移技能）
+                if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
+                {
+                    direction = context.AimDirection;
+                }
+                else
+                {
+                    direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : target.Transform.forward;
+                }
             }
 
             if (direction.sqrMagnitude <= 0f)
@@ -382,6 +398,20 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 应用护盾效果。
+        /// </summary>
+        private static void ApplyShield(float value, EffectDefinition effect, CombatTarget target)
+        {
+            if (target.Health == null || value <= 0f)
+            {
+                return;
+            }
+
+            var duration = Mathf.Max(0f, effect.Duration);
+            target.Health.ApplyShield(value, duration);
+        }
+
+        /// <summary>
         /// 召唤单位。
         /// </summary>
         /// <remarks>
@@ -398,8 +428,20 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 在目标位置生成（无目标时在施法者位置）
-            var spawnPosition = target.IsValid ? target.Transform.position : (context.CasterUnit != null ? context.CasterUnit.transform.position : Vector3.zero);
+            // 计算生成位置：优先使用瞄准点（支持锤石灯笼等点地型技能）
+            Vector3 spawnPosition;
+            if (context.HasAimPoint)
+            {
+                spawnPosition = context.AimPoint;
+            }
+            else if (target.IsValid && target.Transform != null)
+            {
+                spawnPosition = target.Transform.position;
+            }
+            else
+            {
+                spawnPosition = context.CasterUnit != null ? context.CasterUnit.transform.position : Vector3.zero;
+            }
             
             // [性能] 直接 Instantiate 会产生 GC，高频召唤场景建议使用对象池
             Object.Instantiate(prefab, spawnPosition, Quaternion.identity);

@@ -25,3 +25,6 @@ MonoBehaviour:
   modifiers:
   - {fileID: 11400000, guid: ddc02118ee8366243a67cb7d406aa021, type: 2}
   triggers: []
+  controlEffects: []
+  controlImmunities:
+  - Silence

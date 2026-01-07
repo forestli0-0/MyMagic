@@ -45,7 +45,8 @@ namespace CombatSystem.Data
         Move,           // 位移
         Resource,       // 资源变更（加/减法力等）
         Summon,         // 召唤
-        TriggerSkill    // 触发另一个技能
+        TriggerSkill,   // 触发另一个技能
+        Shield          // 护盾
     }
 
     /// <summary>
@@ -192,6 +193,19 @@ namespace CombatSystem.Data
         Leap,       // 跳跃
         Knockback,  // 击退
         Pull        // 拉取
+    }
+
+    /// <summary>
+    /// 控制效果类型。
+    /// </summary>
+    public enum ControlType
+    {
+        Stun,       // 眩晕
+        Silence,    // 沉默
+        Root,       // 禁锢
+        Disarm,     // 缴械
+        Fear,       // 恐惧
+        Taunt       // 嘲讽
     }
 
     /// <summary>

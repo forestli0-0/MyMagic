@@ -20,6 +20,13 @@ MonoBehaviour:
   value: 4
   resourceType: 0
   damageType: 0
+  scalingStat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+  scalingRatio: 0.4
+  canCrit: 0
+  critChance: 0
+  critMultiplier: 2
+  critChanceStat: {fileID: 0}
+  critMultiplierStat: {fileID: 0}
   moveStyle: 0
   moveDistance: 0
   moveSpeed: 0

@@ -503,6 +503,17 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            // 控制状态限制（眩晕/沉默等）
+            if (HasControl(ControlType.Stun) || HasControl(ControlType.Silence) || HasControl(ControlType.Fear))
+            {
+                return false;
+            }
+
+            if (skill == BasicAttack && HasControl(ControlType.Disarm))
+            {
+                return false;
+            }
+
             // 必须存活
             if (health != null && !health.IsAlive)
             {
@@ -533,6 +544,21 @@ namespace CombatSystem.Gameplay
             }
 
             return Time.time < gcdEndTime;
+        }
+
+        private bool HasControl(ControlType type)
+        {
+            if (buffController == null)
+            {
+                return false;
+            }
+
+            if (buffController.HasControlImmunity(type))
+            {
+                return false;
+            }
+
+            return buffController.HasControl(type);
         }
 
         private bool CanCastIgnoringLockouts(SkillDefinition skill)

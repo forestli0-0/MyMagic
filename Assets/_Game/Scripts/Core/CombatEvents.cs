@@ -45,6 +45,25 @@ namespace CombatSystem.Core
     }
 
     /// <summary>
+    /// 护盾数值变更事件数据。
+    /// </summary>
+    public struct ShieldChangedEvent
+    {
+        public HealthComponent Source;  // 来源组件
+        public float OldValue;          // 变更前的值
+        public float NewValue;          // 变更后的值
+        public float Delta;             // 变化量
+
+        public ShieldChangedEvent(HealthComponent source, float oldValue, float newValue)
+        {
+            Source = source;
+            OldValue = oldValue;
+            NewValue = newValue;
+            Delta = newValue - oldValue;
+        }
+    }
+
+    /// <summary>
     /// 资源（法力/能量等）变更事件数据。
     /// </summary>
     public struct ResourceChangedEvent
