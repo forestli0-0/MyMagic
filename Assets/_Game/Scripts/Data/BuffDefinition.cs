@@ -14,6 +14,8 @@ namespace CombatSystem.Data
         [SerializeField] private Sprite icon;
         [Tooltip("是否为负面效果")]
         [SerializeField] private bool isDebuff;
+        [Tooltip("是否可被驱散/净化")]
+        [SerializeField] private bool dispellable = true;
         
         [Header("时间与堆叠")]
         [Tooltip("基础持续时间")]
@@ -41,6 +43,7 @@ namespace CombatSystem.Data
 
         public Sprite Icon => icon;
         public bool IsDebuff => isDebuff;
+        public bool Dispellable => dispellable;
         public float Duration => duration;
         public float TickInterval => tickInterval;
         public BuffStackingRule StackingRule => stackingRule;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CombatSystem.Data
@@ -24,7 +25,7 @@ namespace CombatSystem.Data
         [Tooltip("伤害属性分类")]
         [SerializeField] private DamageType damageType;
 
-        [Header("Scaling & Crit")]
+        [Header("缩放与暴击")]
         [Tooltip("用于伤害/治疗缩放的属性（可选）")]
         [SerializeField] private StatDefinition scalingStat;
         [Tooltip("缩放系数：Final = Value + Stat * Ratio")]
@@ -40,9 +41,19 @@ namespace CombatSystem.Data
         [Tooltip("暴击倍率的属性来源（可选）")]
         [SerializeField] private StatDefinition critMultiplierStat;
 
-        [Header("Hit Triggers")]
-        [Tooltip("Whether this damage can trigger OnHit logic (non-basic attacks must opt in)")]
+        [Header("命中触发")]
+        [Tooltip("此伤害是否可触发命中效果（非普攻需显式开启）")]
         [SerializeField] private bool triggersOnHit;
+
+        [Header("净化/驱散")]
+        [Tooltip("移除所有可驱散的 Buff")]
+        [SerializeField] private bool cleanseAll;
+        [Tooltip("移除可驱散的负面 Buff")]
+        [SerializeField] private bool cleanseDebuffs;
+        [Tooltip("移除可驱散的控制效果")]
+        [SerializeField] private bool cleanseControls;
+        [Tooltip("要净化的控制类型列表（空 = 任意）")]
+        [SerializeField] private List<ControlType> cleanseControlTypes = new List<ControlType>();
 
         [Header("位移相关")]
         [SerializeField] private MoveStyle moveStyle;
@@ -84,6 +95,10 @@ namespace CombatSystem.Data
         public StatDefinition CritChanceStat => critChanceStat;
         public StatDefinition CritMultiplierStat => critMultiplierStat;
         public bool TriggersOnHit => triggersOnHit;
+        public bool CleanseAll => cleanseAll;
+        public bool CleanseDebuffs => cleanseDebuffs;
+        public bool CleanseControls => cleanseControls;
+        public IReadOnlyList<ControlType> CleanseControlTypes => cleanseControlTypes;
         public BuffDefinition Buff => buff;
         public ProjectileDefinition Projectile => projectile;
         public SkillDefinition TriggeredSkill => triggeredSkill;

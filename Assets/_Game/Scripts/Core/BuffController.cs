@@ -351,7 +351,7 @@ namespace CombatSystem.Core
 
             if (duration > 0f && buff.IsDebuff && buff.ControlEffects.Count > 0)
             {
-                duration = ApplyTenacity(duration);
+                duration = ApplyTenacity(duration, buff.ControlEffects);
             }
 
             // 非 Independent 模式：合并到已有实例
@@ -452,6 +452,63 @@ namespace CombatSystem.Core
                 {
                     RemoveAt(i, true);
                     removed = true;
+                }
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// 驱散/净化 Buff。
+        /// </summary>
+        /// <param name="removeAll">是否移除所有可驱散 Buff</param>
+        /// <param name="removeDebuffs">是否移除负面 Buff</param>
+        /// <param name="removeControls">是否移除控制类 Buff</param>
+        /// <param name="controlTypes">要净化的控制类型列表（为空表示任意）</param>
+        /// <returns>移除的 Buff 数量</returns>
+        public int Cleanse(bool removeAll, bool removeDebuffs, bool removeControls, IReadOnlyList<ControlType> controlTypes)
+        {
+            if (activeBuffs.Count == 0)
+            {
+                return 0;
+            }
+
+            var removed = 0;
+            for (int i = activeBuffs.Count - 1; i >= 0; i--)
+            {
+                var instance = activeBuffs[i];
+                var definition = instance.Definition;
+                if (definition == null || !definition.Dispellable)
+                {
+                    continue;
+                }
+
+                var shouldRemove = false;
+                if (removeAll)
+                {
+                    shouldRemove = true;
+                }
+                else
+                {
+                    if (removeDebuffs && definition.IsDebuff)
+                    {
+                        shouldRemove = true;
+                    }
+
+                    if (!shouldRemove && removeControls)
+                    {
+                        var controls = definition.ControlEffects;
+                        if (controls != null && controls.Count > 0 && ShouldCleanseControls(controls, controlTypes))
+                        {
+                            shouldRemove = true;
+                        }
+                    }
+                }
+
+                if (shouldRemove)
+                {
+                    RemoveAt(i, true);
+                    removed++;
                 }
             }
 
@@ -837,6 +894,32 @@ namespace CombatSystem.Core
             return false;
         }
 
+        private static bool ShouldCleanseControls(IReadOnlyList<ControlType> controls, IReadOnlyList<ControlType> filter)
+        {
+            var allowAny = filter == null || filter.Count == 0 || ContainsControl(filter, ControlType.All);
+
+            for (int i = 0; i < controls.Count; i++)
+            {
+                var control = controls[i];
+                if (control == ControlType.All)
+                {
+                    continue;
+                }
+
+                if (!ControlRules.IsCleanseable(control))
+                {
+                    continue;
+                }
+
+                if (allowAny || ContainsControl(filter, control))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void TryInterruptCast(BuffDefinition buff)
         {
             if (buff == null || skillUser == null || !skillUser.IsCasting)
@@ -885,6 +968,30 @@ namespace CombatSystem.Core
             }
 
             return duration * (1f - tenacity);
+        }
+
+        private float ApplyTenacity(float duration, IReadOnlyList<ControlType> controls)
+        {
+            if (duration <= 0f || controls == null || controls.Count == 0)
+            {
+                return duration;
+            }
+
+            for (int i = 0; i < controls.Count; i++)
+            {
+                var control = controls[i];
+                if (control == ControlType.All)
+                {
+                    continue;
+                }
+
+                if (!ControlRules.IsTenacityAffectable(control))
+                {
+                    return duration;
+                }
+            }
+
+            return ApplyTenacity(duration);
         }
 
         #endregion

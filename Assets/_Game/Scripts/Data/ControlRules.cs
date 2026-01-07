@@ -30,6 +30,40 @@ namespace CombatSystem.Data
         }
 
         /// <summary>
+        /// 该控制是否受韧性影响。
+        /// </summary>
+        public static bool IsTenacityAffectable(ControlType type)
+        {
+            switch (type)
+            {
+                case ControlType.Knockup:
+                case ControlType.Knockback:
+                case ControlType.Suppression:
+                case ControlType.All:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// 该控制是否可被净化。
+        /// </summary>
+        public static bool IsCleanseable(ControlType type)
+        {
+            switch (type)
+            {
+                case ControlType.Knockup:
+                case ControlType.Knockback:
+                case ControlType.Suppression:
+                case ControlType.All:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
         /// 获取指定控制类型的所有行为标记。
         /// </summary>
         /// <param name="type">控制类型</param>

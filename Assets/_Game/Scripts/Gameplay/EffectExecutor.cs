@@ -20,6 +20,7 @@ namespace CombatSystem.Gameplay
     /// - Summon: 召唤单位
     /// - TriggerSkill: 触发另一个技能
     /// - ResetBasicAttack: 重置普攻冷却/后摇
+    /// - Cleanse: 净化/驱散
     /// </remarks>
     public class EffectExecutor : MonoBehaviour
     {
@@ -169,6 +170,10 @@ namespace CombatSystem.Gameplay
                 case EffectType.ResetBasicAttack:
                     // 重置普攻冷却/后摇
                     ResetBasicAttack(context);
+                    break;
+                case EffectType.Cleanse:
+                    // 净化/驱散
+                    ApplyCleanse(effect, target);
                     break;
             }
         }
@@ -471,9 +476,33 @@ namespace CombatSystem.Gameplay
                 context.AimDirection);
         }
 
+        /// <summary>
+        /// 重置普攻冷却/后摇。
+        /// </summary>
+        /// <param name="context">技能运行时上下文</param>
         private static void ResetBasicAttack(SkillRuntimeContext context)
         {
             context.Caster?.ResetBasicAttack();
+        }
+
+        /// <summary>
+        /// 应用净化效果，驱散目标身上的可驱散 Buff。
+        /// </summary>
+        /// <param name="effect">效果配置定义</param>
+        /// <param name="target">目标</param>
+        private static void ApplyCleanse(EffectDefinition effect, CombatTarget target)
+        {
+            if (effect == null || target.Buffs == null)
+            {
+                return;
+            }
+
+            if (!effect.CleanseAll && !effect.CleanseDebuffs && !effect.CleanseControls)
+            {
+                return;
+            }
+
+            target.Buffs.Cleanse(effect.CleanseAll, effect.CleanseDebuffs, effect.CleanseControls, effect.CleanseControlTypes);
         }
 
         private struct PendingEffect

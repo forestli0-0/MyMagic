@@ -47,7 +47,8 @@ namespace CombatSystem.Data
         Summon,         // 召唤
         TriggerSkill,   // 触发另一个技能
         Shield,         // 护盾
-        ResetBasicAttack // 重置普攻冷却/后摇
+        ResetBasicAttack, // 重置普攻冷却/后摇
+        Cleanse         // 净化/驱散
     }
 
     /// <summary>
