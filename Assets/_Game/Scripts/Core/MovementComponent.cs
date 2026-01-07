@@ -316,7 +316,7 @@ namespace CombatSystem.Core
         {
             // 检查是否允许旋转（施法时可能被限制）
             var canRotate = skillUser == null || !skillUser.IsCasting || skillUser.CanRotateWhileCasting;
-            if (!canRotate || IsMovementBlocked())
+            if (!canRotate || IsRotationBlocked())
             {
                 return;
             }
@@ -339,27 +339,17 @@ namespace CombatSystem.Core
                 return false;
             }
 
-            if (HasControl(ControlType.Stun) || HasControl(ControlType.Root) || HasControl(ControlType.Fear))
-            {
-                return true;
-            }
-
-            return false;
+            return buffController.HasControlFlag(ControlFlag.BlocksMovement);
         }
 
-        private bool HasControl(ControlType type)
+        private bool IsRotationBlocked()
         {
             if (buffController == null)
             {
                 return false;
             }
 
-            if (buffController.HasControlImmunity(type))
-            {
-                return false;
-            }
-
-            return buffController.HasControl(type);
+            return buffController.HasControlFlag(ControlFlag.BlocksRotation);
         }
 
         #endregion

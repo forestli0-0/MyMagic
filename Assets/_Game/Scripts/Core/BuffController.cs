@@ -100,6 +100,11 @@ namespace CombatSystem.Core
                     continue;
                 }
 
+                if (type == ControlType.All)
+                {
+                    continue;
+                }
+
                 if (ContainsControl(controls, type))
                 {
                     return true;
@@ -128,9 +133,56 @@ namespace CombatSystem.Core
                     continue;
                 }
 
-                if (ContainsControl(immunities, type))
+                if (ContainsControl(immunities, ControlType.All) || ContainsControl(immunities, type))
                 {
                     return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 是否存在满足指定控制规则的控制效果。
+        /// </summary>
+        public bool HasControlFlag(ControlFlag flag)
+        {
+            if (flag == ControlFlag.None)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                var definition = activeBuffs[i].Definition;
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var controls = definition.ControlEffects;
+                if (controls == null || controls.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < controls.Count; j++)
+                {
+                    var control = controls[j];
+                    if (control == ControlType.All)
+                    {
+                        continue;
+                    }
+
+                    if (HasControlImmunity(control))
+                    {
+                        continue;
+                    }
+
+                    if (ControlRules.HasFlag(control, flag))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -340,6 +392,7 @@ namespace CombatSystem.Core
 
                     activeBuffs[index] = instance;
                     TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                    TryInterruptCast(buff);
                     BuffsChanged?.Invoke();
                     return;
                 }
@@ -359,6 +412,7 @@ namespace CombatSystem.Core
                         instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
                         activeBuffs[refreshIndex] = instance;
                         TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                        TryInterruptCast(buff);
                         BuffsChanged?.Invoke();
                     }
 
@@ -374,6 +428,7 @@ namespace CombatSystem.Core
 
             // 触发 OnApply 效果
             TriggerBuff(newInstance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+            TryInterruptCast(buff);
             BuffsChanged?.Invoke();
         }
 
@@ -780,6 +835,40 @@ namespace CombatSystem.Core
             }
 
             return false;
+        }
+
+        private void TryInterruptCast(BuffDefinition buff)
+        {
+            if (buff == null || skillUser == null || !skillUser.IsCasting)
+            {
+                return;
+            }
+
+            var controls = buff.ControlEffects;
+            if (controls == null || controls.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < controls.Count; i++)
+            {
+                var control = controls[i];
+                if (control == ControlType.All)
+                {
+                    continue;
+                }
+
+                if (HasControlImmunity(control))
+                {
+                    continue;
+                }
+
+                if (ControlRules.HasFlag(control, ControlFlag.InterruptsCasting))
+                {
+                    skillUser.InterruptCast();
+                    return;
+                }
+            }
         }
 
         private float ApplyTenacity(float duration)

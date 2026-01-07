@@ -207,7 +207,43 @@ namespace CombatSystem.Data
         Root,       // 禁锢
         Disarm,     // 缴械
         Fear,       // 恐惧
-        Taunt       // 嘲讽
+        Taunt,      // 嘲讽
+        Knockup,    // 击飞
+        Knockback,  // 击退
+        Suppression,// 压制
+        Charm,      // 魅惑
+        Sleep,      // 睡眠
+        Polymorph,  // 变形
+        Blind,      // 致盲
+        Slow,       // 减速
+        All         // 用于免疫配置
+    }
+
+    /// <summary>
+    /// 控制规则标记。
+    /// </summary>
+    /// <remarks>
+    /// 使用位标记组合表示控制效果的行为限制：
+    /// - BlocksXXX: 禁止玩家执行对应操作
+    /// - ForcesMovement: 由 AI 接管移动（恐惧逃跑/嘲讽靠近等）
+    /// - InterruptsCasting: 立即打断当前施法
+    /// </remarks>
+    [System.Flags]
+    public enum ControlFlag
+    {
+        None = 0,
+        /// <summary>禁止玩家控制移动</summary>
+        BlocksMovement = 1 << 0,
+        /// <summary>禁止旋转</summary>
+        BlocksRotation = 1 << 1,
+        /// <summary>禁止施放技能</summary>
+        BlocksCasting = 1 << 2,
+        /// <summary>禁止普通攻击</summary>
+        BlocksBasicAttack = 1 << 3,
+        /// <summary>立即打断当前施法</summary>
+        InterruptsCasting = 1 << 4,
+        /// <summary>强制移动（AI 接管，用于恐惧/嘲讽/魅惑）</summary>
+        ForcesMovement = 1 << 5
     }
 
     /// <summary>

@@ -534,12 +534,12 @@ namespace CombatSystem.Gameplay
             }
 
             // 控制状态限制（眩晕/沉默等）
-            if (HasControl(ControlType.Stun) || HasControl(ControlType.Silence) || HasControl(ControlType.Fear))
+            if (buffController != null && buffController.HasControlFlag(ControlFlag.BlocksCasting))
             {
                 return false;
             }
 
-            if (skill == BasicAttack && HasControl(ControlType.Disarm))
+            if (skill == BasicAttack && buffController != null && buffController.HasControlFlag(ControlFlag.BlocksBasicAttack))
             {
                 return false;
             }
@@ -574,21 +574,6 @@ namespace CombatSystem.Gameplay
             }
 
             return Time.time < gcdEndTime;
-        }
-
-        private bool HasControl(ControlType type)
-        {
-            if (buffController == null)
-            {
-                return false;
-            }
-
-            if (buffController.HasControlImmunity(type))
-            {
-                return false;
-            }
-
-            return buffController.HasControl(type);
         }
 
         private bool CanCastIgnoringLockouts(SkillDefinition skill)
