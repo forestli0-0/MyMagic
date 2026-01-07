@@ -387,6 +387,15 @@ namespace CombatSystem.Gameplay
             var isChannel = channelTime > 0f;
             var totalTime = castTime + channelTime;
 
+            if (IsBasicAttackSkill(skill))
+            {
+                cooldownDuration = ApplyAttackSpeed(cooldownDuration);
+            }
+            else
+            {
+                cooldownDuration = ApplyAbilityHaste(cooldownDuration);
+            }
+
             // 扣除资源
             if (!SpendResource(skill, resourceCost))
             {
@@ -1110,6 +1119,55 @@ namespace CombatSystem.Gameplay
             currentHasAimPoint = false;
             currentAimPoint = default;
             currentAimDirection = default;
+        }
+
+        private bool IsBasicAttackSkill(SkillDefinition skill)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            var basic = BasicAttack;
+            return basic != null && basic == skill;
+        }
+
+        private float ApplyAbilityHaste(float cooldownDuration)
+        {
+            if (cooldownDuration <= 0f || stats == null)
+            {
+                return cooldownDuration;
+            }
+
+            var haste = Mathf.Max(0f, stats.GetValueById(CombatStatIds.AbilityHaste, 0f));
+            if (haste <= 0f)
+            {
+                return cooldownDuration;
+            }
+
+            return cooldownDuration * 100f / (100f + haste);
+        }
+
+        /// <summary>
+        /// 最小攻击冷却时间（秒），防止极端攻速导致冷却趋近于 0。
+        /// </summary>
+        private const float MinAttackCooldown = 0.1f;
+
+        private float ApplyAttackSpeed(float cooldownDuration)
+        {
+            if (cooldownDuration <= 0f || stats == null)
+            {
+                return cooldownDuration;
+            }
+
+            var bonusAttackSpeed = Mathf.Max(0f, stats.GetValueById(CombatStatIds.AttackSpeed, 0f));
+            if (bonusAttackSpeed <= 0f)
+            {
+                return cooldownDuration;
+            }
+
+            var result = cooldownDuration / (1f + bonusAttackSpeed);
+            return Mathf.Max(result, MinAttackCooldown);
         }
 
         #region Target Handle Pool

@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace CombatSystem.Gameplay
 {
+    /// <summary>
+    /// 伤害系统，负责计算最终伤害并应用效果。
+    /// </summary>
     public static class DamageSystem
     {
         public static void ApplyDamage(float amount, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger)
@@ -31,7 +34,11 @@ namespace CombatSystem.Gameplay
             }
 
             var wasAlive = target.Health.IsAlive;
-            target.Health.ApplyDamage(finalAmount, out _);
+            var appliedDamage = target.Health.ApplyDamage(finalAmount, out _);
+            if (appliedDamage > 0f)
+            {
+                ApplyVamp(effect, context, appliedDamage);
+            }
 
             var notifySkillHit = trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
             var notifyBuffHit = trigger != SkillStepTrigger.OnHit;
@@ -43,7 +50,7 @@ namespace CombatSystem.Gameplay
 
             if (notifyBuffHit)
             {
-                var casterBuffs = context.CasterUnit != null ? context.CasterUnit.GetComponent<BuffController>() : null;
+                var casterBuffs = context.CasterBuffs;
                 casterBuffs?.NotifyHit(context, target);
 
                 var attackerTarget = default(CombatTarget);
@@ -52,7 +59,7 @@ namespace CombatSystem.Gameplay
                     CombatTarget.TryCreate(context.CasterUnit.gameObject, out attackerTarget);
                 }
 
-                var targetBuffs = target.Unit != null ? target.Unit.GetComponent<BuffController>() : target.GameObject.GetComponent<BuffController>();
+                var targetBuffs = target.Buffs;
                 targetBuffs?.NotifyDamaged(context, attackerTarget.IsValid ? attackerTarget : target);
 
                 if (wasAlive && target.Health != null && !target.Health.IsAlive)
@@ -62,6 +69,40 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        private static void ApplyVamp(EffectDefinition effect, SkillRuntimeContext context, float appliedDamage)
+        {
+            if (effect == null || appliedDamage <= 0f)
+            {
+                return;
+            }
+
+            var stats = context.CasterStats;
+            if (stats == null)
+            {
+                return;
+            }
+
+            var healRate = stats.GetValueById(CombatStatIds.Omnivamp, 0f);
+            if (effect.DamageType == DamageType.Physical)
+            {
+                healRate += stats.GetValueById(CombatStatIds.Lifesteal, 0f);
+            }
+
+            if (healRate <= 0f)
+            {
+                return;
+            }
+
+            // 使用缓存的 Health 引用
+            var health = context.CasterHealth;
+            if (health == null)
+            {
+                return;
+            }
+
+            health.Heal(appliedDamage * healRate);
+        }
+
         private static float GetScalingValue(EffectDefinition effect, SkillRuntimeContext context)
         {
             if (effect == null || effect.ScalingStat == null || Mathf.Approximately(effect.ScalingRatio, 0f))
@@ -69,12 +110,7 @@ namespace CombatSystem.Gameplay
                 return 0f;
             }
 
-            if (context.CasterUnit == null)
-            {
-                return 0f;
-            }
-
-            var stats = context.CasterUnit.GetComponent<StatsComponent>();
+            var stats = context.CasterStats;
             if (stats == null)
             {
                 return 0f;
@@ -93,16 +129,15 @@ namespace CombatSystem.Gameplay
             }
 
             var critChance = effect.CritChance;
-            var caster = context.CasterUnit;
-            if (caster != null)
+            var stats = context.CasterStats;
+            if (stats != null)
             {
-                var stats = caster.GetComponent<StatsComponent>();
-                if (stats != null && effect.CritChanceStat != null)
+                if (effect.CritChanceStat != null)
                 {
                     critChance += stats.GetValue(effect.CritChanceStat, 0f);
                 }
 
-                if (stats != null && effect.CritMultiplierStat != null)
+                if (effect.CritMultiplierStat != null)
                 {
                     var statMultiplier = stats.GetValue(effect.CritMultiplierStat, 0f);
                     if (statMultiplier > 0f)
@@ -122,3 +157,4 @@ namespace CombatSystem.Gameplay
         }
     }
 }
+

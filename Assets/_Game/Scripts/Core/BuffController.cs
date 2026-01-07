@@ -37,6 +37,9 @@ namespace CombatSystem.Core
         [Tooltip("技能使用组件引用")]
         [SerializeField] private SkillUserComponent skillUser;
 
+        [Tooltip("属性组件引用")]
+        [SerializeField] private StatsComponent stats;
+
         [Tooltip("效果执行器引用")]
         [SerializeField] private EffectExecutor effectExecutor;
 
@@ -145,6 +148,7 @@ namespace CombatSystem.Core
         {
             unitRoot = GetComponent<UnitRoot>();
             skillUser = GetComponent<SkillUserComponent>();
+            stats = GetComponent<StatsComponent>();
         }
 
         /// <summary>
@@ -292,6 +296,11 @@ namespace CombatSystem.Core
             var duration = buff.Duration;
             var tickInterval = buff.TickInterval;
             var maxStacks = Mathf.Max(1, buff.MaxStacks);
+
+            if (duration > 0f && buff.IsDebuff && buff.ControlEffects.Count > 0)
+            {
+                duration = ApplyTenacity(duration);
+            }
 
             // 非 Independent 模式：合并到已有实例
             if (buff.StackingRule != BuffStackingRule.Independent)
@@ -696,6 +705,11 @@ namespace CombatSystem.Core
                 skillUser = GetComponent<SkillUserComponent>();
             }
 
+            if (stats == null)
+            {
+                stats = GetComponent<StatsComponent>();
+            }
+
             // [性能] FindObjectOfType 是全局搜索，首次调用时可能影响性能
             // 建议：通过 Inspector 注入或在场景初始化时配置
             if (effectExecutor == null)
@@ -756,6 +770,22 @@ namespace CombatSystem.Core
             }
 
             return false;
+        }
+
+        private float ApplyTenacity(float duration)
+        {
+            if (duration <= 0f || stats == null)
+            {
+                return duration;
+            }
+
+            var tenacity = Mathf.Clamp01(stats.GetValueById(CombatStatIds.Tenacity, 0f));
+            if (tenacity <= 0f)
+            {
+                return duration;
+            }
+
+            return duration * (1f - tenacity);
         }
 
         #endregion

@@ -204,38 +204,42 @@ namespace CombatSystem.Gameplay
                 return amount;
             }
 
+            var resistance = GetResistanceFromStats(effect.DamageType, target);
+
             var targetBuffs = GetBuffController(target);
-            if (targetBuffs == null || targetBuffs.ActiveBuffs.Count == 0)
+            if (targetBuffs != null && targetBuffs.ActiveBuffs.Count > 0)
             {
-                return amount;
+                var tags = context.Skill != null ? context.Skill.Tags : null;
+                var buffResistance = ApplyModifiers(
+                    0f,
+                    targetBuffs.ActiveBuffs,
+                    ModifierTargetType.Effect,
+                    ModifierParameters.EffectResistance,
+                    null,
+                    tags,
+                    context,
+                    target,
+                    ModifierScope.Target);
+
+                var typeParameter = effect.DamageType == DamageType.Physical
+                    ? ModifierParameters.EffectResistancePhysical
+                    : ModifierParameters.EffectResistanceMagical;
+
+                buffResistance = ApplyModifiers(
+                    buffResistance,
+                    targetBuffs.ActiveBuffs,
+                    ModifierTargetType.Effect,
+                    typeParameter,
+                    null,
+                    tags,
+                    context,
+                    target,
+                    ModifierScope.Target);
+
+                resistance += buffResistance;
             }
 
-            var tags = context.Skill != null ? context.Skill.Tags : null;
-            var resistance = ApplyModifiers(
-                0f,
-                targetBuffs.ActiveBuffs,
-                ModifierTargetType.Effect,
-                ModifierParameters.EffectResistance,
-                null,
-                tags,
-                context,
-                target,
-                ModifierScope.Target);
-
-            var typeParameter = effect.DamageType == DamageType.Physical
-                ? ModifierParameters.EffectResistancePhysical
-                : ModifierParameters.EffectResistanceMagical;
-
-            resistance = ApplyModifiers(
-                resistance,
-                targetBuffs.ActiveBuffs,
-                ModifierTargetType.Effect,
-                typeParameter,
-                null,
-                tags,
-                context,
-                target,
-                ModifierScope.Target);
+            resistance = ApplyPenetration(effect.DamageType, context, resistance);
 
             if (Mathf.Approximately(resistance, 0f))
             {
@@ -245,6 +249,65 @@ namespace CombatSystem.Gameplay
             var clamped = Mathf.Clamp(resistance, -95f, 10000f);
             var result = amount * 100f / (100f + clamped);
             return Mathf.Max(0f, result);
+        }
+
+        private static float GetResistanceFromStats(DamageType damageType, CombatTarget target)
+        {
+            var stats = target.Stats;
+            if (stats == null)
+            {
+                return 0f;
+            }
+
+            switch (damageType)
+            {
+                case DamageType.Physical:
+                    return stats.GetValueById(CombatStatIds.Armor, 0f);
+                case DamageType.Magical:
+                    return stats.GetValueById(CombatStatIds.MagicResist, 0f);
+                default:
+                    return 0f;
+            }
+        }
+
+        private static float ApplyPenetration(DamageType damageType, SkillRuntimeContext context, float resistance)
+        {
+            if (resistance <= 0f)
+            {
+                return resistance;
+            }
+
+            var stats = context.CasterStats;
+            if (stats == null)
+            {
+                return resistance;
+            }
+
+            var flatPen = 0f;
+            var percentPen = 0f;
+
+            switch (damageType)
+            {
+                case DamageType.Physical:
+                    flatPen = stats.GetValueById(CombatStatIds.ArmorPenFlat, 0f);
+                    percentPen = stats.GetValueById(CombatStatIds.ArmorPenPercent, 0f);
+                    break;
+                case DamageType.Magical:
+                    flatPen = stats.GetValueById(CombatStatIds.MagicPenFlat, 0f);
+                    percentPen = stats.GetValueById(CombatStatIds.MagicPenPercent, 0f);
+                    break;
+            }
+
+            flatPen = Mathf.Max(0f, flatPen);
+            percentPen = Mathf.Clamp01(percentPen);
+
+            if (Mathf.Approximately(flatPen, 0f) && Mathf.Approximately(percentPen, 0f))
+            {
+                return resistance;
+            }
+
+            var reduced = resistance * (1f - percentPen) - flatPen;
+            return reduced;
         }
 
         /// <summary>

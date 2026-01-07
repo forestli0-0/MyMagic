@@ -280,7 +280,7 @@ namespace CombatSystem.Gameplay
             var spawnPosition = context.CasterUnit != null ? context.CasterUnit.transform.position : transform.position;
             var direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : transform.forward;
 
-            // 优先使用瞄准方向（支持 EZ Q 等方向型技能）
+            // 优先使用瞄准方向
             if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
             {
                 direction = context.AimDirection;
@@ -334,7 +334,7 @@ namespace CombatSystem.Gameplay
             }
             else
             {
-                // 冲刺等：优先使用瞄准方向（支持 EZ E 等方向位移技能）
+                // 冲刺等：优先使用瞄准方向
                 if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
                 {
                     direction = context.AimDirection;
@@ -428,7 +428,7 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 计算生成位置：优先使用瞄准点（支持锤石灯笼等点地型技能）
+            // 计算生成位置：优先使用瞄准点
             Vector3 spawnPosition;
             if (context.HasAimPoint)
             {

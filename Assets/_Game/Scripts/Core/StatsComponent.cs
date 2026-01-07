@@ -28,6 +28,8 @@ namespace CombatSystem.Core
         private readonly List<RuntimeStat> runtimeStats = new List<RuntimeStat>(16);
         // 通过定义查找索引的映射表
         private readonly Dictionary<StatDefinition, int> indexByStat = new Dictionary<StatDefinition, int>(16);
+        // 通过 ID 查找索引的映射表
+        private readonly Dictionary<string, int> indexByStatId = new Dictionary<string, int>(16, StringComparer.Ordinal);
 
         /// <summary>
         /// 当属性发生变化时触发的本地事件。
@@ -148,6 +150,7 @@ namespace CombatSystem.Core
         {
             runtimeStats.Clear();
             indexByStat.Clear();
+            indexByStatId.Clear();
         }
 
         /// <summary>
@@ -175,11 +178,40 @@ namespace CombatSystem.Core
         }
 
         /// <summary>
+        /// 尝试按 ID 获取指定属性的当前值。
+        /// </summary>
+        public bool TryGetValueById(string statId, out float value)
+        {
+            if (string.IsNullOrEmpty(statId))
+            {
+                value = 0f;
+                return false;
+            }
+
+            if (indexByStatId.TryGetValue(statId, out var index))
+            {
+                value = runtimeStats[index].value;
+                return true;
+            }
+
+            value = 0f;
+            return false;
+        }
+
+        /// <summary>
         /// 获取指定属性的当前值，若不存在则返回回退值。
         /// </summary>
         public float GetValue(StatDefinition stat, float fallback = 0f)
         {
             return TryGetValue(stat, out var value) ? value : fallback;
+        }
+
+        /// <summary>
+        /// 按 ID 获取指定属性的当前值，若不存在则返回回退值。
+        /// </summary>
+        public float GetValueById(string statId, float fallback = 0f)
+        {
+            return TryGetValueById(statId, out var value) ? value : fallback;
         }
 
         /// <summary>
@@ -259,6 +291,10 @@ namespace CombatSystem.Core
 
             // 注册新属性
             indexByStat[stat] = runtimeStats.Count;
+            if (!string.IsNullOrWhiteSpace(stat.Id))
+            {
+                indexByStatId[stat.Id] = runtimeStats.Count;
+            }
             runtimeStats.Add(new RuntimeStat(stat, baseValue, baseValue));
 
             if (raiseEvent)
