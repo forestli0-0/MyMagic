@@ -282,8 +282,13 @@ namespace CombatSystem.Core
         /// </summary>
         private void ProcessNormalMove(float deltaTime)
         {
+            var movementBlocked = IsMovementBlocked();
+
+            // 尝试移动打断普攻前摇
+            TryCancelBasicAttackOnMove(movementBlocked);
+
             // 检查是否允许移动（施法时可能被限制）
-            var canMove = (skillUser == null || !skillUser.IsCasting || skillUser.CanMoveWhileCasting) && !IsMovementBlocked();
+            var canMove = (skillUser == null || !skillUser.IsCasting || skillUser.CanMoveWhileCasting) && !movementBlocked;
 
             if (hasMoveInput && canMove)
             {
@@ -483,6 +488,25 @@ namespace CombatSystem.Core
         {
             hasMoveInput = false;
             moveInput = Vector3.zero;
+        }
+
+        /// <summary>
+        /// 尝试通过移动打断普攻前摇。
+        /// </summary>
+        /// <param name="movementBlocked">当前是否被控制状态阻止移动</param>
+        private void TryCancelBasicAttackOnMove(bool movementBlocked)
+        {
+            if (!hasMoveInput || movementBlocked)
+            {
+                return;
+            }
+
+            if (skillUser == null || !skillUser.IsCasting || skillUser.CanMoveWhileCasting)
+            {
+                return;
+            }
+
+            skillUser.CancelBasicAttackWindup();
         }
 
         /// <summary>

@@ -526,6 +526,37 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 取消普攻前摇（用于移动打断普攻）。
+        /// </summary>
+        public bool CancelBasicAttackWindup()
+        {
+            if (!isCasting || currentSkill == null)
+            {
+                return false;
+            }
+
+            if (!IsBasicAttackSkill(currentSkill))
+            {
+                return false;
+            }
+
+            if (currentChannelTime > 0f)
+            {
+                return false;
+            }
+
+            var context = currentContext.Skill != null
+                ? currentContext
+                : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
+
+            ClearPendingSteps(currentSkill);
+            RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
+            recoveryEndTime = Mathf.Min(recoveryEndTime, Time.time);
+            ClearCastState();
+            return true;
+        }
+
+        /// <summary>
         /// 重置普攻冷却与后摇，用于普攻重置类效果。
         /// </summary>
         /// <returns>若成功重置则返回 true，无普攻技能时返回 false</returns>
@@ -647,6 +678,19 @@ namespace CombatSystem.Gameplay
             return true;
         }
 
+        /// <summary>
+        /// 尝试获取当前单位被“嘲讽”（Taunt）强制指向的来源单位。
+        /// 若返回 true，则通过 <paramref name="source"/> 输出嘲讽来源的 <see cref="UnitRoot"/>，
+        /// 上层调用可据此限制只能对该来源进行普攻或自动响应。
+        /// </summary>
+        /// <remarks>
+        /// 实现细节：调用 <c>buffController.TryGetForcedMovement(out control, out source)</c>
+        /// 并检查返回的控制类型是否为 <c>ControlType.Taunt</c> 且 <c>source</c> 非空。
+        /// 常被 <see cref="TryCast"/>、<see cref="CanCast"/> 与 <see cref="TryHandleTaunt"/> 等方法使用，
+        /// 用于在被嘲讽状态下强制只能向嘲讽者进行普攻。
+        /// </remarks>
+        /// <param name="source">当返回 true 时指向嘲讽来源的单位根，否则为 null。</param>
+        /// <returns>若存在有效的嘲讽来源则返回 true。</returns>
         private bool TryGetTauntSource(out UnitRoot source)
         {
             source = null;
