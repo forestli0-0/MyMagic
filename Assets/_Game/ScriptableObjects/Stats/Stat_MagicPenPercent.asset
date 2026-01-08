@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Stat_MagicPenPercent
   m_EditorClassIdentifier: 
   id: Stat_MagicPenPercent
-  displayName: Magic Pen (%)
+  displayName: Magic Pen Percent
   defaultValue: 0
   minValue: 0
   maxValue: 1

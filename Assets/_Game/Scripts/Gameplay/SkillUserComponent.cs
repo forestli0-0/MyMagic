@@ -218,6 +218,11 @@ namespace CombatSystem.Gameplay
 
             if (!isCasting)
             {
+                if (TryHandleTaunt())
+                {
+                    return;
+                }
+
                 // 施法结束后尝试消耗输入缓冲
                 TryConsumeQueuedCast();
             }
@@ -323,6 +328,29 @@ namespace CombatSystem.Gameplay
             if (skill == null)
             {
                 return false;
+            }
+
+            if (TryGetTauntSource(out var taunter))
+            {
+                if (skill != BasicAttack)
+                {
+                    return false;
+                }
+
+                if (taunter == null)
+                {
+                    return false;
+                }
+
+                explicitTarget = taunter.gameObject;
+                hasAimPoint = false;
+                aimPoint = default;
+                aimDirection = default;
+
+                if (!IsTargetInRange(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+                {
+                    return false;
+                }
             }
 
             if (!CanCast(skill))
@@ -527,6 +555,12 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            var isTauntBasic = IsTauntBasicAttack(skill);
+            if (TryGetTauntSource(out _) && !isTauntBasic)
+            {
+                return false;
+            }
+
             // 施法/后摇/GCD 期间不可释放
             if (IsLockedOut())
             {
@@ -536,12 +570,18 @@ namespace CombatSystem.Gameplay
             // 控制状态限制（眩晕/沉默等）
             if (buffController != null && buffController.HasControlFlag(ControlFlag.BlocksCasting))
             {
-                return false;
+                if (!isTauntBasic)
+                {
+                    return false;
+                }
             }
 
             if (skill == BasicAttack && buffController != null && buffController.HasControlFlag(ControlFlag.BlocksBasicAttack))
             {
-                return false;
+                if (!isTauntBasic)
+                {
+                    return false;
+                }
             }
 
             // 必须存活
@@ -558,6 +598,97 @@ namespace CombatSystem.Gameplay
 
             // 检查资源
             return HasResource(skill, skill.ResourceCost);
+        }
+
+        private bool TryHandleTaunt()
+        {
+            if (buffController == null || IsLockedOut())
+            {
+                return false;
+            }
+
+            if (!TryGetTauntSource(out var source))
+            {
+                return false;
+            }
+
+            var basicAttack = BasicAttack;
+            if (basicAttack == null)
+            {
+                return true;
+            }
+
+            if (cooldown != null && !cooldown.IsReady(basicAttack))
+            {
+                return true;
+            }
+
+            if (!HasResource(basicAttack, basicAttack.ResourceCost))
+            {
+                return true;
+            }
+
+            TryCast(basicAttack, source.gameObject);
+            return true;
+        }
+
+        private bool IsTauntBasicAttack(SkillDefinition skill)
+        {
+            if (skill != BasicAttack)
+            {
+                return false;
+            }
+
+            if (!TryGetTauntSource(out _))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TryGetTauntSource(out UnitRoot source)
+        {
+            source = null;
+            if (buffController == null)
+            {
+                return false;
+            }
+
+            if (!buffController.TryGetForcedMovement(out var control, out source))
+            {
+                return false;
+            }
+
+            return control == ControlType.Taunt && source != null;
+        }
+
+        private bool IsTargetInRange(SkillDefinition skill, GameObject target, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+        {
+            if (skill == null || target == null || targetingSystem == null || unitRoot == null)
+            {
+                return true;
+            }
+
+            var targeting = skill.Targeting;
+            if (targeting == null || targeting.Range <= 0f)
+            {
+                return true;
+            }
+
+            if (!CombatTarget.TryCreate(target, out var combatTarget))
+            {
+                return false;
+            }
+
+            return targetingSystem.IsWithinTargetingShape(
+                targeting,
+                unitRoot,
+                combatTarget,
+                target,
+                hasAimPoint,
+                aimPoint,
+                aimDirection);
         }
 
         private bool IsLockedOut()

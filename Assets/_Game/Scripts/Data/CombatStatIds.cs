@@ -34,5 +34,7 @@ namespace CombatSystem.Data
         public const string Lifesteal = "Stat_Lifesteal";
         /// <summary>全能吸血（所有伤害类型）</summary>
         public const string Omnivamp = "Stat_Omnivamp";
+        /// <summary>移动速度</summary>
+        public const string MoveSpeed = "Stat_MoveSpeed";
     }
 }

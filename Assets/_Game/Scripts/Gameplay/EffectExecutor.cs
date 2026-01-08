@@ -135,7 +135,7 @@ namespace CombatSystem.Gameplay
                     break;
                 case EffectType.ApplyBuff:
                     // 施加 Buff
-                    ApplyBuff(effect, target);
+                    ApplyBuff(effect, context, target);
                     break;
                 case EffectType.RemoveBuff:
                     // 移除 Buff
@@ -231,7 +231,7 @@ namespace CombatSystem.Gameplay
         /// <summary>
         /// 施加 Buff 到目标。
         /// </summary>
-        private static void ApplyBuff(EffectDefinition effect, CombatTarget target)
+        private static void ApplyBuff(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
             if (!target.IsValid)
             {
@@ -243,7 +243,7 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            target.Buffs?.ApplyBuff(effect.Buff);
+            target.Buffs?.ApplyBuff(effect.Buff, context.CasterUnit);
         }
 
         /// <summary>

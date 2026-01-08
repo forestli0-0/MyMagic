@@ -52,10 +52,10 @@ namespace CombatSystem.AI
         [Header("移动参数")]
         [Tooltip("是否使用 NavMesh 导航")]
         [SerializeField] private bool useNavMesh = true;
-        [Tooltip("移动速度")]
-        [SerializeField] private float moveSpeed = 3.5f;
         [Tooltip("停止距离")]
         [SerializeField] private float stoppingDistance = 1.5f;
+        [Tooltip("攻击距离迟滞缓冲，避免 Attack/Chase 边界抖动")]
+        [SerializeField] private float attackRangeBuffer = 0.25f;
         [Tooltip("转向速度（度/秒）")]
         [SerializeField] private float turnSpeed = 720f;
 
@@ -209,7 +209,7 @@ namespace CombatSystem.AI
             // 使用普通攻击
             selectedSkill = skillUser != null ? skillUser.BasicAttack : null;
             selectedMinRange = 0f;
-            selectedMaxRange = aiProfile.AttackRange;
+            selectedMaxRange = GetSkillMaxRange(selectedSkill, aiProfile.AttackRange);
 
             // 根据距离决定追击或攻击
             currentState = distance <= selectedMaxRange ? AIState.Attack : AIState.Chase;
@@ -435,7 +435,8 @@ namespace CombatSystem.AI
             var distance = GetDistanceToTarget();
             var minRange = selectedSkill != null ? selectedMinRange : 0f;
             var maxRange = selectedSkill != null && selectedMaxRange > 0f ? selectedMaxRange : aiProfile.AttackRange;
-            if (distance > maxRange)
+            var buffer = currentState == AIState.Attack ? Mathf.Max(0f, attackRangeBuffer) : 0f;
+            if (maxRange > 0f && distance > maxRange + buffer)
             {
                 return false;
             }
@@ -460,7 +461,7 @@ namespace CombatSystem.AI
             var destination = currentTarget.Transform.position;
             if (useNavMesh && navAgent != null)
             {
-                navAgent.speed = moveSpeed;
+                navAgent.speed = movement != null ? movement.MoveSpeed : 3.5f;
                 navAgent.stoppingDistance = Mathf.Max(stoppingDistance, selectedMinRange);
                 navAgent.isStopped = false;
                 navAgent.SetDestination(destination);
@@ -503,7 +504,7 @@ namespace CombatSystem.AI
 
             if (useNavMesh && navAgent != null)
             {
-                navAgent.speed = moveSpeed;
+                navAgent.speed = movement != null ? movement.MoveSpeed : 3.5f;
                 navAgent.stoppingDistance = 0f;
                 navAgent.isStopped = false;
                 navAgent.SetDestination(destination);
@@ -547,11 +548,12 @@ namespace CombatSystem.AI
             var direction = delta / distance;
             if (movement != null)
             {
-                movement.SetMoveInput(direction, moveSpeed);
+                movement.SetMoveInput(direction);
                 return;
             }
 
-            transform.position = origin + direction * moveSpeed * Time.deltaTime;
+            var speed = 3.5f; // 无 MovementComponent 时的回退速度
+            transform.position = origin + direction * speed * Time.deltaTime;
 
             // 面向移动方向
             if (direction.sqrMagnitude > 0.001f && CanRotateWhileCasting())
@@ -615,10 +617,7 @@ namespace CombatSystem.AI
             }
 
             // 无选中技能时使用普通攻击
-            if (selectedSkill == null)
-            {
-                selectedSkill = skillUser.BasicAttack;
-            }
+            EnsureBasicAttackSelection();
 
             if (selectedSkill == null)
             {
@@ -635,6 +634,24 @@ namespace CombatSystem.AI
 
                 selectedSkill = null;
             }
+        }
+
+        private void EnsureBasicAttackSelection()
+        {
+            if (selectedSkill != null || skillUser == null)
+            {
+                return;
+            }
+
+            var basic = skillUser.BasicAttack;
+            if (basic == null)
+            {
+                return;
+            }
+
+            selectedSkill = basic;
+            selectedMinRange = 0f;
+            selectedMaxRange = GetSkillMaxRange(basic, aiProfile != null ? aiProfile.AttackRange : 0f);
         }
 
         /// <summary>
@@ -830,6 +847,30 @@ namespace CombatSystem.AI
             }
 
             return true;
+        }
+
+        private static float GetSkillMaxRange(SkillDefinition skill, float fallback)
+        {
+            if (skill == null || skill.Targeting == null)
+            {
+                return fallback;
+            }
+
+            var targeting = skill.Targeting;
+            switch (targeting.Mode)
+            {
+                case TargetingMode.Self:
+                    return 0f;
+                case TargetingMode.Sphere:
+                    if (targeting.Radius > 0f)
+                    {
+                        return targeting.Radius;
+                    }
+
+                    break;
+            }
+
+            return targeting.Range > 0f ? targeting.Range : fallback;
         }
 
         /// <summary>

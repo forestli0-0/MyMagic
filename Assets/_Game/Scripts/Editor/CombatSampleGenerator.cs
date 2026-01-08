@@ -57,6 +57,22 @@ namespace CombatSystem.Editor
             public StatDefinition HealthRegen;
             public StatDefinition MaxMana;
             public StatDefinition ManaRegen;
+            public StatDefinition MoveSpeed;
+            public StatDefinition AttackPower;
+            public StatDefinition AbilityPower;
+            public StatDefinition AttackSpeed;
+            public StatDefinition CritChance;
+            public StatDefinition CritMultiplier;
+            public StatDefinition Armor;
+            public StatDefinition MagicResist;
+            public StatDefinition ArmorPenFlat;
+            public StatDefinition ArmorPenPercent;
+            public StatDefinition MagicPenFlat;
+            public StatDefinition MagicPenPercent;
+            public StatDefinition AbilityHaste;
+            public StatDefinition Lifesteal;
+            public StatDefinition Omnivamp;
+            public StatDefinition Tenacity;
 
             public TagDefinition TagPlayer;
             public TagDefinition TagEnemy;
@@ -66,6 +82,7 @@ namespace CombatSystem.Editor
             public TagDefinition TagNature;
 
             public TargetingDefinition TargetingSingleEnemy;
+            public TargetingDefinition TargetingBasicAttack;
             public TargetingDefinition TargetingSelf;
             public TargetingDefinition TargetingConeEnemy;
             public TargetingDefinition TargetingSphereEnemy;
@@ -224,6 +241,54 @@ namespace CombatSystem.Editor
                 assets.ManaRegen = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ManaRegen.asset");
                 ConfigureStat(assets.ManaRegen, "Stat_ManaRegen", "Mana Regen", 5f, 0f, 9999f, false, false);
 
+                assets.MoveSpeed = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MoveSpeed.asset");
+                ConfigureStat(assets.MoveSpeed, "Stat_MoveSpeed", "Move Speed", 5f, 0f, 20f, false, false);
+
+                assets.AttackPower = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AttackPower.asset");
+                ConfigureStat(assets.AttackPower, "Stat_AttackPower", "Attack Power", 10f, 0f, 9999f, false, false);
+
+                assets.AbilityPower = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AbilityPower.asset");
+                ConfigureStat(assets.AbilityPower, "Stat_AbilityPower", "Ability Power", 0f, 0f, 9999f, false, false);
+
+                assets.AttackSpeed = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AttackSpeed.asset");
+                ConfigureStat(assets.AttackSpeed, "Stat_AttackSpeed", "Attack Speed", 0f, 0f, 5f, false, true);
+
+                assets.CritChance = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_CritChance.asset");
+                ConfigureStat(assets.CritChance, "Stat_CritChance", "Crit Chance", 0f, 0f, 1f, false, true);
+
+                assets.CritMultiplier = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_CritMultiplier.asset");
+                ConfigureStat(assets.CritMultiplier, "Stat_CritMultiplier", "Crit Multiplier", 2f, 1f, 5f, false, false);
+
+                assets.Armor = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Armor.asset");
+                ConfigureStat(assets.Armor, "Stat_Armor", "Armor", 0f, 0f, 9999f, true, false);
+
+                assets.MagicResist = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicResist.asset");
+                ConfigureStat(assets.MagicResist, "Stat_MagicResist", "Magic Resist", 0f, 0f, 9999f, true, false);
+
+                assets.ArmorPenFlat = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ArmorPenFlat.asset");
+                ConfigureStat(assets.ArmorPenFlat, "Stat_ArmorPenFlat", "Armor Pen Flat", 0f, 0f, 9999f, true, false);
+
+                assets.ArmorPenPercent = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ArmorPenPercent.asset");
+                ConfigureStat(assets.ArmorPenPercent, "Stat_ArmorPenPercent", "Armor Pen Percent", 0f, 0f, 1f, false, true);
+
+                assets.MagicPenFlat = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicPenFlat.asset");
+                ConfigureStat(assets.MagicPenFlat, "Stat_MagicPenFlat", "Magic Pen Flat", 0f, 0f, 9999f, true, false);
+
+                assets.MagicPenPercent = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicPenPercent.asset");
+                ConfigureStat(assets.MagicPenPercent, "Stat_MagicPenPercent", "Magic Pen Percent", 0f, 0f, 1f, false, true);
+
+                assets.AbilityHaste = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AbilityHaste.asset");
+                ConfigureStat(assets.AbilityHaste, "Stat_AbilityHaste", "Ability Haste", 0f, 0f, 500f, true, false);
+
+                assets.Lifesteal = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Lifesteal.asset");
+                ConfigureStat(assets.Lifesteal, "Stat_Lifesteal", "Lifesteal", 0f, 0f, 1f, false, true);
+
+                assets.Omnivamp = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Omnivamp.asset");
+                ConfigureStat(assets.Omnivamp, "Stat_Omnivamp", "Omnivamp", 0f, 0f, 1f, false, true);
+
+                assets.Tenacity = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Tenacity.asset");
+                ConfigureStat(assets.Tenacity, "Stat_Tenacity", "Tenacity", 0f, 0f, 1f, false, true);
+
                 assets.TagPlayer = LoadOrCreate<TagDefinition>($"{folders.Tags}/Tag_Player.asset");
                 ConfigureTag(assets.TagPlayer, "Tag_Player", "Player");
 
@@ -250,6 +315,22 @@ namespace CombatSystem.Editor
                     TargetingMode.Single,
                     TargetTeam.Enemy,
                     12f,
+                    0f,
+                    45f,
+                    1,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null);
+
+                assets.TargetingBasicAttack = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_BasicAttack.asset");
+                ConfigureTargeting(
+                    assets.TargetingBasicAttack,
+                    "Targeting_BasicAttack",
+                    "Basic Attack",
+                    TargetingMode.Single,
+                    TargetTeam.Enemy,
+                    2f,
                     0f,
                     45f,
                     1,
@@ -555,7 +636,11 @@ namespace CombatSystem.Editor
                     "Effect_BurnTickDamage",
                     "Burn Tick",
                     5f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    0.4f);
 
                 assets.EffectApplyBurn = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyBurn.asset");
                 ConfigureEffectApplyBuff(
@@ -570,7 +655,14 @@ namespace CombatSystem.Editor
                     "Effect_BasicAttackDamage",
                     "Basic Attack Damage",
                     10f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
 
                 assets.EffectFireball = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_FireballDamage.asset");
                 ConfigureEffectDamage(
@@ -578,7 +670,11 @@ namespace CombatSystem.Editor
                     "Effect_FireballDamage",
                     "Fireball Damage",
                     25f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    1f);
 
                 assets.EffectApplyArcaneFocus = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyArcaneFocus.asset");
                 ConfigureEffectApplyBuff(
@@ -593,7 +689,14 @@ namespace CombatSystem.Editor
                     "Effect_CleaveDamage",
                     "Cleave Damage",
                     18f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
 
                 assets.EffectChainDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ChainLightningDamage.asset");
                 ConfigureEffectDamage(
@@ -601,7 +704,11 @@ namespace CombatSystem.Editor
                     "Effect_ChainLightningDamage",
                     "Chain Lightning Damage",
                     12f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    1f);
 
                 assets.EffectRandomShotDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_RandomShotDamage.asset");
                 ConfigureEffectDamage(
@@ -609,7 +716,14 @@ namespace CombatSystem.Editor
                     "Effect_RandomShotDamage",
                     "Random Shot Damage",
                     15f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
 
                 assets.EffectExecuteDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ExecuteDamage.asset");
                 ConfigureEffectDamage(
@@ -617,7 +731,14 @@ namespace CombatSystem.Editor
                     "Effect_ExecuteDamage",
                     "Execute Damage",
                     35f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
 
                 assets.EffectHealSmall = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_HealSmall.asset");
                 ConfigureEffectHeal(
@@ -649,7 +770,14 @@ namespace CombatSystem.Editor
                     "Effect_LineStrikeDamage",
                     "Line Strike Damage",
                     16f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
 
                 assets.EffectBoxDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_BoxFieldDamage.asset");
                 ConfigureEffectDamage(
@@ -657,7 +785,11 @@ namespace CombatSystem.Editor
                     "Effect_BoxFieldDamage",
                     "Box Field Damage",
                     18f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    1f);
 
                 assets.EffectBleedTick = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_BleedTickDamage.asset");
                 ConfigureEffectDamage(
@@ -665,7 +797,11 @@ namespace CombatSystem.Editor
                     "Effect_BleedTickDamage",
                     "Bleed Tick",
                     4f,
-                    DamageType.Physical);
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    0.4f);
 
                 assets.EffectApplyBleed = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyBleed.asset");
                 ConfigureEffectApplyBuff(
@@ -680,7 +816,11 @@ namespace CombatSystem.Editor
                     "Effect_PoisonTickDamage",
                     "Poison Tick",
                     3f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    0.4f);
 
                 assets.EffectApplyPoison = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyPoison.asset");
                 ConfigureEffectApplyBuff(
@@ -697,7 +837,9 @@ namespace CombatSystem.Editor
                     6f,
                     DamageType.Magical,
                     6f,
-                    2f);
+                    2f,
+                    assets.AbilityPower,
+                    0.4f);
 
                 assets.EffectArcaneBoltHit = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ArcaneBoltHit.asset");
                 ConfigureEffectDamage(
@@ -705,7 +847,11 @@ namespace CombatSystem.Editor
                     "Effect_ArcaneBoltHit",
                     "Arcane Bolt Hit",
                     16f,
-                    DamageType.Magical);
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    1f);
 
                 assets.EffectArcaneBoltProjectile = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ArcaneBoltProjectile.asset");
                 ConfigureEffectProjectile(
@@ -909,7 +1055,7 @@ namespace CombatSystem.Editor
                     0f,
                     true,
                     true,
-                    assets.TargetingSingleEnemy,
+                    assets.TargetingBasicAttack,
                     null,
                     new SkillStepData
                     {
@@ -1380,7 +1526,8 @@ namespace CombatSystem.Editor
                         new StatValueData(assets.MaxHealth, 100f),
                         new StatValueData(assets.HealthRegen, 1f),
                         new StatValueData(assets.MaxMana, 100f),
-                        new StatValueData(assets.ManaRegen, 5f)
+                        new StatValueData(assets.ManaRegen, 5f),
+                        new StatValueData(assets.MoveSpeed, 5f)
                     },
                     assets.SkillBasicAttack,
                     new Object[] { assets.SkillFireball, assets.SkillArcaneFocus },
@@ -1397,7 +1544,8 @@ namespace CombatSystem.Editor
                         new StatValueData(assets.MaxHealth, 80f),
                         new StatValueData(assets.HealthRegen, 0f),
                         new StatValueData(assets.MaxMana, 30f),
-                        new StatValueData(assets.ManaRegen, 1f)
+                        new StatValueData(assets.ManaRegen, 1f),
+                        new StatValueData(assets.MoveSpeed, 3.5f)
                     },
                     assets.SkillBasicAttack,
                     null,
@@ -1462,13 +1610,11 @@ namespace CombatSystem.Editor
                 SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
                 SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
                 SetComponentValue(enemyAI, "useNavMesh", false);
-                SetComponentValue(enemyAI, "moveSpeed", 2.5f);
             }
 
             var playerMove = player.AddComponent<PlayerMovementDriver>();
             SetComponentReference(playerMove, "movement", player.GetComponent<MovementComponent>());
             SetComponentReference(playerMove, "viewCamera", FindMainCamera());
-            SetComponentValue(playerMove, "moveSpeed", 6f);
             SetComponentValue(playerMove, "useCameraYaw", true);
 
             var indicatorRoot = new GameObject("SkillIndicator");
@@ -1504,7 +1650,15 @@ namespace CombatSystem.Editor
             SetComponentValue(pageSwitcher, "slotsPerPage", assets.HUDDefault != null ? assets.HUDDefault.MaxSkillSlots : 6);
             SetComponentValue(pageSwitcher, "includeBasicAttack", false);
             SetComponentValue(pageSwitcher, "wrapPages", true);
-            ConfigureSkillPages(pageSwitcher, 0, new SkillPageData[]
+            var controlTestSkills = BuildSkillList(
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestStun.asset"),
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestRoot.asset"),
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestSuppression.asset"),
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestFear.asset"),
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestTaunt.asset"),
+                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestCharm.asset"));
+
+            var pages = new List<SkillPageData>
             {
                 new SkillPageData
                 {
@@ -1558,7 +1712,22 @@ namespace CombatSystem.Editor
                         assets.SkillFireball
                     }
                 }
-            });
+            };
+
+            if (controlTestSkills.Length > 0)
+            {
+                pages.Add(new SkillPageData
+                {
+                    Name = "Control Tests",
+                    Skills = controlTestSkills
+                });
+            }
+            else
+            {
+                Debug.LogWarning("[CombatSampleGenerator] Control test skills not found, skipping control page.");
+            }
+
+            ConfigureSkillPages(pageSwitcher, 0, pages.ToArray());
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, SampleScenePath);
@@ -2401,7 +2570,10 @@ namespace CombatSystem.Editor
             Object[] requiredTags,
             Object[] blockedTags,
             TargetingOrigin origin = TargetingOrigin.Caster,
-            bool allowEmpty = false)
+            bool allowEmpty = false,
+            HitValidationPolicy hitValidation = HitValidationPolicy.AliveOnly,
+            int lineOfSightMask = -1,
+            float lineOfSightHeight = 1.5f)
         {
             var so = new SerializedObject(targeting);
             SetDefinitionBase(so, id, displayName);
@@ -2415,6 +2587,9 @@ namespace CombatSystem.Editor
             so.FindProperty("sort").enumValueIndex = (int)sort;
             so.FindProperty("includeSelf").boolValue = includeSelf;
             so.FindProperty("allowEmpty").boolValue = allowEmpty;
+            so.FindProperty("hitValidation").enumValueIndex = (int)hitValidation;
+            so.FindProperty("lineOfSightMask").intValue = lineOfSightMask;
+            so.FindProperty("lineOfSightHeight").floatValue = lineOfSightHeight;
             SetObjectList(so.FindProperty("requiredTags"), requiredTags);
             SetObjectList(so.FindProperty("blockedTags"), blockedTags);
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -2455,7 +2630,13 @@ namespace CombatSystem.Editor
             float value,
             DamageType damageType,
             float duration = 0f,
-            float interval = 0f)
+            float interval = 0f,
+            StatDefinition scalingStat = null,
+            float scalingRatio = 0f,
+            bool canCrit = false,
+            StatDefinition critChanceStat = null,
+            StatDefinition critMultiplierStat = null,
+            bool triggersOnHit = false)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
@@ -2464,6 +2645,12 @@ namespace CombatSystem.Editor
             so.FindProperty("damageType").enumValueIndex = (int)damageType;
             so.FindProperty("duration").floatValue = duration;
             so.FindProperty("interval").floatValue = interval;
+            so.FindProperty("scalingStat").objectReferenceValue = scalingStat;
+            so.FindProperty("scalingRatio").floatValue = scalingRatio;
+            so.FindProperty("canCrit").boolValue = canCrit;
+            so.FindProperty("critChanceStat").objectReferenceValue = critChanceStat;
+            so.FindProperty("critMultiplierStat").objectReferenceValue = critMultiplierStat;
+            so.FindProperty("triggersOnHit").boolValue = triggersOnHit;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -2743,7 +2930,13 @@ namespace CombatSystem.Editor
             bool canRotateWhileCasting,
             TargetingDefinition targeting,
             Object[] tags,
-            SkillStepData step)
+            SkillStepData step,
+            float postCastTime = 0f,
+            float gcdDuration = 0f,
+            float channelTickInterval = 0f,
+            float queueWindow = 0f,
+            SkillQueuePolicy queuePolicy = SkillQueuePolicy.Replace,
+            TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart)
         {
             var so = new SerializedObject(skill);
             SetDefinitionBase(so, id, displayName);
@@ -2754,6 +2947,12 @@ namespace CombatSystem.Editor
             so.FindProperty("channelTime").floatValue = channelTime;
             so.FindProperty("canMoveWhileCasting").boolValue = canMoveWhileCasting;
             so.FindProperty("canRotateWhileCasting").boolValue = canRotateWhileCasting;
+            so.FindProperty("postCastTime").floatValue = postCastTime;
+            so.FindProperty("gcdDuration").floatValue = gcdDuration;
+            so.FindProperty("channelTickInterval").floatValue = channelTickInterval;
+            so.FindProperty("queueWindow").floatValue = queueWindow;
+            so.FindProperty("queuePolicy").enumValueIndex = (int)queuePolicy;
+            so.FindProperty("targetSnapshotPolicy").enumValueIndex = (int)targetSnapshotPolicy;
             so.FindProperty("targeting").objectReferenceValue = targeting;
             SetObjectList(so.FindProperty("tags"), tags);
 
@@ -2854,7 +3053,29 @@ namespace CombatSystem.Editor
         private static void ConfigureDatabase(SampleAssets assets)
         {
             var so = new SerializedObject(assets.Database);
-            SetObjectList(so.FindProperty("stats"), new Object[] { assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen });
+            SetObjectList(so.FindProperty("stats"), new Object[]
+            {
+                assets.MaxHealth,
+                assets.HealthRegen,
+                assets.MaxMana,
+                assets.ManaRegen,
+                assets.MoveSpeed,
+                assets.AttackPower,
+                assets.AbilityPower,
+                assets.AttackSpeed,
+                assets.CritChance,
+                assets.CritMultiplier,
+                assets.Armor,
+                assets.MagicResist,
+                assets.ArmorPenFlat,
+                assets.ArmorPenPercent,
+                assets.MagicPenFlat,
+                assets.MagicPenPercent,
+                assets.AbilityHaste,
+                assets.Lifesteal,
+                assets.Omnivamp,
+                assets.Tenacity
+            });
             SetObjectList(so.FindProperty("tags"), new Object[] { assets.TagPlayer, assets.TagEnemy, assets.TagMagic, assets.TagFire, assets.TagPhysical, assets.TagNature });
             SetObjectList(so.FindProperty("units"), new Object[] { assets.UnitPlayer, assets.UnitEnemy, assets.UnitSummonTotem });
             SetObjectList(so.FindProperty("skills"), new Object[]
@@ -2941,6 +3162,7 @@ namespace CombatSystem.Editor
             SetObjectList(so.FindProperty("targetings"), new Object[]
             {
                 assets.TargetingSingleEnemy,
+                assets.TargetingBasicAttack,
                 assets.TargetingSelf,
                 assets.TargetingConeEnemy,
                 assets.TargetingSphereEnemy,
@@ -3003,6 +3225,35 @@ namespace CombatSystem.Editor
             {
                 property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
             }
+        }
+
+        private static SkillDefinition LoadOptionalSkill(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                return null;
+            }
+
+            return AssetDatabase.LoadAssetAtPath<SkillDefinition>(path);
+        }
+
+        private static Object[] BuildSkillList(params SkillDefinition[] skills)
+        {
+            if (skills == null || skills.Length == 0)
+            {
+                return new Object[0];
+            }
+
+            var list = new List<Object>(skills.Length);
+            for (int i = 0; i < skills.Length; i++)
+            {
+                if (skills[i] != null)
+                {
+                    list.Add(skills[i]);
+                }
+            }
+
+            return list.ToArray();
         }
 
         private static void SetComponentReference(Object component, string propertyName, Object value)

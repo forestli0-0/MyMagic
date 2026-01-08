@@ -254,6 +254,12 @@ namespace CombatSystem.Core
                     continue;
                 }
 
+                if (ShouldEndSuppression(instance))
+                {
+                    expiredIndices.Add(i);
+                    continue;
+                }
+
                 // 检查是否需要触发 Tick（周期性效果）
                 if (instance.NextTickTime > 0f && now >= instance.NextTickTime)
                 {
@@ -337,6 +343,16 @@ namespace CombatSystem.Core
         /// <param name="buff">要应用的 Buff 定义</param>
         public void ApplyBuff(BuffDefinition buff)
         {
+            ApplyBuff(buff, null);
+        }
+
+        /// <summary>
+        /// 应用一个 Buff 到该单位，并记录来源。
+        /// </summary>
+        /// <param name="buff">要应用的 Buff 定义</param>
+        /// <param name="source">施加来源（可为空）</param>
+        public void ApplyBuff(BuffDefinition buff, UnitRoot source)
+        {
             if (buff == null)
             {
                 return;
@@ -390,6 +406,11 @@ namespace CombatSystem.Core
                         instance.EndTime = duration > 0f ? now + duration : instance.EndTime;
                     }
 
+                    if (source != null)
+                    {
+                        instance.Source = source;
+                    }
+
                     activeBuffs[index] = instance;
                     TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
                     TryInterruptCast(buff);
@@ -410,6 +431,11 @@ namespace CombatSystem.Core
                         instance.Stacks = 1;
                         instance.EndTime = duration > 0f ? now + duration : -1f;
                         instance.NextTickTime = tickInterval > 0f ? now + tickInterval : -1f;
+                        if (source != null)
+                        {
+                            instance.Source = source;
+                        }
+
                         activeBuffs[refreshIndex] = instance;
                         TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
                         TryInterruptCast(buff);
@@ -423,7 +449,7 @@ namespace CombatSystem.Core
             // 创建新的 Buff 实例
             var endTime = duration > 0f ? now + duration : -1f;
             var nextTick = tickInterval > 0f ? now + tickInterval : -1f;
-            var newInstance = new BuffInstance(buff, 1, endTime, nextTick, now);
+            var newInstance = new BuffInstance(buff, 1, endTime, nextTick, now, source);
             activeBuffs.Add(newInstance);
 
             // 触发 OnApply 效果
@@ -920,6 +946,119 @@ namespace CombatSystem.Core
             return false;
         }
 
+        private static bool ShouldEndSuppression(BuffInstance instance)
+        {
+            var definition = instance.Definition;
+            if (definition == null)
+            {
+                return false;
+            }
+
+            var controls = definition.ControlEffects;
+            if (controls == null || controls.Count == 0 || !ContainsControl(controls, ControlType.Suppression))
+            {
+                return false;
+            }
+
+            var source = instance.Source;
+            if (source == null)
+            {
+                return false;
+            }
+
+            var sourceSkillUser = source.GetComponent<SkillUserComponent>();
+            if (sourceSkillUser == null)
+            {
+                return false;
+            }
+
+            return !sourceSkillUser.IsCasting;
+        }
+
+        /// <summary>
+        /// 获取强制移动控制（Fear/Taunt/Charm）及其来源。
+        /// </summary>
+        public bool TryGetForcedMovement(out ControlType control, out UnitRoot source)
+        {
+            control = ControlType.All;
+            source = null;
+
+            if (activeBuffs.Count == 0)
+            {
+                return false;
+            }
+
+            var found = false;
+            var bestPriority = int.MinValue;
+
+            for (int i = 0; i < activeBuffs.Count; i++)
+            {
+                var instance = activeBuffs[i];
+                var definition = instance.Definition;
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var controls = definition.ControlEffects;
+                if (controls == null || controls.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < controls.Count; j++)
+                {
+                    var type = controls[j];
+                    if (type == ControlType.All)
+                    {
+                        continue;
+                    }
+
+                    if (!ControlRules.HasFlag(type, ControlFlag.ForcesMovement))
+                    {
+                        continue;
+                    }
+
+                    if (HasControlImmunity(type))
+                    {
+                        continue;
+                    }
+
+                    var priority = GetForcedMovementPriority(type);
+                    var prefer = !found
+                                 || priority > bestPriority
+                                 || (priority == bestPriority && source == null && instance.Source != null);
+
+                    if (!prefer)
+                    {
+                        continue;
+                    }
+
+                    found = true;
+                    bestPriority = priority;
+                    control = type;
+                    source = instance.Source;
+                }
+            }
+
+            return found;
+        }
+
+        private static int GetForcedMovementPriority(ControlType type)
+        {
+            switch (type)
+            {
+                case ControlType.Taunt:
+                    return 3;
+                case ControlType.Charm:
+                    return 2;
+                case ControlType.Fear:
+                    return 1;
+                default:
+                    return 0;
+            }
+        }
+
         private void TryInterruptCast(BuffDefinition buff)
         {
             if (buff == null || skillUser == null || !skillUser.IsCasting)
@@ -1019,6 +1158,9 @@ namespace CombatSystem.Core
             /// <summary>应用时间（用于排序）</summary>
             public float AppliedTime;
 
+            /// <summary>Buff 来源（施加者）</summary>
+            public UnitRoot Source;
+
             /// <summary>
             /// 创建 Buff 实例。
             /// </summary>
@@ -1027,13 +1169,14 @@ namespace CombatSystem.Core
             /// <param name="endTime">结束时间</param>
             /// <param name="nextTickTime">下一次 Tick 时间</param>
             /// <param name="appliedTime">应用时间</param>
-            public BuffInstance(BuffDefinition definition, int stacks, float endTime, float nextTickTime, float appliedTime)
+            public BuffInstance(BuffDefinition definition, int stacks, float endTime, float nextTickTime, float appliedTime, UnitRoot source)
             {
                 Definition = definition;
                 Stacks = stacks;
                 EndTime = endTime;
                 NextTickTime = nextTickTime;
                 AppliedTime = appliedTime;
+                Source = source;
             }
         }
 

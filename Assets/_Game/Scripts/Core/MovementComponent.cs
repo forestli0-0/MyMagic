@@ -34,9 +34,11 @@ namespace CombatSystem.Core
         [SerializeField] private SkillUserComponent skillUser;
         [Tooltip("Buff 控制器，用于控制状态判定")]
         [SerializeField] private BuffController buffController;
+        [Tooltip("属性组件，用于读取移动速度等属性")]
+        [SerializeField] private StatsComponent stats;
 
         [Header("移动设置")]
-        [Tooltip("基础移动速度（单位/秒）")]
+        [Tooltip("基础移动速度（回退值，无 StatsComponent 时使用）")]
         [SerializeField] private float baseMoveSpeed = 5f;
 
         [Tooltip("旋转速度（度/秒）")]
@@ -45,15 +47,16 @@ namespace CombatSystem.Core
         [Tooltip("是否在移动时自动朝向移动方向")]
         [SerializeField] private bool rotateToMovement = true;
 
+        [Header("控制驱动")]
+        [Tooltip("强制移动控制的速度倍率（Fear/Taunt/Charm）")]
+        [SerializeField] private float forcedControlSpeedMultiplier = 1f;
+
         #endregion
 
         #region 常规移动状态
 
         /// <summary>当前帧的移动输入方向</summary>
         private Vector3 moveInput;
-
-        /// <summary>当前帧的移动速度</summary>
-        private float moveSpeed;
 
         /// <summary>当前帧是否有移动输入</summary>
         private bool hasMoveInput;
@@ -86,6 +89,11 @@ namespace CombatSystem.Core
         /// </summary>
         public bool IsForcedMoving => forcedActive;
 
+        /// <summary>
+        /// 当前移动速度（从属性系统读取，或使用基础值回退）。
+        /// </summary>
+        public float MoveSpeed => GetMoveSpeed();
+
         #endregion
 
         #region Unity 生命周期
@@ -98,6 +106,7 @@ namespace CombatSystem.Core
             controller = GetComponent<CharacterController>();
             skillUser = GetComponent<SkillUserComponent>();
             buffController = GetComponent<BuffController>();
+            stats = GetComponent<StatsComponent>();
         }
 
         /// <summary>
@@ -119,6 +128,11 @@ namespace CombatSystem.Core
             {
                 buffController = GetComponent<BuffController>();
             }
+
+            if (stats == null)
+            {
+                stats = GetComponent<StatsComponent>();
+            }
         }
 
         /// <summary>
@@ -135,6 +149,12 @@ namespace CombatSystem.Core
                 return;
             }
 
+            if (TryGetControlMove(out var controlDirection, out var controlRotate))
+            {
+                ProcessControlMove(deltaTime, controlDirection, controlRotate);
+                return;
+            }
+
             // 处理常规移动输入
             ProcessNormalMove(deltaTime);
         }
@@ -147,19 +167,18 @@ namespace CombatSystem.Core
         /// 设置移动输入（每帧调用）。
         /// </summary>
         /// <param name="direction">移动方向（世界空间）</param>
-        /// <param name="speed">移动速度</param>
         /// <remarks>
         /// 输入在当前帧结束后自动清空，需要每帧持续调用以保持移动。
+        /// 移动速度由组件内部从 StatsComponent 读取。
         /// </remarks>
-        public void SetMoveInput(Vector3 direction, float speed)
+        public void SetMoveInput(Vector3 direction)
         {
-            if (direction.sqrMagnitude <= 0.0001f || speed <= 0f)
+            if (direction.sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
             moveInput = direction;
-            moveSpeed = speed;
             hasMoveInput = true;
         }
 
@@ -169,13 +188,12 @@ namespace CombatSystem.Core
         /// <param name="velocity">速度向量（方向 × 速度）</param>
         public void SetMoveVelocity(Vector3 velocity)
         {
-            var speed = velocity.magnitude;
-            if (speed <= 0.0001f)
+            if (velocity.sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            SetMoveInput(velocity / speed, speed);
+            SetMoveInput(velocity.normalized);
         }
 
         /// <summary>
@@ -185,7 +203,6 @@ namespace CombatSystem.Core
         {
             hasMoveInput = false;
             moveInput = Vector3.zero;
-            moveSpeed = 0f;
         }
 
         /// <summary>
@@ -276,7 +293,7 @@ namespace CombatSystem.Core
                     direction.Normalize();
                 }
 
-                var speed = moveSpeed > 0f ? moveSpeed : baseMoveSpeed;
+                var speed = GetMoveSpeed();
                 Move(direction * speed * deltaTime);
 
                 // 根据配置决定是否朝向移动方向
@@ -287,9 +304,7 @@ namespace CombatSystem.Core
             }
 
             // 清空本帧输入，等待下一帧重新设置
-            hasMoveInput = false;
-            moveInput = Vector3.zero;
-            moveSpeed = 0f;
+            ClearMoveInput();
         }
 
         /// <summary>
@@ -330,6 +345,158 @@ namespace CombatSystem.Core
 
             var rotation = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+        }
+
+        private void ProcessControlMove(float deltaTime, Vector3 direction, bool rotate)
+        {
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                ClearMoveInput();
+                return;
+            }
+
+            var speed = baseMoveSpeed * Mathf.Max(0f, forcedControlSpeedMultiplier);
+            Move(direction * speed * deltaTime);
+
+            if (rotate)
+            {
+                RotateTowardsForced(direction);
+            }
+
+            ClearMoveInput();
+        }
+
+        private void RotateTowardsForced(Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            var rotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+        }
+
+        private bool TryGetControlMove(out Vector3 direction, out bool rotate)
+        {
+            direction = Vector3.zero;
+            rotate = true;
+
+            if (buffController == null)
+            {
+                return false;
+            }
+
+            if (!buffController.TryGetForcedMovement(out var control, out var source))
+            {
+                return false;
+            }
+
+            if (control == ControlType.Taunt && ShouldHoldPositionForTaunt(source))
+            {
+                return false;
+            }
+
+            var origin = transform.position;
+            Vector3 delta;
+            if (source != null && source.transform != null)
+            {
+                delta = source.transform.position - origin;
+            }
+            else
+            {
+                delta = transform.forward;
+            }
+
+            delta.y = 0f;
+            if (control == ControlType.Fear)
+            {
+                delta = -delta;
+            }
+
+            if (delta.sqrMagnitude <= 0.0001f)
+            {
+                delta = control == ControlType.Fear ? -transform.forward : transform.forward;
+                delta.y = 0f;
+            }
+
+            if (delta.sqrMagnitude <= 0.0001f)
+            {
+                return false;
+            }
+
+            direction = delta.normalized;
+            return true;
+        }
+
+        private bool ShouldHoldPositionForTaunt(UnitRoot source)
+        {
+            if (source == null || source.transform == null)
+            {
+                return false;
+            }
+
+            var basicAttack = skillUser != null ? skillUser.BasicAttack : null;
+            if (basicAttack == null || basicAttack.Targeting == null)
+            {
+                return false;
+            }
+
+            var maxRange = GetTargetingMaxRange(basicAttack.Targeting);
+            if (maxRange <= 0f)
+            {
+                return false;
+            }
+
+            var origin = transform.position;
+            var targetPos = source.transform.position;
+            origin.y = 0f;
+            targetPos.y = 0f;
+            return (targetPos - origin).sqrMagnitude <= maxRange * maxRange;
+        }
+
+        private static float GetTargetingMaxRange(TargetingDefinition targeting)
+        {
+            if (targeting == null)
+            {
+                return 0f;
+            }
+
+            switch (targeting.Mode)
+            {
+                case TargetingMode.Self:
+                    return 0f;
+                case TargetingMode.Sphere:
+                    if (targeting.Radius > 0f)
+                    {
+                        return targeting.Radius;
+                    }
+
+                    break;
+            }
+
+            return targeting.Range;
+        }
+
+        private void ClearMoveInput()
+        {
+            hasMoveInput = false;
+            moveInput = Vector3.zero;
+        }
+
+        /// <summary>
+        /// 获取当前移动速度（从属性系统读取，或使用基础值回退）。
+        /// </summary>
+        private float GetMoveSpeed()
+        {
+            if (stats != null)
+            {
+                var speed = stats.GetValueById(CombatStatIds.MoveSpeed, baseMoveSpeed);
+                return Mathf.Max(0f, speed);
+            }
+
+            return baseMoveSpeed;
         }
 
         private bool IsMovementBlocked()

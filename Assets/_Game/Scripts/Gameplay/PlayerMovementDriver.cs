@@ -24,11 +24,11 @@ namespace CombatSystem.Gameplay
         [Tooltip("移动组件引用")]
         [SerializeField] private MovementComponent movement;
 
+        [Tooltip("技能组件引用")]
+        [SerializeField] private SkillUserComponent skillUser;
+
         [Tooltip("视角相机（用于计算相机相对移动方向）")]
         [SerializeField] private Camera viewCamera;
-
-        [Tooltip("移动速度")]
-        [SerializeField] private float moveSpeed = 6f;
 
         [Tooltip("是否使用相机朝向作为移动参考（按 W 向相机前方移动）")]
         [SerializeField] private bool useCameraYaw = true;
@@ -43,6 +43,7 @@ namespace CombatSystem.Gameplay
         private void Reset()
         {
             movement = GetComponent<MovementComponent>();
+            skillUser = GetComponent<SkillUserComponent>();
         }
 
         /// <summary>
@@ -60,6 +61,11 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (skillUser == null)
+            {
+                skillUser = GetComponent<SkillUserComponent>();
+            }
+
             // 懒加载主相机
             if (viewCamera == null)
             {
@@ -73,6 +79,12 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (skillUser != null && skillUser.IsChanneling && !skillUser.CanMoveWhileCasting)
+            {
+                skillUser.InterruptCast();
+                return;
+            }
+
             // 计算移动方向
             var direction = CalculateMoveDirection(input);
 
@@ -82,8 +94,8 @@ namespace CombatSystem.Gameplay
                 direction.Normalize();
             }
 
-            // 传递给移动组件执行
-            movement.SetMoveInput(direction, moveSpeed);
+            // 传递给移动组件执行（速度由 MovementComponent 从属性系统读取）
+            movement.SetMoveInput(direction);
         }
 
         #endregion

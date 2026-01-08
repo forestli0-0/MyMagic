@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Stat_MagicPenFlat
   m_EditorClassIdentifier: 
   id: Stat_MagicPenFlat
-  displayName: Magic Pen (Flat)
+  displayName: Magic Pen Flat
   defaultValue: 0
   minValue: 0
   maxValue: 9999
