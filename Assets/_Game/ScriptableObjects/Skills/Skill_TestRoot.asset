@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 423d4e9b41e544a48bd5f4c93619d8bf, type: 3}
-  m_Name: Skill_BasicAttack
+  m_Name: Skill_TestRoot
   m_EditorClassIdentifier: 
-  id: Skill_BasicAttack
-  displayName: Basic Attack
+  id: Skill_TestRoot
+  displayName: Test Root
   icon: {fileID: 0}
   resourceType: 0
   resourceCost: 0
-  cooldown: 1
+  cooldown: 3
   castTime: 0
   channelTime: 0
   canMoveWhileCasting: 1
@@ -38,4 +38,4 @@ MonoBehaviour:
     vfxPrefab: {fileID: 0}
     sfx: {fileID: 0}
     effects:
-    - {fileID: 11400000, guid: b059aada7d919934abeaad340b644d60, type: 2}
+    - {fileID: 11400000, guid: 7944e15e030c4d2abe98e38f4b8c4fc0, type: 2}

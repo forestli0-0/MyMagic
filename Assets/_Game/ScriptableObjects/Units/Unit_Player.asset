@@ -27,12 +27,8 @@ MonoBehaviour:
     value: 100
   - stat: {fileID: 11400000, guid: 9513982558b6fb943b14b6b56874d4a9, type: 2}
     value: 5
-  - stat: {fileID: 11400000, guid: 0ec3c9cd3e7b4228a3e413569d7fe5b9, type: 2}
-    value: 20
-  - stat: {fileID: 11400000, guid: 10af6bca9af9442a9704ead4a12275a0, type: 2}
-    value: 20
-  - stat: {fileID: 11400000, guid: 83301ac81240442ebf84e7e14d6f344c, type: 2}
-    value: 0.2
+  - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
+    value: 5
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills:
   - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}

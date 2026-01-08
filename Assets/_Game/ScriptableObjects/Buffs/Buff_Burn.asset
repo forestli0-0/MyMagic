@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Burn
   icon: {fileID: 0}
   isDebuff: 1
+  dispellable: 1
   duration: 5
   tickInterval: 1
   stackingRule: 0
@@ -29,3 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 78fcaa908fefdc54496398ada172336f, type: 2}
+  controlEffects: []
+  controlImmunities: []

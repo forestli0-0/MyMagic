@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Arcane Focus
   icon: {fileID: 0}
   isDebuff: 0
+  dispellable: 1
   duration: 8
   tickInterval: 0
   stackingRule: 0
@@ -28,3 +29,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5b220bcb251d2964a81fb93bef0579b3, type: 2}
   - {fileID: 11400000, guid: a2147e181c8c0cb45a0be869a741aff5, type: 2}
   triggers: []
+  controlEffects: []
+  controlImmunities: []

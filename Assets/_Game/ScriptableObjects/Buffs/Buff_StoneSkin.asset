@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Stone Skin
   icon: {fileID: 0}
   isDebuff: 0
+  dispellable: 1
   duration: 8
   tickInterval: 0
   stackingRule: 0
@@ -25,7 +26,5 @@ MonoBehaviour:
   modifiers:
   - {fileID: 11400000, guid: cfa3339ae6f39924583dc9f8cf355769, type: 2}
   triggers: []
-  controlEffects: []
-  controlImmunities:
-  - Stun
-  - Root
+  controlEffects: 
+  controlImmunities: 0000000002000000

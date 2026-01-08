@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Poison
   icon: {fileID: 0}
   isDebuff: 1
+  dispellable: 1
   duration: 4
   tickInterval: 1
   stackingRule: 2
@@ -29,3 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 3d253ad53f4924043832484e5f343ddc, type: 2}
+  controlEffects: []
+  controlImmunities: []

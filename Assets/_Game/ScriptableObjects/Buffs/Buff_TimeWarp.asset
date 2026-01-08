@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Time Warp
   icon: {fileID: 0}
   isDebuff: 0
+  dispellable: 1
   duration: 6
   tickInterval: 0
   stackingRule: 0
@@ -26,3 +27,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f81d69008f45e204bbfa8ca2c555278f, type: 2}
   - {fileID: 11400000, guid: dfd3674a6b1f48f4b848f2285bd8e813, type: 2}
   triggers: []
+  controlEffects: []
+  controlImmunities: []

@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Bleed
   icon: {fileID: 0}
   isDebuff: 1
+  dispellable: 1
   duration: 6
   tickInterval: 2
   stackingRule: 1
@@ -29,3 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 38335d6ad507c3740a5fe1a9ddfbb814, type: 2}
+  controlEffects: []
+  controlImmunities: []
