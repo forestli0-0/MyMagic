@@ -65,7 +65,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 
 ## 5. 输入与控制（需要整理）
 - 现有输入直接调用 `Input.*`，需抽象为统一输入层（便于手柄/键鼠/可重绑）。
-- 目标：`ICombatInput` 统一对接玩家移动、技能、UI。
+- 目标：使用Input System 统一对接项目所有输入。
 
 ## 6. 技术路线 (阶段性交付)
 - Phase A: 游戏主循环 + 场景流转（城镇/地城/Boss）+ 保存/读取
