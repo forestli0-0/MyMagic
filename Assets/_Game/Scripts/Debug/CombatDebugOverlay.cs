@@ -1,6 +1,7 @@
 using System.Text;
 using CombatSystem.Core;
 using CombatSystem.Gameplay;
+using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,7 +13,8 @@ namespace CombatSystem.Debugging
         [SerializeField] private Text outputText;
         [SerializeField] private Graphic background;
         [SerializeField] private bool visible = true;
-        [SerializeField] private KeyCode toggleKey = KeyCode.F3;
+        [SerializeField] private InputReader inputReader;
+        [SerializeField] private bool autoFindInputReader = true;
         [SerializeField] private float refreshInterval = 0.25f;
 
         [Header("Target")]
@@ -35,18 +37,30 @@ namespace CombatSystem.Debugging
 
         private void Awake()
         {
+            ResolveInputReader();
             ResolveReferences();
             SetVisible(visible);
         }
 
+        private void OnEnable()
+        {
+            ResolveInputReader();
+            if (inputReader != null)
+            {
+                inputReader.ToggleOverlay += HandleToggleOverlay;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (inputReader != null)
+            {
+                inputReader.ToggleOverlay -= HandleToggleOverlay;
+            }
+        }
+
         private void Update()
         {
-            if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey))
-            {
-                visible = !visible;
-                SetVisible(visible);
-            }
-
             if (!visible || outputText == null)
             {
                 return;
@@ -154,7 +168,7 @@ namespace CombatSystem.Debugging
         {
             if (targetUnit == null)
             {
-                targetUnit = FindObjectOfType<UnitRoot>();
+                targetUnit = FindFirstObjectByType<UnitRoot>();
             }
 
             if (targetUnit != null)
@@ -187,13 +201,29 @@ namespace CombatSystem.Debugging
 
             if (projectilePool == null)
             {
-                projectilePool = FindObjectOfType<ProjectilePool>();
+                projectilePool = FindFirstObjectByType<ProjectilePool>();
             }
 
             if (floatingText == null)
             {
-                floatingText = FindObjectOfType<FloatingTextManager>();
+                floatingText = FindFirstObjectByType<FloatingTextManager>();
             }
+        }
+
+        private void ResolveInputReader()
+        {
+            if (!autoFindInputReader || inputReader != null)
+            {
+                return;
+            }
+
+            inputReader = FindFirstObjectByType<InputReader>();
+        }
+
+        private void HandleToggleOverlay()
+        {
+            visible = !visible;
+            SetVisible(visible);
         }
     }
 }

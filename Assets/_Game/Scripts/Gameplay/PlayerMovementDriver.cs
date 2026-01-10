@@ -1,4 +1,5 @@
 using CombatSystem.Core;
+using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEngine;
 
@@ -27,6 +28,9 @@ namespace CombatSystem.Gameplay
         [Tooltip("技能组件引用")]
         [SerializeField] private SkillUserComponent skillUser;
 
+        [Tooltip("输入读取器（Input System）")]
+        [SerializeField] private InputReader inputReader;
+
         [Tooltip("视角相机（用于计算相机相对移动方向）")]
         [SerializeField] private Camera viewCamera;
 
@@ -46,6 +50,19 @@ namespace CombatSystem.Gameplay
             skillUser = GetComponent<SkillUserComponent>();
         }
 
+        private void Awake()
+        {
+            if (inputReader == null)
+            {
+                inputReader = FindFirstObjectByType<InputReader>();
+            }
+
+            if (skillUser == null)
+            {
+                skillUser = GetComponent<SkillUserComponent>();
+            }
+        }
+
         /// <summary>
         /// 每帧读取输入并驱动移动。
         /// </summary>
@@ -61,9 +78,9 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            if (skillUser == null)
+            if (inputReader == null)
             {
-                skillUser = GetComponent<SkillUserComponent>();
+                return;
             }
 
             // 懒加载主相机
@@ -73,7 +90,7 @@ namespace CombatSystem.Gameplay
             }
 
             // 读取输入（-1 到 1 的原始值）
-            var input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            var input = inputReader.Move;
             if (input.sqrMagnitude <= 0.0001f)
             {
                 return;

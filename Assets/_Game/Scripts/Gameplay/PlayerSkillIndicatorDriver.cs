@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
+using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEngine;
 
@@ -39,18 +40,8 @@ namespace CombatSystem.Gameplay
         [SerializeField] private float raycastDistance = 200f;
 
         [Header("Input")]
-        [Tooltip("取消瞄准的按键")]
-        [SerializeField] private KeyCode cancelKey = KeyCode.Escape;
-        [Tooltip("技能槽对应的按键数组")]
-        [SerializeField] private KeyCode[] skillKeys = new KeyCode[]
-        {
-            KeyCode.Alpha1,
-            KeyCode.Alpha2,
-            KeyCode.Alpha3,
-            KeyCode.Alpha4,
-            KeyCode.Alpha5,
-            KeyCode.Alpha6
-        };
+        [SerializeField] private InputReader inputReader;
+        [SerializeField] private bool autoFindInputReader = true;
 
         #endregion
 
@@ -58,8 +49,8 @@ namespace CombatSystem.Gameplay
 
         /// <summary>当前正在瞄准的技能</summary>
         private SkillDefinition activeSkill;
-        /// <summary>当前激活的按键</summary>
-        private KeyCode activeKey = KeyCode.None;
+        /// <summary>当前激活的技能槽位</summary>
+        private int activeSlot = -1;
         /// <summary>上一帧的瞄准方向</summary>
         private Vector3 lastAimDirection = Vector3.forward;
         /// <summary>上一帧的瞄准点</summary>
@@ -109,6 +100,8 @@ namespace CombatSystem.Gameplay
             {
                 indicator.SetAnchor(transform);
             }
+
+            ResolveInputReader();
         }
 
         /// <summary>
@@ -116,13 +109,20 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void OnDisable()
         {
+            if (inputReader != null)
+            {
+                inputReader.SkillStarted -= HandleSkillStarted;
+                inputReader.SkillCanceled -= HandleSkillCanceled;
+                inputReader.CancelPerformed -= HandleCancelPerformed;
+            }
+
             if (indicator != null)
             {
                 indicator.Hide();
             }
 
             activeSkill = null;
-            activeKey = KeyCode.None;
+            activeSlot = -1;
             hasAimPoint = false;
         }
 
@@ -131,6 +131,14 @@ namespace CombatSystem.Gameplay
             if (eventHub == null && unitRoot != null)
             {
                 eventHub = unitRoot.EventHub;
+            }
+
+            ResolveInputReader();
+            if (inputReader != null)
+            {
+                inputReader.SkillStarted += HandleSkillStarted;
+                inputReader.SkillCanceled += HandleSkillCanceled;
+                inputReader.CancelPerformed += HandleCancelPerformed;
             }
         }
 
@@ -150,74 +158,72 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 如果当前正在瞄准技能
-            if (activeSkill != null)
-            {
-                // 持续更新瞄准方向
-                UpdateAimDirection();
-
-                // 更新目标高亮
-                UpdateTargetHighlight();
-
-                // 检测按键松开 - 释放技能
-                if (Input.GetKeyUp(activeKey))
-                {
-                    CommitCast();
-                    return;
-                }
-
-                // 检测取消键 - ESC取消瞄准
-                if (cancelKey != KeyCode.None && Input.GetKeyDown(cancelKey))
-                {
-                    CancelAim();
-                    return;
-                }
-
-                // 检测鼠标右键 - 取消瞄准
-                if (Input.GetMouseButtonDown(1))
-                {
-                    CancelAim();
-                }
-
-                return;
-            }
-
-            // 没有配置技能按键则返回
-            if (skillKeys == null || skillKeys.Length == 0)
+            if (activeSkill == null)
             {
                 return;
             }
 
-            // 检测技能按键按下
-            for (int i = 0; i < skillKeys.Length; i++)
-            {
-                var key = skillKeys[i];
-                if (key == KeyCode.None)
-                {
-                    continue;
-                }
+            // 持续更新瞄准方向
+            UpdateAimDirection();
 
-                if (!Input.GetKeyDown(key))
-                {
-                    continue;
-                }
-
-                // 获取对应槽位的技能
-                var skill = GetSkillForSlot(i);
-                if (skill == null)
-                {
-                    continue;
-                }
-
-                // 开始瞄准该技能
-                BeginAim(skill, key);
-                return;
-            }
+            // 更新目标高亮
+            UpdateTargetHighlight();
         }
 
         #endregion
 
         #region 私有方法
+
+        private void ResolveInputReader()
+        {
+            if (!autoFindInputReader || inputReader != null)
+            {
+                return;
+            }
+
+            inputReader = FindFirstObjectByType<InputReader>();
+        }
+
+        private void HandleSkillStarted(int slotIndex)
+        {
+            if (!UIRoot.IsGameplayInputAllowed())
+            {
+                return;
+            }
+
+            if (activeSkill != null)
+            {
+                return;
+            }
+
+            var skill = GetSkillForSlot(slotIndex);
+            if (skill == null)
+            {
+                return;
+            }
+
+            BeginAim(skill, slotIndex);
+        }
+
+        private void HandleSkillCanceled(int slotIndex)
+        {
+            if (activeSkill == null || slotIndex != activeSlot)
+            {
+                return;
+            }
+
+            CommitCast();
+        }
+
+        private void HandleCancelPerformed()
+        {
+            if (activeSkill == null)
+            {
+                return;
+            }
+
+            CancelAim();
+        }
 
         /// <summary>
         /// 根据槽位索引获取对应的技能定义。
@@ -247,8 +253,8 @@ namespace CombatSystem.Gameplay
         /// 显示技能指示器并记录当前激活的技能和按键。
         /// </summary>
         /// <param name="skill">要瞄准的技能</param>
-        /// <param name="key">触发该技能的按键</param>
-        private void BeginAim(SkillDefinition skill, KeyCode key)
+        /// <param name="slotIndex">触发该技能的槽位索引</param>
+        private void BeginAim(SkillDefinition skill, int slotIndex)
         {
             // 检查有效性：技能存在、有技能组件、且当前不在施法中
             if (skill == null || skillUser == null || skillUser.IsCasting)
@@ -257,7 +263,7 @@ namespace CombatSystem.Gameplay
             }
 
             activeSkill = skill;
-            activeKey = key;
+            activeSlot = slotIndex;
             indicator.Show(skill);
             UpdateAimDirection();
             UpdateTargetHighlight();
@@ -452,8 +458,14 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            // 从摄像机发射一条经过鼠标位置的射线
-            var ray = viewCamera.ScreenPointToRay(Input.mousePosition);
+            if (inputReader == null)
+            {
+                point = transform.position + lastAimDirection;
+                return false;
+            }
+
+            // 从摄像机发射一条经过指针位置的射线
+            var ray = viewCamera.ScreenPointToRay(inputReader.AimPoint);
 
             // 如果启用了地面遮罩检测
             if (useGroundMask)
@@ -517,7 +529,7 @@ namespace CombatSystem.Gameplay
         private void CancelAim()
         {
             activeSkill = null;
-            activeKey = KeyCode.None;
+            activeSlot = -1;
             hasAimPoint = false;
             indicator.Hide();
             indicator.ClearAimPoint();

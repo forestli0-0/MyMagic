@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
+using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEngine;
 
@@ -36,7 +37,8 @@ namespace CombatSystem.Gameplay
         [SerializeField] private int initialPage;
 
         [Header("Input")]
-        [SerializeField] private KeyCode switchKey = KeyCode.Tab;
+        [SerializeField] private InputReader inputReader;
+        [SerializeField] private bool autoFindInputReader = true;
         [Tooltip("切换冷却时间，防止连按")]
         [SerializeField] private float switchCooldown = 0.2f;
 
@@ -72,25 +74,46 @@ namespace CombatSystem.Gameplay
             ApplyPage(Mathf.Clamp(initialPage, 0, Mathf.Max(0, pages.Count - 1)));
         }
 
-        private void Update()
+        private void OnEnable()
+        {
+            if (autoFindInputReader && inputReader == null)
+            {
+                inputReader = FindFirstObjectByType<InputReader>();
+            }
+
+            if (inputReader != null)
+            {
+                inputReader.SwitchPage += HandleSwitchPage;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (inputReader != null)
+            {
+                inputReader.SwitchPage -= HandleSwitchPage;
+            }
+        }
+
+        private void HandleSwitchPage(int delta)
         {
             if (!UIRoot.IsGameplayInputAllowed())
             {
                 return;
             }
 
-            if (pages == null || pages.Count == 0 || switchKey == KeyCode.None)
+            if (pages == null || pages.Count == 0)
             {
                 return;
             }
 
-            // 检查切换冷却
-            if (Input.GetKeyDown(switchKey) && Time.time >= lastSwitchTime + switchCooldown)
+            if (Time.time < lastSwitchTime + switchCooldown)
             {
-                lastSwitchTime = Time.time;
-                var delta = IsShiftPressed() ? -1 : 1;
-                SwitchPage(delta);
+                return;
             }
+
+            lastSwitchTime = Time.time;
+            SwitchPage(delta);
         }
 
         private void SwitchPage(int delta)
@@ -161,9 +184,5 @@ namespace CombatSystem.Gameplay
             }
         }
 
-        private static bool IsShiftPressed()
-        {
-            return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        }
     }
 }

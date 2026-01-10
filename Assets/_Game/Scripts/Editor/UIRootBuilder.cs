@@ -12,6 +12,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 
 namespace CombatSystem.Editor
 {
@@ -251,13 +253,70 @@ namespace CombatSystem.Editor
 
         private static void EnsureEventSystem()
         {
-            if (Object.FindFirstObjectByType<EventSystem>() != null)
+            var existing = Object.FindFirstObjectByType<EventSystem>();
+            if (existing != null)
+            {
+                var legacy = existing.GetComponent<StandaloneInputModule>();
+                if (legacy != null)
+                {
+                    Object.DestroyImmediate(legacy);
+                }
+
+                var module = existing.GetComponent<InputSystemUIInputModule>();
+                if (module == null)
+                {
+                    module = existing.gameObject.AddComponent<InputSystemUIInputModule>();
+                }
+
+                ConfigureInputSystemUiModule(module);
+                return;
+            }
+
+            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            ConfigureInputSystemUiModule(eventSystem.GetComponent<InputSystemUIInputModule>());
+            Undo.RegisterCreatedObjectUndo(eventSystem, "Create EventSystem");
+        }
+
+        private static void ConfigureInputSystemUiModule(InputSystemUIInputModule module)
+        {
+            if (module == null)
             {
                 return;
             }
 
-            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Undo.RegisterCreatedObjectUndo(eventSystem, "Create EventSystem");
+            var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/_Game/Input/CombatInputActions.inputactions");
+            if (actions == null)
+            {
+                Debug.LogWarning("[UIRootBuilder] CombatInputActions not found. UI input bindings not configured.");
+                return;
+            }
+
+            var so = new SerializedObject(module);
+            SetSerializedReference(so, "actionsAsset", actions);
+            SetSerializedReference(so, "point", CreateActionReference(actions, "UI/Point"));
+            SetSerializedReference(so, "leftClick", CreateActionReference(actions, "UI/Click"));
+            SetSerializedReference(so, "scrollWheel", CreateActionReference(actions, "UI/ScrollWheel"));
+            SetSerializedReference(so, "move", CreateActionReference(actions, "UI/Navigate"));
+            SetSerializedReference(so, "submit", CreateActionReference(actions, "UI/Submit"));
+            SetSerializedReference(so, "cancel", CreateActionReference(actions, "UI/Cancel"));
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static InputActionReference CreateActionReference(InputActionAsset asset, string actionPath)
+        {
+            var action = asset != null ? asset.FindAction(actionPath) : null;
+            return action != null ? InputActionReference.Create(action) : null;
+        }
+
+        private static void SetSerializedReference(SerializedObject serializedObject, string propertyName, Object value)
+        {
+            var prop = serializedObject.FindProperty(propertyName);
+            if (prop == null)
+            {
+                return;
+            }
+
+            prop.objectReferenceValue = value;
         }
 
         private static void SetSerialized(Object target, string propertyName, Object value)

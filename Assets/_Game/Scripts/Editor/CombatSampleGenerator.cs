@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using CombatSystem.AI;
 using CombatSystem.Core;
 using CombatSystem.Data;
-using CombatSystem.Gameplay;
 using CombatSystem.Debugging;
+using CombatSystem.Gameplay;
+using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -11,6 +12,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 
 namespace CombatSystem.Editor
 {
@@ -1634,8 +1637,9 @@ namespace CombatSystem.Editor
 
             var skillBar = BuildUISystemHud(assets, player.GetComponent<UnitRoot>(), projectilePool);
 
-            // 确保 EventSystem 存在（用于 UI 交互）
+            // 确保 EventSystem/InputReader 存在（用于 UI 交互与输入）
             EnsureEventSystem();
+            EnsureInputRoot();
 
             var pageSwitcher = player.AddComponent<SkillPageSwitcher>();
             SetComponentReference(pageSwitcher, "skillUser", player.GetComponent<SkillUserComponent>());
@@ -1987,7 +1991,6 @@ namespace CombatSystem.Editor
             var pauseHotkey = hudCanvas.AddComponent<PauseMenuHotkey>();
             SetComponentReference(pauseHotkey, "uiManager", uiManager);
             SetComponentReference(pauseHotkey, "pauseModal", pauseModal);
-            SetComponentValue(pauseHotkey, "toggleKey", KeyCode.Escape);
             SetComponentValue(pauseHotkey, "onlyWhenGameplayScreen", false);
 
             return skillBar;
@@ -3305,12 +3308,90 @@ namespace CombatSystem.Editor
         /// </summary>
         private static void EnsureEventSystem()
         {
-            if (Object.FindFirstObjectByType<EventSystem>() != null)
+            var existing = Object.FindFirstObjectByType<EventSystem>();
+            if (existing != null)
+            {
+                var legacy = existing.GetComponent<StandaloneInputModule>();
+                if (legacy != null)
+                {
+                    Object.DestroyImmediate(legacy);
+                }
+
+                var module = existing.GetComponent<InputSystemUIInputModule>();
+                if (module == null)
+                {
+                    module = existing.gameObject.AddComponent<InputSystemUIInputModule>();
+                }
+
+                ConfigureInputSystemUiModule(module);
+                return;
+            }
+
+            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            ConfigureInputSystemUiModule(eventSystem.GetComponent<InputSystemUIInputModule>());
+        }
+
+        private static void EnsureInputRoot()
+        {
+            if (Object.FindFirstObjectByType<InputReader>() != null)
             {
                 return;
             }
 
-            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var inputRoot = new GameObject("InputRoot", typeof(InputReader));
+            var inputReader = inputRoot.GetComponent<InputReader>();
+            var actions = LoadInputActions();
+            if (actions != null)
+            {
+                SetComponentReference(inputReader, "actions", actions);
+            }
+        }
+
+        private static void ConfigureInputSystemUiModule(InputSystemUIInputModule module)
+        {
+            if (module == null)
+            {
+                return;
+            }
+
+            var actions = LoadInputActions();
+            if (actions == null)
+            {
+                Debug.LogWarning("[CombatSampleGenerator] CombatInputActions not found. UI input bindings not configured.");
+                return;
+            }
+
+            var so = new SerializedObject(module);
+            SetSerializedReference(so, "actionsAsset", actions);
+            SetSerializedReference(so, "point", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UIPoint}"));
+            SetSerializedReference(so, "leftClick", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UIClick}"));
+            SetSerializedReference(so, "scrollWheel", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UIScroll}"));
+            SetSerializedReference(so, "move", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UINavigate}"));
+            SetSerializedReference(so, "submit", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UISubmit}"));
+            SetSerializedReference(so, "cancel", CreateActionReference(actions, $"{CombatInputIds.UIMap}/{CombatInputIds.UICancel}"));
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static InputActionAsset LoadInputActions()
+        {
+            return AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/_Game/Input/CombatInputActions.inputactions");
+        }
+
+        private static InputActionReference CreateActionReference(InputActionAsset asset, string actionPath)
+        {
+            var action = asset != null ? asset.FindAction(actionPath) : null;
+            return action != null ? InputActionReference.Create(action) : null;
+        }
+
+        private static void SetSerializedReference(SerializedObject serializedObject, string propertyName, Object value)
+        {
+            var prop = serializedObject.FindProperty(propertyName);
+            if (prop == null)
+            {
+                return;
+            }
+
+            prop.objectReferenceValue = value;
         }
     }
 }

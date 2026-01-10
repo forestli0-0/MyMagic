@@ -1,3 +1,4 @@
+using CombatSystem.Input;
 using UnityEngine;
 
 namespace CombatSystem.UI
@@ -6,7 +7,8 @@ namespace CombatSystem.UI
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIModalBase pauseModal;
-        [SerializeField] private KeyCode toggleKey = KeyCode.Escape;
+        [SerializeField] private InputReader inputReader;
+        [SerializeField] private bool autoFindInputReader = true;
         [SerializeField] private bool onlyWhenGameplayScreen = true;
 
         private void Reset()
@@ -15,16 +17,37 @@ namespace CombatSystem.UI
             {
                 uiManager = GetComponentInParent<UIManager>();
             }
+
+            if (autoFindInputReader && inputReader == null)
+            {
+                inputReader = FindFirstObjectByType<InputReader>();
+            }
         }
 
-        private void Update()
+        private void OnEnable()
         {
-            if (toggleKey == KeyCode.None || uiManager == null || pauseModal == null)
+            if (autoFindInputReader && inputReader == null)
             {
-                return;
+                inputReader = FindFirstObjectByType<InputReader>();
             }
 
-            if (!Input.GetKeyDown(toggleKey))
+            if (inputReader != null)
+            {
+                inputReader.PausePerformed += HandlePausePerformed;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (inputReader != null)
+            {
+                inputReader.PausePerformed -= HandlePausePerformed;
+            }
+        }
+
+        private void HandlePausePerformed()
+        {
+            if (uiManager == null || pauseModal == null)
             {
                 return;
             }
