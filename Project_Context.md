@@ -63,9 +63,22 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - **VendorService**: 商店交易
 - **SaveService**: 角色/进度/物品/任务存档
 
-## 5. 输入与控制（需要整理）
-- 现有输入直接调用 `Input.*`，需抽象为统一输入层（便于手柄/键鼠/可重绑）。
-- 目标：使用Input System 统一对接项目所有输入。
+## 5. 输入与控制（已完成）
+基于 Unity Input System 实现统一输入抽象层，支持键鼠/手柄多设备输入。
+
+**核心组件：**
+- `InputReader`: 统一输入读取器，管理 ActionMap 生命周期，通过事件分发输入
+- `CombatInputAssetBuilder`: 编辑器工具，代码生成 InputActionAsset
+
+**输入映射 (ActionMap)：**
+- `Gameplay`: 移动、瞄准、技能(1-6)、取消、暂停、切换技能页
+- `UI`: 导航、确认、取消、指针、点击、滚动
+- `Debug`: 切换调试覆盖层(F3)
+
+**设计原则：**
+- 事件驱动：消费者订阅 `InputReader` 事件，不直接依赖 Input System API
+- UI 模式感知：根据 `UIManager.InputMode` 自动切换 Gameplay/UI 映射
+- 可重绑定：绑定配置集中于 `CombatInputAssetBuilder`，修改后重新生成即可
 
 ## 6. 技术路线 (阶段性交付)
 - Phase A: 游戏主循环 + 场景流转（城镇/地城/Boss）+ 保存/读取
