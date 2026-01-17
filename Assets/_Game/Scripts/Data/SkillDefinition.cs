@@ -27,18 +27,18 @@ namespace CombatSystem.Data
         [SerializeField] private bool canRotateWhileCasting = true;
 
         // 施法节奏与输入缓冲配置
-        [Header("Cast Flow")]
-        [Tooltip("Post-cast recovery time")]
+        [Header("施法节奏")]
+        [Tooltip("施法后摇时间（技能释放完毕后的恢复时间）")]
         [SerializeField] private float postCastTime;
-        [Tooltip("Global cooldown duration")]
+        [Tooltip("公共冷却时间（GCD，释放后短暂锁定其他技能）")]
         [SerializeField] private float gcdDuration;
-        [Tooltip("Channel tick interval (0 = no ticks)")]
+        [Tooltip("引导技能的跳动间隔（0 表示不跳动）")]
         [SerializeField] private float channelTickInterval;
-        [Tooltip("Input queue window before cast ends")]
+        [Tooltip("输入队列窗口（施法结束前可提前输入下一个技能的时间）")]
         [SerializeField] private float queueWindow;
-        [Tooltip("How to handle multiple queued inputs")]
+        [Tooltip("队列输入处理策略（多个输入时如何处理）")]
         [SerializeField] private SkillQueuePolicy queuePolicy = SkillQueuePolicy.Replace;
-        [Tooltip("Target snapshot behavior for this skill")]
+        [Tooltip("目标快照策略（决定何时锁定目标）")]
         [SerializeField] private TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart;
         
         [Header("逻辑与筛选")]

@@ -111,6 +111,8 @@ namespace CombatSystem.Editor
                 return;
             }
 
+            NormalizeCanvasTransforms(root);
+
             var uiManager = root.Manager != null ? root.Manager : root.GetComponentInChildren<UIManager>(true);
             if (uiManager == null)
             {
@@ -201,6 +203,20 @@ namespace CombatSystem.Editor
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
+        [MenuItem("Combat/UI/Fix UIRoot Canvases")]
+        public static void FixUIRootCanvases()
+        {
+            var root = Object.FindFirstObjectByType<UIRoot>();
+            if (root == null)
+            {
+                Debug.LogWarning("[UIRootBuilder] No UIRoot found in the scene.");
+                return;
+            }
+
+            NormalizeCanvasTransforms(root);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        }
+
         private static Canvas CreateCanvas(string name, Transform parent, int sortingOrder)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -211,11 +227,49 @@ namespace CombatSystem.Editor
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = sortingOrder;
 
+            NormalizeCanvasTransform(canvas);
+
             var scaler = go.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(CanvasReferenceWidth, CanvasReferenceHeight);
 
             return canvas;
+        }
+
+        internal static void NormalizeCanvasTransforms(UIRoot root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            NormalizeCanvasTransform(root.ScreensCanvas);
+            NormalizeCanvasTransform(root.HudCanvas);
+            NormalizeCanvasTransform(root.ModalCanvas);
+            NormalizeCanvasTransform(root.OverlayCanvas);
+        }
+
+        private static void NormalizeCanvasTransform(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var rect = canvas.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = canvas.gameObject.AddComponent<RectTransform>();
+            }
+
+            rect.localScale = Vector3.one;
+            rect.localPosition = Vector3.zero;
+            rect.localRotation = Quaternion.identity;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private static T CreateScreen<T>(string name, Transform parent) where T : UIScreenBase

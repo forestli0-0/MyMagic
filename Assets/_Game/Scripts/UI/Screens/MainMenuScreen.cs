@@ -1,3 +1,4 @@
+using CombatSystem.Gameplay;
 using CombatSystem.Persistence;
 using UnityEngine;
 
@@ -14,6 +15,9 @@ namespace CombatSystem.UI
         [Header("Save")]
         [SerializeField] private SaveGameManager saveManager;
 
+        [Header("Flow")]
+        [SerializeField] private LevelFlowController levelFlow;
+
         private void Reset()
         {
             inputMode = UIInputMode.UI;
@@ -25,6 +29,11 @@ namespace CombatSystem.UI
             if (saveManager == null)
             {
                 saveManager = FindFirstObjectByType<SaveGameManager>();
+            }
+
+            if (levelFlow == null)
+            {
+                levelFlow = FindFirstObjectByType<LevelFlowController>();
             }
         }
 
@@ -54,6 +63,17 @@ namespace CombatSystem.UI
 
         public void StartNewGame()
         {
+            if (levelFlow == null)
+            {
+                levelFlow = FindFirstObjectByType<LevelFlowController>();
+            }
+
+            if (levelFlow != null)
+            {
+                levelFlow.StartNewGame();
+                return;
+            }
+
             if (uiManager != null && inGameScreen != null)
             {
                 uiManager.ShowScreen(inGameScreen, true);
@@ -69,7 +89,6 @@ namespace CombatSystem.UI
 
             if (saveManager != null && saveManager.TryLoadLatest())
             {
-                StartNewGame();
                 return;
             }
 

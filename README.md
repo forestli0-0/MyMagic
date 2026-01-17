@@ -5,9 +5,9 @@
 
 ## 运行步骤
 1. 使用 Unity 2022.3 LTS 打开本项目。
-2. 选择菜单：`Combat/Generate Sample Content` 生成示例资源与场景。
-3. 打开场景：`Assets/Scenes/SampleScene.unity`。
-4. 进入 Play Mode 运行。
+2. 选择菜单：`Combat/Generate Playable Flow` 生成可游玩流程与场景。
+3. 打开场景：`Assets/Scenes/MainMenu.unity`。
+4. 进入 Play Mode 运行（主菜单 -> New Game/Continue）。
 
 ## 已实现功能（战斗系统基础）
 - 技能系统（数据驱动配置）

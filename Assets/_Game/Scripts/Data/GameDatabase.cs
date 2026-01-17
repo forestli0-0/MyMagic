@@ -17,6 +17,9 @@ namespace CombatSystem.Data
         [Header("单位与技能")]
         [SerializeField] private List<UnitDefinition> units = new List<UnitDefinition>();
         [SerializeField] private List<SkillDefinition> skills = new List<SkillDefinition>();
+
+        [Header("关卡与流程")]
+        [SerializeField] private List<LevelDefinition> levels = new List<LevelDefinition>();
         
         [Header("战斗逻辑")]
         [SerializeField] private List<BuffDefinition> buffs = new List<BuffDefinition>();
@@ -37,6 +40,7 @@ namespace CombatSystem.Data
         private Dictionary<string, TagDefinition> tagsById;
         private Dictionary<string, UnitDefinition> unitsById;
         private Dictionary<string, SkillDefinition> skillsById;
+        private Dictionary<string, LevelDefinition> levelsById;
         private Dictionary<string, BuffDefinition> buffsById;
         private Dictionary<string, EffectDefinition> effectsById;
         private Dictionary<string, ConditionDefinition> conditionsById;
@@ -50,6 +54,7 @@ namespace CombatSystem.Data
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<UnitDefinition> Units => units;
         public IReadOnlyList<SkillDefinition> Skills => skills;
+        public IReadOnlyList<LevelDefinition> Levels => levels;
         public IReadOnlyList<BuffDefinition> Buffs => buffs;
         public IReadOnlyList<EffectDefinition> Effects => effects;
         public IReadOnlyList<ConditionDefinition> Conditions => conditions;
@@ -80,6 +85,7 @@ namespace CombatSystem.Data
             tagsById = BuildIndex(tags);
             unitsById = BuildIndex(units);
             skillsById = BuildIndex(skills);
+            levelsById = BuildIndex(levels);
             buffsById = BuildIndex(buffs);
             effectsById = BuildIndex(effects);
             conditionsById = BuildIndex(conditions);
@@ -112,6 +118,12 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(skillsById, id);
+        }
+
+        public LevelDefinition GetLevel(string id)
+        {
+            EnsureIndexes();
+            return GetById(levelsById, id);
         }
 
         public BuffDefinition GetBuff(string id)
@@ -209,4 +221,3 @@ namespace CombatSystem.Data
         }
     }
 }
-

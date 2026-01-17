@@ -92,3 +92,146 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 ## 7. 默认假设
 - AI 使用 NavMeshAgent
 - 伤害公式先用: Base + Scale + Modifiers - Resistance
+
+## 8. 7日MVP任务清单（防跑偏）
+
+### 8.1 Scope Lock（必须遵守）
+- 仅做 3 个场景：Town / Field / Boss
+- 仅 1 条主线 + 1 条支线
+- 装备 10-15 件，稀有度 3 档，词缀 4-6 个
+- 技能总量控制在 6-8 个（含基础攻击）
+- 只做 1 套可完整通关的循环（10-15 分钟）
+
+### 8.2 里程碑与任务（Day 1-7）
+
+**Day 1: 核心循环与场景流转**
+- [x] 创建 Town/Field/Boss 三场景并打通传送点
+- [x] LevelDefinition + LevelFlowController（出生点/回城点/关卡状态）
+- [x] 保存/读取扩展：场景名 + 出生点 Id
+- [x] 主菜单/存档/继续流程串通
+- [x] 体验检查：进入游戏->完成一次场景切换
+
+**Day 2: 成长系统**
+- [ ] ProgressionDefinition（经验曲线/升级所需/属性点）
+- [ ] PlayerProgression（经验、等级、属性点、事件派发）
+- [ ] 属性面板 UI（加点/升级提示/经验条）
+- [ ] 与 StatsComponent 接入（升级即时生效）
+- [ ] 保存/读取扩展：等级/经验/已分配属性点
+
+**Day 3: 物品与装备**
+- [ ] ItemDefinition / AffixDefinition / ItemInstance
+- [ ] InventoryComponent（背包、堆叠、容量）
+- [ ] EquipmentComponent（槽位/加成/穿脱）
+- [ ] 背包与装备 UI（拖拽或点击交互）
+- [ ] 保存/读取扩展：背包与装备
+
+**Day 4: 掉落与商店**
+- [ ] LootTableDefinition + LootDropper（掉落权重）
+- [ ] LootPickup（拾取/自动拾取可选）
+- [ ] 货币系统（单一货币）
+- [ ] VendorDefinition + VendorService + UI（买/卖）
+- [ ] 掉落与经济数值首轮校准
+
+**Day 5: 任务系统**
+- [ ] QuestDefinition（目标/步骤/奖励）
+- [ ] QuestTracker（状态、事件监听）
+- [ ] 任务触发器（区域/击杀/对话占位）
+- [ ] 实现 1 主线 + 1 支线
+- [ ] 保存/读取扩展：任务状态
+
+**Day 6: 敌人生态与 Boss**
+- [ ] EncounterDefinition（刷怪/精英）
+- [ ] 精英词缀（属性修正/技能增强）
+- [ ] Boss 技能 2-3 个（节奏/易读 telegraph）
+- [ ] AI 行为包补完（追击/技能释放/撤退可选）
+- [ ] Field/Boss 关卡难度首轮调平
+
+**Day 7: 体验与收尾**
+- [ ] 关键战斗反馈（打击音/命中特效/镜头轻微抖动）
+- [ ] UI 动效（技能/掉落/任务更新提示）
+- [ ] 性能检查（池化、避免 Update GC）
+- [ ] Bug 修复 + 文档补齐（README/操作说明）
+- [ ] 录制演示视频脚本与流程
+
+### 8.3 美术与表现任务清单（跨越绘画）
+- [ ] 确定视觉基调与调色板（Town/Field/Boss 各 1 套）
+- [ ] 场景占位资源（地面/墙体/障碍/传送点）
+- [ ] 角色/怪物/ Boss 占位模型或替代素材
+- [ ] UI 关键图标（技能/装备/任务/货币）
+- [ ] 关键技能 VFX（基础攻击/核心技能/ Boss 技能）
+- [ ] 基础音效（命中/施法/拾取/界面确认）
+
+### 8.4 MVP 验收标准（完成定义）
+- [ ] 从主菜单进入游戏，完成一次 Town->Field->Boss 循环
+- [ ] 角色成长与装备变化可感知，数值不崩
+- [ ] 任务可接取/完成/领奖励
+- [ ] 存档可完整恢复：场景/角色/装备/任务/货币
+- [ ] 10-15 分钟完整通关一次，无明显卡关
+
+## 9. 跨会话交接（每次会话更新）
+
+### 9.1 当前状态快照
+- 已具备：数据驱动战斗体系、基础 AI FSM、HUD/UI 框架、样例生成工具与样例场景
+- 已新增：LevelDefinition/LevelFlowController/LevelPortal/LevelSpawnPoint 与 PlayableFlowGenerator（已运行）
+- 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`
+- 存档范围：位置/血量/资源/场景名 + 出生点 Id（成长/物品/任务未覆盖）
+
+### 9.2 当前正在做/下一步（优先级顺序）
+- Day 2: ProgressionDefinition（经验曲线/升级所需/属性点）
+- PlayerProgression（经验、等级、属性点、事件派发）
+- 属性面板 UI（加点/升级提示/经验条）+ 与 StatsComponent 接入
+- 保存/读取扩展：等级/经验/已分配属性点
+
+### 9.3 待确认/风险
+- 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）
+- 视角/操控手感：俯视 ARPG，鼠标点击/指向
+- 美术资源来源：Unity Asset Store 免费资源（见 9.5）
+
+### 9.4 关键入口与工具
+- 样例场景：`Assets/Scenes/SampleScene.unity`
+- 生成工具：`Assets/_Game/Scripts/Editor/CombatSampleGenerator.cs`
+- 关卡流转生成：`Assets/_Game/Scripts/Editor/PlayableFlowGenerator.cs`
+- 战斗数据库：`Assets/_Game/Scripts/Data/GameDatabase.cs`
+
+### 9.5 资产清单（已锁定，可跨会话复用）
+**角色**
+- GanzSe FREE Low Poly Modular Character
+  https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/ganzse-free-low-poly-modular-character-321521
+- Creative Characters FREE - Animated Low Poly 3D Models
+  https://assetstore.unity.com/packages/3d/characters/humanoids/creative-characters-free-animated-low-poly-3d-models-304841
+
+**场景/地形**
+- Blacksmith's Forge
+  https://assetstore.unity.com/packages/3d/environments/fantasy/blacksmith-s-forge-17785
+- STYLIZED Fantasy Armory - Low Poly 3D Art
+  https://assetstore.unity.com/packages/3d/environments/fantasy/stylized-fantasy-armory-low-poly-3d-art-249203
+- Stylized House Interior
+  https://assetstore.unity.com/packages/3d/environments/stylized-house-interior-224331
+- Free Low Poly Nature Forest
+  https://assetstore.unity.com/packages/3d/environments/landscapes/free-low-poly-nature-forest-205742
+- Low-Poly Simple Nature Pack
+  https://assetstore.unity.com/packages/3d/environments/landscapes/low-poly-simple-nature-pack-162153
+- (UNL) Ultimate Nature Lite
+  https://assetstore.unity.com/packages/3d/environments/unl-ultimate-nature-lite-176906
+
+**武器/道具**
+- Stylized Newbie Weapons Pack
+  https://assetstore.unity.com/packages/3d/props/weapons/stylized-newbie-weapons-pack-200709
+
+**VFX**
+- Free Fire VFX - URP
+  https://assetstore.unity.com/packages/vfx/particles/fire-explosions/free-fire-vfx-urp-266226
+- Trails VFX - URP
+  https://assetstore.unity.com/packages/vfx/trails-vfx-urp-242574
+
+**UI 图标**
+- Clean Vector Icons
+  https://assetstore.unity.com/packages/2d/gui/icons/clean-vector-icons-132084
+
+**天空盒**
+- Fantasy Skybox FREE
+  https://assetstore.unity.com/packages/2d/textures-materials/sky/fantasy-skybox-free-18353
+
+**音效**
+- Free Sound Effects Pack
+  https://marketplace.unity.com/packages/audio/sound-fx/free-sound-effects-pack-155776

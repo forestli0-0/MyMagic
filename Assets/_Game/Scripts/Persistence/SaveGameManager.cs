@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using CombatSystem.Core;
+using CombatSystem.Gameplay;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -152,6 +153,13 @@ namespace CombatSystem.Persistence
                 }
             }
 
+            var levelFlow = FindFirstObjectByType<LevelFlowController>();
+            if (levelFlow != null)
+            {
+                data.player.levelId = levelFlow.CurrentLevelId;
+                data.player.spawnPointId = levelFlow.CurrentSpawnPointId;
+            }
+
             return data;
         }
 
@@ -169,12 +177,25 @@ namespace CombatSystem.Persistence
                 return;
             }
 
+            var spawnApplied = false;
             if (savePosition)
             {
-                player.transform.position = data.player.position;
+                if (!string.IsNullOrWhiteSpace(data.player.spawnPointId))
+                {
+                    var levelFlow = FindFirstObjectByType<LevelFlowController>();
+                    if (levelFlow != null)
+                    {
+                        spawnApplied = levelFlow.TryApplySpawn(data.player.spawnPointId, player);
+                    }
+                }
+
+                if (!spawnApplied)
+                {
+                    player.transform.position = data.player.position;
+                }
             }
 
-            if (saveRotation)
+            if (saveRotation && !spawnApplied)
             {
                 player.transform.rotation = data.player.rotation;
             }
@@ -217,6 +238,14 @@ namespace CombatSystem.Persistence
         private void BeginSceneLoad(SaveData data)
         {
             pendingLoad = data;
+            if (data != null && data.player != null)
+            {
+                var levelFlow = FindFirstObjectByType<LevelFlowController>();
+                if (levelFlow != null)
+                {
+                    levelFlow.PrepareSpawn(data.player.levelId, data.player.spawnPointId);
+                }
+            }
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             SceneManager.sceneLoaded += HandleSceneLoaded;
             SceneManager.LoadScene(data.slotInfo.sceneName);
