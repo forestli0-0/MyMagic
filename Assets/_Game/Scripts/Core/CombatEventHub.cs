@@ -20,6 +20,8 @@ namespace CombatSystem.Core
         public event Action<ShieldChangedEvent> ShieldChanged;
         /// <summary> 当单位死亡时触发 </summary>
         public event Action<HealthComponent> UnitDied;
+        /// <summary> 当单位死亡时触发（包含击杀来源） </summary>
+        public event Action<UnitKilledEvent> UnitKilled;
         /// <summary> 当单位资源（如法力）发生变化时触发 </summary>
         public event Action<ResourceChangedEvent> ResourceChanged;
         /// <summary> 当技能冷却状态发生变化时触发 </summary>
@@ -30,6 +32,12 @@ namespace CombatSystem.Core
         public event Action<SkillCastEvent> SkillCastCompleted;
         /// <summary> 当技能施法被打断时触发 </summary>
         public event Action<SkillCastEvent> SkillCastInterrupted;
+        /// <summary> 当经验值发生变化时触发 </summary>
+        public event Action<ExperienceChangedEvent> ExperienceChanged;
+        /// <summary> 当等级发生变化时触发 </summary>
+        public event Action<LevelChangedEvent> LevelChanged;
+        /// <summary> 当属性点发生变化时触发 </summary>
+        public event Action<AttributePointsChangedEvent> AttributePointsChanged;
         /// <summary> 当玩家或系统切换当前目标时触发 </summary>
         public event Action<HealthComponent> TargetChanged;
         /// <summary> 当玩家或系统清除当前目标时触发 </summary>
@@ -41,11 +49,15 @@ namespace CombatSystem.Core
         public void RaiseHealthChanged(HealthChangedEvent evt) => HealthChanged?.Invoke(evt);
         public void RaiseShieldChanged(ShieldChangedEvent evt) => ShieldChanged?.Invoke(evt);
         public void RaiseUnitDied(HealthComponent source) => UnitDied?.Invoke(source);
+        public void RaiseUnitKilled(UnitKilledEvent evt) => UnitKilled?.Invoke(evt);
         public void RaiseResourceChanged(ResourceChangedEvent evt) => ResourceChanged?.Invoke(evt);
         public void RaiseCooldownChanged(CooldownChangedEvent evt) => CooldownChanged?.Invoke(evt);
         public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
         public void RaiseSkillCastCompleted(SkillCastEvent evt) => SkillCastCompleted?.Invoke(evt);
         public void RaiseSkillCastInterrupted(SkillCastEvent evt) => SkillCastInterrupted?.Invoke(evt);
+        public void RaiseExperienceChanged(ExperienceChangedEvent evt) => ExperienceChanged?.Invoke(evt);
+        public void RaiseLevelChanged(LevelChangedEvent evt) => LevelChanged?.Invoke(evt);
+        public void RaiseAttributePointsChanged(AttributePointsChangedEvent evt) => AttributePointsChanged?.Invoke(evt);
         public void RaiseTargetChanged(HealthComponent target) => TargetChanged?.Invoke(target);
         public void RaiseTargetCleared() => TargetCleared?.Invoke();
 
@@ -56,11 +68,15 @@ namespace CombatSystem.Core
             HealthChanged = null;
             ShieldChanged = null;
             UnitDied = null;
+            UnitKilled = null;
             ResourceChanged = null;
             CooldownChanged = null;
             SkillCastStarted = null;
             SkillCastCompleted = null;
             SkillCastInterrupted = null;
+            ExperienceChanged = null;
+            LevelChanged = null;
+            AttributePointsChanged = null;
             TargetChanged = null;
             TargetCleared = null;
         }

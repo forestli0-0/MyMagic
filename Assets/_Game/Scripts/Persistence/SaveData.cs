@@ -23,6 +23,10 @@ namespace CombatSystem.Persistence
         public float resource;
         public string levelId;
         public string spawnPointId;
+        public bool hasProgression;
+        public int level;
+        public int experience;
+        public int attributePoints;
     }
 
     [Serializable]

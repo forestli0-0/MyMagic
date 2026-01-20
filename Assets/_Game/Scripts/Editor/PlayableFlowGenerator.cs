@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
+using CombatSystem.Debugging;
 using CombatSystem.Gameplay;
 using CombatSystem.Persistence;
 using CombatSystem.UI;
@@ -183,6 +185,7 @@ namespace CombatSystem.Editor
             EnsureLevelFlow(level);
             EnsureSaveGameManager();
             EnsureUIRoot();
+            EnsurePlayerProgression();
             EnsureSpawnPoints();
             EnsurePortals(portals);
             SetGameplayInitialScreen();
@@ -216,6 +219,7 @@ namespace CombatSystem.Editor
 
             EnsureSaveGameManager();
             EnsureUIRoot();
+            EnsurePlayerProgression();
             SetMenuInitialScreen();
 
             EditorSceneManager.SaveScene(menuScene, MainMenuScenePath);
@@ -233,6 +237,7 @@ namespace CombatSystem.Editor
 
             EnsureSaveGameManager();
             EnsureUIRoot();
+            EnsurePlayerProgression();
             SetMenuInitialScreen();
 
             EditorSceneManager.SaveScene(scene, SampleScenePath);
@@ -280,6 +285,61 @@ namespace CombatSystem.Editor
 
             UIRootBuilder.BuildBasicUI();
             UIRootBuilder.NormalizeCanvasTransforms(root);
+        }
+
+        private static void EnsurePlayerProgression()
+        {
+            var playerObj = GameObject.FindGameObjectWithTag("Player");
+            var unitRoot = playerObj != null ? playerObj.GetComponent<UnitRoot>() : Object.FindFirstObjectByType<UnitRoot>();
+            if (unitRoot == null)
+            {
+                return;
+            }
+
+            var progression = unitRoot.GetComponent<PlayerProgression>();
+            if (progression == null)
+            {
+                progression = unitRoot.gameObject.AddComponent<PlayerProgression>();
+            }
+
+            var database = AssetDatabase.LoadAssetAtPath<GameDatabase>(DatabasePath);
+            var definition = database != null ? database.GetProgression("Progression_Default") : null;
+            if (definition == null)
+            {
+                definition = AssetDatabase.LoadAssetAtPath<ProgressionDefinition>("Assets/_Game/ScriptableObjects/Progression/Progression_Default.asset");
+            }
+
+            var eventHub = unitRoot.EventHub != null
+                ? unitRoot.EventHub
+                : AssetDatabase.LoadAssetAtPath<CombatEventHub>("Assets/_Game/ScriptableObjects/Runtime/CombatEventHub.asset");
+
+            SetSerializedReference(progression, "progression", definition);
+            SetSerializedReference(progression, "eventHub", eventHub);
+            SetSerializedValue(progression, "initializeOnAwake", true);
+
+            var xpReward = unitRoot.GetComponent<ExperienceOnKill>();
+            if (xpReward == null)
+            {
+                xpReward = unitRoot.gameObject.AddComponent<ExperienceOnKill>();
+            }
+
+            SetSerializedReference(xpReward, "eventHub", eventHub);
+            SetSerializedReference(xpReward, "playerProgression", progression);
+            SetSerializedReference(xpReward, "playerTeam", unitRoot.GetComponent<TeamComponent>());
+            SetSerializedValue(xpReward, "experiencePerKill", 25);
+            SetSerializedValue(xpReward, "requireEnemyTeam", true);
+            SetSerializedValue(xpReward, "playerTag", "Player");
+
+            var xpGrant = unitRoot.GetComponent<DebugExperienceGrant>();
+            if (xpGrant == null)
+            {
+                xpGrant = unitRoot.gameObject.AddComponent<DebugExperienceGrant>();
+            }
+
+            SetSerializedReference(xpGrant, "progression", progression);
+            SetSerializedEnum(xpGrant, "grantKey", KeyCode.F5);
+            SetSerializedValue(xpGrant, "grantAmount", 50);
+            SetSerializedValue(xpGrant, "requireShift", false);
         }
 
         private static void EnsureSpawnPoints()
@@ -515,6 +575,54 @@ namespace CombatSystem.Editor
             }
 
             prop.boolValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedValue(Object target, string propertyName, int value)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(propertyName);
+            if (prop == null)
+            {
+                return;
+            }
+
+            prop.intValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedEnum(Object target, string propertyName, System.Enum value)
+        {
+            if (target == null || value == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(propertyName);
+            if (prop == null)
+            {
+                return;
+            }
+
+            if (prop.propertyType == SerializedPropertyType.Enum)
+            {
+                var index = System.Array.IndexOf(prop.enumNames, value.ToString());
+                if (index >= 0)
+                {
+                    prop.enumValueIndex = index;
+                }
+            }
+            else
+            {
+                prop.intValue = System.Convert.ToInt32(value);
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

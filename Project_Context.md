@@ -112,11 +112,11 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - [x] 体验检查：进入游戏->完成一次场景切换
 
 **Day 2: 成长系统**
-- [ ] ProgressionDefinition（经验曲线/升级所需/属性点）
-- [ ] PlayerProgression（经验、等级、属性点、事件派发）
-- [ ] 属性面板 UI（加点/升级提示/经验条）
-- [ ] 与 StatsComponent 接入（升级即时生效）
-- [ ] 保存/读取扩展：等级/经验/已分配属性点
+- [x] ProgressionDefinition（经验曲线/升级所需/属性点）
+- [x] PlayerProgression（经验、等级、属性点、事件派发）
+- [x] 属性面板 UI（加点/升级提示/经验条）
+- [x] 与 StatsComponent 接入（升级即时生效）
+- [x] 保存/读取扩展：等级/经验/已分配属性点
 
 **Day 3: 物品与装备**
 - [ ] ItemDefinition / AffixDefinition / ItemInstance
@@ -173,14 +173,16 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 ### 9.1 当前状态快照
 - 已具备：数据驱动战斗体系、基础 AI FSM、HUD/UI 框架、样例生成工具与样例场景
 - 已新增：LevelDefinition/LevelFlowController/LevelPortal/LevelSpawnPoint 与 PlayableFlowGenerator（已运行）
+- 已新增：ProgressionDefinition/PlayerProgression/经验 HUD/击杀经验/存档成长数据
 - 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`
-- 存档范围：位置/血量/资源/场景名 + 出生点 Id（成长/物品/任务未覆盖）
+- 存档范围：位置/血量/资源/场景名 + 出生点 Id + 等级/经验/属性点（物品/任务未覆盖）
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- Day 2: ProgressionDefinition（经验曲线/升级所需/属性点）
-- PlayerProgression（经验、等级、属性点、事件派发）
-- 属性面板 UI（加点/升级提示/经验条）+ 与 StatsComponent 接入
-- 保存/读取扩展：等级/经验/已分配属性点
+- Day 3: ItemDefinition / AffixDefinition / ItemInstance
+- InventoryComponent（背包、堆叠、容量）
+- EquipmentComponent（槽位/加成/穿脱）
+- 背包与装备 UI（拖拽或点击交互）
+- 保存/读取扩展：背包与装备
 
 ### 9.3 待确认/风险
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）

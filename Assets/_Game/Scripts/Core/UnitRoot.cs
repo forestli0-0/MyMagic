@@ -21,6 +21,8 @@ namespace CombatSystem.Core
         [SerializeField] private CooldownComponent cooldown;
         [SerializeField] private UnitTagsComponent unitTags;
         [SerializeField] private BuffController buffController;
+        [SerializeField] private PlayerProgression progression;
+        [SerializeField] private TeamComponent team;
         
         [Header("选项")]
         [Tooltip("是否在 Awake 时自动初始化")]
@@ -28,6 +30,7 @@ namespace CombatSystem.Core
 
         public UnitDefinition Definition => unitDefinition;
         public CombatEventHub EventHub => eventHub;
+        public TeamComponent Team => team;
 
         private void Reset()
         {
@@ -38,6 +41,8 @@ namespace CombatSystem.Core
             cooldown = GetComponent<CooldownComponent>();
             unitTags = GetComponent<UnitTagsComponent>();
             buffController = GetComponent<BuffController>();
+            progression = GetComponent<PlayerProgression>();
+            team = GetComponent<TeamComponent>();
         }
 
         private void Awake()
@@ -109,6 +114,11 @@ namespace CombatSystem.Core
             if (cooldown != null)
             {
                 cooldown.SetEventHub(eventHub);
+            }
+
+            if (progression != null)
+            {
+                progression.SetEventHub(eventHub);
             }
 
         }

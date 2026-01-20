@@ -194,9 +194,27 @@ namespace CombatSystem.Editor
                 BuildCombatHUD(root.HudCanvas, sprite, font);
             }
 
-            if (mainMenu != null)
+            if (uiManager != null)
             {
-                SetSerialized(uiManager, "initialScreen", mainMenu);
+                var sceneName = SceneManager.GetActiveScene().name;
+                var isMainMenuScene = !string.IsNullOrEmpty(sceneName) &&
+                    sceneName.Equals("MainMenu", System.StringComparison.OrdinalIgnoreCase);
+
+                if (isMainMenuScene && mainMenu != null)
+                {
+                    SetSerialized(uiManager, "initialScreen", mainMenu);
+                    SetSerialized(uiManager, "hideHudOnStart", true);
+                }
+                else if (inGame != null)
+                {
+                    SetSerialized(uiManager, "initialScreen", inGame);
+                    SetSerialized(uiManager, "hideHudOnStart", false);
+                }
+                else if (mainMenu != null)
+                {
+                    SetSerialized(uiManager, "initialScreen", mainMenu);
+                    SetSerialized(uiManager, "hideHudOnStart", true);
+                }
             }
 
             EnsureEventSystem();
@@ -489,6 +507,7 @@ namespace CombatSystem.Editor
                 WireCombatHudFromRoot(existingController, existingController.transform);
                 EnsureHudBackgroundsSliced(existingController.transform, sprite);
                 TryWireCombatHud(existingController);
+                EnsureProgressionHud(existingController.transform, sprite, font);
                 CleanupDuplicateHudRoots(hudCanvas, existingController);
                 return;
             }
@@ -514,6 +533,7 @@ namespace CombatSystem.Editor
                 WireCombatHudFromRoot(existing, hudRoot.transform);
                 EnsureHudBackgroundsSliced(hudRoot.transform, sprite);
                 TryWireCombatHud(existing);
+                EnsureProgressionHud(hudRoot.transform, sprite, font);
                 CleanupDuplicateHudRoots(hudCanvas, existing);
                 return;
             }
@@ -576,6 +596,7 @@ namespace CombatSystem.Editor
                 SetSerialized(debugOverlay, "visible", true);
             }
 
+            EnsureProgressionHud(hudRoot.transform, sprite, font);
             EnsureHudBackgroundsSliced(hudRoot.transform, sprite);
             CleanupDuplicateHudRoots(hudCanvas, controller);
         }
@@ -593,6 +614,111 @@ namespace CombatSystem.Editor
             SetSerializedIfNull(controller, "targetUnit", Object.FindFirstObjectByType<UnitRoot>());
             SetSerializedIfNull(controller, "worldCamera", FindMainCamera());
             EnsureTargetUnitIsPlayer(controller);
+        }
+
+        private static void EnsureProgressionHud(Transform hudRoot, Sprite sprite, Font font)
+        {
+            if (hudRoot == null)
+            {
+                return;
+            }
+
+            var controller = hudRoot.GetComponentInChildren<ProgressionHUDController>(true);
+            if (controller != null)
+            {
+                WireProgressionHudFromRoot(controller, controller.transform);
+                SetSerializedIfNull(controller, "eventHub", FindEventHub());
+                SetSerializedIfNull(controller, "progression", FindPlayerProgression());
+                return;
+            }
+
+            var root = FindOrCreateChild(hudRoot, "ProgressionHUD");
+            var rect = root.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = root.AddComponent<RectTransform>();
+            }
+
+            StretchRect(rect);
+
+            var experienceBar = FindChildComponentByName<ValueBarUI>(root.transform, "ExperienceBar");
+            if (experienceBar == null)
+            {
+                experienceBar = CreateHudValueBar(
+                    "ExperienceBar",
+                    rect,
+                    new Vector2(0f, 1f),
+                    new Vector2(0f, 1f),
+                    new Vector2(220f, 10f),
+                    new Vector2(130f, -64f),
+                    sprite,
+                    font,
+                    new Color(0f, 0f, 0f, 0.6f),
+                    new Color(0.8f, 0.6f, 0.2f, 1f));
+                SetSerialized(experienceBar, "showPercent", true);
+                SetSerialized(experienceBar, "showMax", false);
+            }
+
+            var levelText = FindChildComponentByName<Text>(root.transform, "LevelText");
+            if (levelText == null)
+            {
+                var levelRect = CreateHudRect(
+                    "LevelText",
+                    rect,
+                    new Vector2(0f, 1f),
+                    new Vector2(0f, 1f),
+                    new Vector2(90f, 16f),
+                    new Vector2(280f, -20f));
+                levelText = CreateText(levelRect.gameObject, "Lv 1", font, 12, TextAnchor.MiddleLeft);
+                levelText.color = Color.white;
+            }
+
+            var pointsText = FindChildComponentByName<Text>(root.transform, "PointsText");
+            if (pointsText == null)
+            {
+                var pointsRect = CreateHudRect(
+                    "PointsText",
+                    rect,
+                    new Vector2(0f, 1f),
+                    new Vector2(0f, 1f),
+                    new Vector2(120f, 16f),
+                    new Vector2(280f, -44f));
+                pointsText = CreateText(pointsRect.gameObject, "Points: 0", font, 12, TextAnchor.MiddleLeft);
+                pointsText.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            }
+
+            controller = root.AddComponent<ProgressionHUDController>();
+            SetSerialized(controller, "experienceBar", experienceBar);
+            SetSerialized(controller, "levelText", levelText);
+            SetSerialized(controller, "pointsText", pointsText);
+            SetSerializedIfNull(controller, "eventHub", FindEventHub());
+            SetSerializedIfNull(controller, "progression", FindPlayerProgression());
+        }
+
+        private static void WireProgressionHudFromRoot(ProgressionHUDController controller, Transform root)
+        {
+            if (controller == null || root == null)
+            {
+                return;
+            }
+
+            var experienceBar = FindChildComponentByName<ValueBarUI>(root, "ExperienceBar");
+            if (experienceBar != null)
+            {
+                SetSerialized(controller, "experienceBar", experienceBar);
+            }
+
+            var levelText = FindChildComponentByName<Text>(root, "LevelText");
+            if (levelText != null)
+            {
+                SetSerialized(controller, "levelText", levelText);
+            }
+
+            var pointsText = FindChildComponentByName<Text>(root, "PointsText");
+            if (pointsText != null)
+            {
+                SetSerialized(controller, "pointsText", pointsText);
+            }
         }
 
         private static HUDConfig FindHudConfig()
@@ -623,6 +749,21 @@ namespace CombatSystem.Editor
 
             var path = AssetDatabase.GUIDToAssetPath(guids[0]);
             return AssetDatabase.LoadAssetAtPath<CombatEventHub>(path);
+        }
+
+        private static PlayerProgression FindPlayerProgression()
+        {
+            var playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject != null)
+            {
+                var progression = playerObject.GetComponent<PlayerProgression>();
+                if (progression != null)
+                {
+                    return progression;
+                }
+            }
+
+            return Object.FindFirstObjectByType<PlayerProgression>();
         }
 
         private static UnitRoot FindPlayerUnit()

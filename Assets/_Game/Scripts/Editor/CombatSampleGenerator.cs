@@ -46,6 +46,7 @@ namespace CombatSystem.Editor
             public string Projectiles;
             public string Skills;
             public string Units;
+            public string Progression;
             public string AI;
             public string UI;
             public string Database;
@@ -172,6 +173,7 @@ namespace CombatSystem.Editor
 
             public AIProfile AIBasic;
             public HUDConfig HUDDefault;
+            public ProgressionDefinition ProgressionDefault;
 
             public ProjectileDefinition ProjectileArcaneBolt;
             public ConditionDefinition ConditionTargetLowHealth;
@@ -203,6 +205,7 @@ namespace CombatSystem.Editor
                 Conditions = EnsureFolder(root, "Conditions"),
                 Skills = EnsureFolder(root, "Skills"),
                 Units = EnsureFolder(root, "Units"),
+                Progression = EnsureFolder(root, "Progression"),
                 AI = EnsureFolder(root, "AI"),
                 UI = EnsureFolder(root, "UI"),
                 Database = EnsureFolder(root, "Database"),
@@ -1557,6 +1560,9 @@ namespace CombatSystem.Editor
                 assets.HUDDefault = LoadOrCreate<HUDConfig>($"{folders.UI}/HUD_Default.asset");
                 ConfigureHUD(assets.HUDDefault, "HUD_Default", "Default HUD", 6, 12, true, true, true);
 
+                assets.ProgressionDefault = LoadOrCreate<ProgressionDefinition>($"{folders.Progression}/Progression_Default.asset");
+                ConfigureProgression(assets.ProgressionDefault, "Progression_Default", "Default Progression", 1, 20, 100, 1.2f, 0, 1);
+
                 assets.Database = LoadOrCreate<GameDatabase>($"{folders.Database}/GameDatabase.asset");
                 ConfigureDatabase(assets);
 
@@ -1595,6 +1601,17 @@ namespace CombatSystem.Editor
             var player = CreateUnitPrimitive("Sample_Player", new Vector3(0f, 0f, 0f));
             player.tag = "Player";
             ConfigureUnitObject(player, assets.UnitPlayer, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
+
+            var progression = player.AddComponent<PlayerProgression>();
+            SetComponentReference(progression, "progression", assets.ProgressionDefault);
+            SetComponentReference(progression, "eventHub", assets.EventHub);
+            SetComponentValue(progression, "initializeOnAwake", true);
+
+            var xpGrant = player.AddComponent<DebugExperienceGrant>();
+            SetComponentReference(xpGrant, "progression", progression);
+            SetComponentValue(xpGrant, "grantKey", KeyCode.F5);
+            SetComponentValue(xpGrant, "grantAmount", 50);
+            SetComponentValue(xpGrant, "requireShift", false);
 
             var enemyGroup = new GameObject("Sample_Enemies");
             var enemyPositions = BuildEnemyPositions(6, 4.5f);
@@ -3053,6 +3070,41 @@ namespace CombatSystem.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void ConfigureProgression(
+            ProgressionDefinition progression,
+            string id,
+            string displayName,
+            int startLevel,
+            int maxLevel,
+            int baseXpToNext,
+            float xpGrowth,
+            int startingAttributePoints,
+            int attributePointsPerLevel)
+        {
+            var so = new SerializedObject(progression);
+            SetDefinitionBase(so, id, displayName);
+            so.FindProperty("startLevel").intValue = startLevel;
+            so.FindProperty("maxLevel").intValue = maxLevel;
+            so.FindProperty("baseXpToNext").intValue = baseXpToNext;
+            so.FindProperty("xpGrowth").floatValue = xpGrowth;
+            so.FindProperty("startingAttributePoints").intValue = startingAttributePoints;
+            so.FindProperty("attributePointsPerLevel").intValue = attributePointsPerLevel;
+
+            var xpOverrides = so.FindProperty("xpOverrides");
+            if (xpOverrides != null)
+            {
+                xpOverrides.arraySize = 0;
+            }
+
+            var pointOverrides = so.FindProperty("attributePointOverrides");
+            if (pointOverrides != null)
+            {
+                pointOverrides.arraySize = 0;
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void ConfigureDatabase(SampleAssets assets)
         {
             var so = new SerializedObject(assets.Database);
@@ -3081,6 +3133,7 @@ namespace CombatSystem.Editor
             });
             SetObjectList(so.FindProperty("tags"), new Object[] { assets.TagPlayer, assets.TagEnemy, assets.TagMagic, assets.TagFire, assets.TagPhysical, assets.TagNature });
             SetObjectList(so.FindProperty("units"), new Object[] { assets.UnitPlayer, assets.UnitEnemy, assets.UnitSummonTotem });
+            SetObjectList(so.FindProperty("progressions"), new Object[] { assets.ProgressionDefault });
             SetObjectList(so.FindProperty("skills"), new Object[]
             {
                 assets.SkillBasicAttack,

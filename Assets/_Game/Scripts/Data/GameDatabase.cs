@@ -20,6 +20,9 @@ namespace CombatSystem.Data
 
         [Header("关卡与流程")]
         [SerializeField] private List<LevelDefinition> levels = new List<LevelDefinition>();
+
+        [Header("成长与进度")]
+        [SerializeField] private List<ProgressionDefinition> progressions = new List<ProgressionDefinition>();
         
         [Header("战斗逻辑")]
         [SerializeField] private List<BuffDefinition> buffs = new List<BuffDefinition>();
@@ -41,6 +44,7 @@ namespace CombatSystem.Data
         private Dictionary<string, UnitDefinition> unitsById;
         private Dictionary<string, SkillDefinition> skillsById;
         private Dictionary<string, LevelDefinition> levelsById;
+        private Dictionary<string, ProgressionDefinition> progressionsById;
         private Dictionary<string, BuffDefinition> buffsById;
         private Dictionary<string, EffectDefinition> effectsById;
         private Dictionary<string, ConditionDefinition> conditionsById;
@@ -55,6 +59,7 @@ namespace CombatSystem.Data
         public IReadOnlyList<UnitDefinition> Units => units;
         public IReadOnlyList<SkillDefinition> Skills => skills;
         public IReadOnlyList<LevelDefinition> Levels => levels;
+        public IReadOnlyList<ProgressionDefinition> Progressions => progressions;
         public IReadOnlyList<BuffDefinition> Buffs => buffs;
         public IReadOnlyList<EffectDefinition> Effects => effects;
         public IReadOnlyList<ConditionDefinition> Conditions => conditions;
@@ -86,6 +91,7 @@ namespace CombatSystem.Data
             unitsById = BuildIndex(units);
             skillsById = BuildIndex(skills);
             levelsById = BuildIndex(levels);
+            progressionsById = BuildIndex(progressions);
             buffsById = BuildIndex(buffs);
             effectsById = BuildIndex(effects);
             conditionsById = BuildIndex(conditions);
@@ -124,6 +130,12 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(levelsById, id);
+        }
+
+        public ProgressionDefinition GetProgression(string id)
+        {
+            EnsureIndexes();
+            return GetById(progressionsById, id);
         }
 
         public BuffDefinition GetBuff(string id)

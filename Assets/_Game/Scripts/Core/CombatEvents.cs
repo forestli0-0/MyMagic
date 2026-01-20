@@ -64,6 +64,40 @@ namespace CombatSystem.Core
     }
 
     /// <summary>
+    /// 伤害来源信息（用于击杀归属等）。
+    /// </summary>
+    public struct DamageSourceInfo
+    {
+        public UnitRoot SourceUnit;
+        public SkillDefinition Skill;
+        public EffectDefinition Effect;
+        public SkillStepTrigger Trigger;
+
+        public DamageSourceInfo(UnitRoot sourceUnit, SkillDefinition skill, EffectDefinition effect, SkillStepTrigger trigger)
+        {
+            SourceUnit = sourceUnit;
+            Skill = skill;
+            Effect = effect;
+            Trigger = trigger;
+        }
+    }
+
+    /// <summary>
+    /// 单位死亡事件数据（包含伤害来源）。
+    /// </summary>
+    public struct UnitKilledEvent
+    {
+        public HealthComponent Victim;
+        public DamageSourceInfo Source;
+
+        public UnitKilledEvent(HealthComponent victim, DamageSourceInfo source)
+        {
+            Victim = victim;
+            Source = source;
+        }
+    }
+
+    /// <summary>
     /// 资源（法力/能量等）变更事件数据。
     /// </summary>
     public struct ResourceChangedEvent
@@ -123,6 +157,69 @@ namespace CombatSystem.Core
             CastTime = castTime;
             ChannelTime = channelTime;
             IsChannel = isChannel;
+        }
+    }
+
+    /// <summary>
+    /// 经验值变更事件数据。
+    /// </summary>
+    public struct ExperienceChangedEvent
+    {
+        public PlayerProgression Source;
+        public int OldValue;
+        public int NewValue;
+        public int Delta;
+        public int Level;
+        public int XpToNext;
+        public float Normalized;
+
+        public ExperienceChangedEvent(PlayerProgression source, int oldValue, int newValue, int level, int xpToNext)
+        {
+            Source = source;
+            OldValue = oldValue;
+            NewValue = newValue;
+            Delta = newValue - oldValue;
+            Level = level;
+            XpToNext = xpToNext;
+            Normalized = xpToNext > 0 ? (float)newValue / xpToNext : 0f;
+        }
+    }
+
+    /// <summary>
+    /// 等级变更事件数据。
+    /// </summary>
+    public struct LevelChangedEvent
+    {
+        public PlayerProgression Source;
+        public int OldLevel;
+        public int NewLevel;
+        public int Delta;
+
+        public LevelChangedEvent(PlayerProgression source, int oldLevel, int newLevel)
+        {
+            Source = source;
+            OldLevel = oldLevel;
+            NewLevel = newLevel;
+            Delta = newLevel - oldLevel;
+        }
+    }
+
+    /// <summary>
+    /// 属性点变更事件数据。
+    /// </summary>
+    public struct AttributePointsChangedEvent
+    {
+        public PlayerProgression Source;
+        public int OldValue;
+        public int NewValue;
+        public int Delta;
+
+        public AttributePointsChangedEvent(PlayerProgression source, int oldValue, int newValue)
+        {
+            Source = source;
+            OldValue = oldValue;
+            NewValue = newValue;
+            Delta = newValue - oldValue;
         }
     }
 }

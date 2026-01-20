@@ -24,6 +24,8 @@ namespace CombatSystem.Gameplay
     /// </remarks>
     public class EffectExecutor : MonoBehaviour
     {
+        private const float NonDamageAggroScore = 1f;
+
         [Tooltip("目标选择系统，用于覆盖目标逻辑")]
         [SerializeField] private TargetingSystem targetingSystem;
         
@@ -149,6 +151,10 @@ namespace CombatSystem.Gameplay
                     // 位移效果
                     var moveDistance = ModifierResolver.ApplyEffectModifiers(effect.MoveDistance, effect, context, target, ModifierParameters.EffectMoveDistance);
                     var moveSpeed = ModifierResolver.ApplyEffectModifiers(effect.MoveSpeed, effect, context, target, ModifierParameters.EffectMoveSpeed);
+                    if (effect.MoveStyle == MoveStyle.Knockback || effect.MoveStyle == MoveStyle.Pull)
+                    {
+                        RegisterAggression(context, target, effect, trigger, NonDamageAggroScore);
+                    }
                     ApplyMove(moveDistance, moveSpeed, effect, context, target);
                     break;
                 case EffectType.Resource:
@@ -378,6 +384,29 @@ namespace CombatSystem.Gameplay
 
             // 直接位移（兼容未接入 MovementComponent 的目标）
             target.Transform.position += direction * moveDistance;
+        }
+
+        private static void RegisterAggression(
+            SkillRuntimeContext context,
+            CombatTarget target,
+            EffectDefinition effect,
+            SkillStepTrigger trigger,
+            float contribution)
+        {
+            if (context.CasterUnit == null || target.Health == null)
+            {
+                return;
+            }
+
+            var casterTeam = context.CasterUnit.Team;
+            var targetTeam = target.Team;
+            if (casterTeam == null || targetTeam == null || casterTeam.IsSameTeam(targetTeam))
+            {
+                return;
+            }
+
+            var source = new DamageSourceInfo(context.CasterUnit, context.Skill, effect, trigger);
+            target.Health.RegisterAggression(source, contribution);
         }
 
         /// <summary>

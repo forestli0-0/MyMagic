@@ -34,7 +34,8 @@ namespace CombatSystem.Gameplay
             }
 
             var wasAlive = target.Health.IsAlive;
-            var appliedDamage = target.Health.ApplyDamage(finalAmount, out _);
+            var damageSource = new DamageSourceInfo(context.CasterUnit, context.Skill, effect, trigger);
+            var appliedDamage = target.Health.ApplyDamage(finalAmount, out _, damageSource);
             if (appliedDamage > 0f)
             {
                 ApplyVamp(effect, context, appliedDamage);

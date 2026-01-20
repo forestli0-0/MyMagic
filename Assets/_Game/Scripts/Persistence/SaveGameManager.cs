@@ -18,6 +18,7 @@ namespace CombatSystem.Persistence
         [SerializeField] private bool saveRotation = true;
         [SerializeField] private bool saveHealth = true;
         [SerializeField] private bool saveResource = true;
+        [SerializeField] private bool saveProgression = true;
         [SerializeField] private string quickSaveName = "Quick Save";
 
         private string currentSlotId;
@@ -151,6 +152,18 @@ namespace CombatSystem.Persistence
                         data.player.resource = resource.Current;
                     }
                 }
+
+                if (saveProgression)
+                {
+                    var progression = player.GetComponent<PlayerProgression>();
+                    if (progression != null)
+                    {
+                        data.player.hasProgression = true;
+                        data.player.level = progression.Level;
+                        data.player.experience = progression.CurrentExperience;
+                        data.player.attributePoints = progression.UnspentAttributePoints;
+                    }
+                }
             }
 
             var levelFlow = FindFirstObjectByType<LevelFlowController>();
@@ -215,6 +228,15 @@ namespace CombatSystem.Persistence
                 if (resource != null && (int)resource.ResourceType == data.player.resourceType)
                 {
                     resource.SetCurrent(data.player.resource);
+                }
+            }
+
+            if (saveProgression && data.player.hasProgression)
+            {
+                var progression = player.GetComponent<PlayerProgression>();
+                if (progression != null)
+                {
+                    progression.ApplyState(data.player.level, data.player.experience, data.player.attributePoints, true);
                 }
             }
         }

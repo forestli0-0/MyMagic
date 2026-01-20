@@ -36,9 +36,18 @@ namespace CombatSystem.Core
         [Tooltip("是否限制生命值不能超过最大值")]
         [SerializeField] private bool clampToMax = true;
 
+        [Header("击杀归属")]
+        [Tooltip("是否启用击杀归属统计（用于掉落/经验等）")]
+        [SerializeField] private bool enableKillAttribution = true;
+        [Tooltip("击杀归属时间窗口（秒）")]
+        [SerializeField] private float attributionWindowSeconds = 8f;
+
         private float currentHealth;
         private float maxHealth;
         private float currentShield;
+        private DamageSourceInfo lastDamageSource;
+        private readonly Dictionary<UnitRoot, AggressorEntry> aggressors = new Dictionary<UnitRoot, AggressorEntry>(8);
+        private readonly List<UnitRoot> expiredAggressors = new List<UnitRoot>(4);
         private readonly List<ShieldInstance> activeShields = new List<ShieldInstance>(8);
         private readonly List<int> expiredShields = new List<int>(4);
 
@@ -94,6 +103,9 @@ namespace CombatSystem.Core
             {
                 stats.StatChanged -= HandleStatChanged;
             }
+
+            // 清理攻击者记录，避免引用残留
+            aggressors.Clear();
         }
 
         private void Update()
@@ -143,6 +155,8 @@ namespace CombatSystem.Core
 
             currentShield = 0f;
             activeShields.Clear();
+            lastDamageSource = default;
+            aggressors.Clear();
         }
 
         /// <summary>
@@ -179,13 +193,21 @@ namespace CombatSystem.Core
         /// <param name="amount">伤害数值</param>
         public void ApplyDamage(float amount)
         {
-            ApplyDamage(amount, out _);
+            ApplyDamage(amount, out _, default);
         }
 
         /// <summary>
         /// 对该组件应用伤害，返回被护盾吸收的数值。
         /// </summary>
         public float ApplyDamage(float amount, out float absorbed)
+        {
+            return ApplyDamage(amount, out absorbed, default);
+        }
+
+        /// <summary>
+        /// 对该组件应用伤害，并记录伤害来源信息。
+        /// </summary>
+        public float ApplyDamage(float amount, out float absorbed, DamageSourceInfo source)
         {
             absorbed = 0f;
             if (amount <= 0f)
@@ -200,6 +222,8 @@ namespace CombatSystem.Core
                 return 0f;
             }
 
+            lastDamageSource = source;
+            RegisterAggressionInternal(source, remaining);
             ModifyCurrent(-remaining);
             return remaining;
         }
@@ -238,6 +262,11 @@ namespace CombatSystem.Core
         /// </summary>
         public void SetCurrent(float value)
         {
+            if (value <= 0f && currentHealth > 0f)
+            {
+                lastDamageSource = default;
+            }
+
             ModifyCurrent(value - currentHealth);
         }
 
@@ -261,8 +290,11 @@ namespace CombatSystem.Core
                 // 死亡判定：从有血到无血的临界点触发
                 if (oldValue > 0f && currentHealth <= 0f)
                 {
+                    var killSource = ResolveKillAttribution();
                     Died?.Invoke(this);
                     eventHub?.RaiseUnitDied(this);
+                    eventHub?.RaiseUnitKilled(new UnitKilledEvent(this, killSource));
+                    aggressors.Clear();
                 }
             }
         }
@@ -401,6 +433,91 @@ namespace CombatSystem.Core
             eventHub?.RaiseShieldChanged(evt);
         }
 
+        /// <summary>
+        /// 记录来自施法者的敌对交互，用于击杀归属判定。
+        /// </summary>
+        public void RegisterAggression(DamageSourceInfo source, float contribution)
+        {
+            RegisterAggressionInternal(source, contribution);
+        }
+
+        private void RegisterAggressionInternal(DamageSourceInfo source, float contribution)
+        {
+            if (!enableKillAttribution || source.SourceUnit == null)
+            {
+                return;
+            }
+
+            var score = Mathf.Max(0f, contribution);
+            if (!aggressors.TryGetValue(source.SourceUnit, out var entry))
+            {
+                entry = new AggressorEntry
+                {
+                    Score = score,
+                    LastHitTime = Time.time,
+                    LastSource = source
+                };
+            }
+            else
+            {
+                entry.Score += score;
+                entry.LastHitTime = Time.time;
+                entry.LastSource = source;
+            }
+
+            lastDamageSource = source;
+            aggressors[source.SourceUnit] = entry;
+        }
+
+        private DamageSourceInfo ResolveKillAttribution()
+        {
+            if (!enableKillAttribution || aggressors.Count == 0)
+            {
+                return lastDamageSource;
+            }
+
+            var now = Time.time;
+            expiredAggressors.Clear();
+
+            var bestScore = float.MinValue;
+            var bestTime = -1f;
+            var bestSource = lastDamageSource;
+
+            foreach (var pair in aggressors)
+            {
+                var unit = pair.Key;
+                if (unit == null)
+                {
+                    expiredAggressors.Add(unit);
+                    continue;
+                }
+
+                var entry = pair.Value;
+                if (attributionWindowSeconds > 0f && now - entry.LastHitTime > attributionWindowSeconds)
+                {
+                    expiredAggressors.Add(unit);
+                    continue;
+                }
+
+                if (entry.Score > bestScore || (Mathf.Approximately(entry.Score, bestScore) && entry.LastHitTime > bestTime))
+                {
+                    bestScore = entry.Score;
+                    bestTime = entry.LastHitTime;
+                    bestSource = entry.LastSource;
+                }
+            }
+
+            if (expiredAggressors.Count > 0)
+            {
+                for (int i = 0; i < expiredAggressors.Count; i++)
+                {
+                    aggressors.Remove(expiredAggressors[i]);
+                }
+            }
+
+            return bestSource;
+        }
+
         private struct ShieldInstance
         {
             public float Amount;
@@ -411,6 +528,13 @@ namespace CombatSystem.Core
                 Amount = amount;
                 ExpireTime = expireTime;
             }
+        }
+
+        private struct AggressorEntry
+        {
+            public float Score;
+            public float LastHitTime;
+            public DamageSourceInfo LastSource;
         }
     }
 }
