@@ -41,6 +41,8 @@ namespace CombatSystem.Data
         [Tooltip("该 Buff 提供的控制免疫")]
         [SerializeField] private List<ControlType> controlImmunities = new List<ControlType>();
 
+        [NonSerialized] private bool isRuntime;
+
         public Sprite Icon => icon;
         public bool IsDebuff => isDebuff;
         public bool Dispellable => dispellable;
@@ -53,6 +55,51 @@ namespace CombatSystem.Data
         public IReadOnlyList<BuffTrigger> Triggers => triggers;
         public IReadOnlyList<ControlType> ControlEffects => controlEffects;
         public IReadOnlyList<ControlType> ControlImmunities => controlImmunities;
+        public bool IsRuntime => isRuntime;
+
+        public static BuffDefinition CreateRuntime(string runtimeName, IReadOnlyList<ModifierDefinition> runtimeModifiers)
+        {
+            var buff = CreateInstance<BuffDefinition>();
+            buff.name = string.IsNullOrWhiteSpace(runtimeName) ? "RuntimeBuff" : runtimeName;
+            buff.isDebuff = false;
+            buff.dispellable = false;
+            buff.duration = 0f;
+            buff.tickInterval = 0f;
+            buff.stackingRule = BuffStackingRule.Refresh;
+            buff.maxStacks = 1;
+            buff.tags = new List<TagDefinition>();
+            buff.modifiers = runtimeModifiers != null ? new List<ModifierDefinition>(runtimeModifiers) : new List<ModifierDefinition>();
+            buff.triggers = new List<BuffTrigger>();
+            buff.controlEffects = new List<ControlType>();
+            buff.controlImmunities = new List<ControlType>();
+            buff.isRuntime = true;
+            return buff;
+        }
+
+        public static BuffDefinition CreateRuntimeClone(BuffDefinition source, string runtimeName = null)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var buff = CreateInstance<BuffDefinition>();
+            buff.name = string.IsNullOrWhiteSpace(runtimeName) ? source.name : runtimeName;
+            buff.icon = source.icon;
+            buff.isDebuff = source.isDebuff;
+            buff.dispellable = source.dispellable;
+            buff.duration = source.duration;
+            buff.tickInterval = source.tickInterval;
+            buff.stackingRule = source.stackingRule;
+            buff.maxStacks = source.maxStacks;
+            buff.tags = source.tags != null ? new List<TagDefinition>(source.tags) : new List<TagDefinition>();
+            buff.modifiers = source.modifiers != null ? new List<ModifierDefinition>(source.modifiers) : new List<ModifierDefinition>();
+            buff.triggers = source.triggers != null ? new List<BuffTrigger>(source.triggers) : new List<BuffTrigger>();
+            buff.controlEffects = source.controlEffects != null ? new List<ControlType>(source.controlEffects) : new List<ControlType>();
+            buff.controlImmunities = source.controlImmunities != null ? new List<ControlType>(source.controlImmunities) : new List<ControlType>();
+            buff.isRuntime = true;
+            return buff;
+        }
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CombatSystem.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace CombatSystem.UI
@@ -19,10 +20,14 @@ namespace CombatSystem.UI
         [SerializeField] private float showDuration = 5f;
         [SerializeField] private bool showPlayer = false;
         [SerializeField] private string playerTag = "Player";
+        [Header("Discovery")]
+        [SerializeField] private bool discoverOnSceneLoad = true;
+        [SerializeField] private bool showOnDiscover = true;
 
         private readonly Dictionary<HealthComponent, UnitHealthBar> bars = new Dictionary<HealthComponent, UnitHealthBar>(32);
         private readonly List<HealthComponent> releaseQueue = new List<HealthComponent>(8);
         private readonly List<UnitHealthBar> pool = new List<UnitHealthBar>(16);
+        private readonly HashSet<HealthComponent> observedHealth = new HashSet<HealthComponent>();
 
         private HealthComponent currentTarget;
         private bool templateBuilt;
@@ -45,11 +50,21 @@ namespace CombatSystem.UI
         {
             ResolveEventHub();
             Subscribe();
+            if (discoverOnSceneLoad)
+            {
+                SceneManager.sceneLoaded += HandleSceneLoaded;
+            }
+            DiscoverUnits();
         }
 
         private void OnDisable()
         {
             Unsubscribe();
+            UnsubscribeLocal();
+            if (discoverOnSceneLoad)
+            {
+                SceneManager.sceneLoaded -= HandleSceneLoaded;
+            }
         }
 
         private void LateUpdate()
@@ -129,6 +144,11 @@ namespace CombatSystem.UI
             eventHub.TargetCleared += HandleTargetCleared;
         }
 
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            DiscoverUnits();
+        }
+
         private void Unsubscribe()
         {
             if (eventHub == null)
@@ -174,6 +194,7 @@ namespace CombatSystem.UI
                 return;
             }
 
+            UnregisterLocal(source);
             if (currentTarget == source)
             {
                 currentTarget = null;
@@ -229,6 +250,81 @@ namespace CombatSystem.UI
             }
 
             currentTarget = null;
+        }
+
+        private void DiscoverUnits()
+        {
+            var healthComponents = FindObjectsByType<HealthComponent>(FindObjectsSortMode.None);
+            if (healthComponents == null || healthComponents.Length == 0)
+            {
+                return;
+            }
+
+            var now = Time.unscaledTime;
+            for (int i = 0; i < healthComponents.Length; i++)
+            {
+                var health = healthComponents[i];
+                if (health == null || !CanShowFor(health))
+                {
+                    continue;
+                }
+
+                RegisterLocal(health);
+                var bar = GetOrCreateBar(health);
+                if (bar == null)
+                {
+                    continue;
+                }
+
+                bar.Refresh();
+                if (showOnDiscover)
+                {
+                    bar.ShowForDuration(showDuration, now);
+                }
+            }
+        }
+
+        private void RegisterLocal(HealthComponent health)
+        {
+            if (health == null || !observedHealth.Add(health))
+            {
+                return;
+            }
+
+            health.HealthChanged += HandleHealthChanged;
+            health.Died += HandleUnitDied;
+        }
+
+        private void UnregisterLocal(HealthComponent health)
+        {
+            if (health == null || !observedHealth.Remove(health))
+            {
+                return;
+            }
+
+            health.HealthChanged -= HandleHealthChanged;
+            health.Died -= HandleUnitDied;
+        }
+
+        private void UnsubscribeLocal()
+        {
+            if (observedHealth.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var health in observedHealth)
+            {
+                if (health == null)
+                {
+                    continue;
+                }
+
+                health.HealthChanged -= HandleHealthChanged;
+                health.Died -= HandleUnitDied;
+            }
+
+            observedHealth.Clear();
         }
 
         /// <summary>

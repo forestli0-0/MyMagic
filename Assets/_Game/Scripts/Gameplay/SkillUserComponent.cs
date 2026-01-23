@@ -163,6 +163,18 @@ namespace CombatSystem.Gameplay
                 eventHub = unitRoot.EventHub;
             }
 
+            if (targetingSystem == null)
+            {
+                // 优先检查 unitRoot 是否有注入，否则尝试全局查找（较耗时）
+                targetingSystem = FindObjectOfType<TargetingSystem>();
+            }
+
+            if (effectExecutor == null)
+            {
+                // 优先检查 unitRoot 是否有注入，否则尝试全局查找（较耗时）
+                effectExecutor = FindObjectOfType<EffectExecutor>();
+            }
+
             if (health != null)
             {
                 health.Died += HandleUnitDied;

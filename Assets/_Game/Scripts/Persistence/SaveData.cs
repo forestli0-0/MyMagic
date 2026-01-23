@@ -34,5 +34,36 @@ namespace CombatSystem.Persistence
     {
         public SaveSlotInfo slotInfo = new SaveSlotInfo();
         public PlayerSaveData player = new PlayerSaveData();
+        public InventorySaveData inventory = new InventorySaveData();
+        public EquipmentSaveData equipment = new EquipmentSaveData();
+    }
+
+    [Serializable]
+    public class ItemInstanceSaveData
+    {
+        public string itemId;
+        public int stack;
+        public int rarity;
+        public string[] affixIds;
+    }
+
+    [Serializable]
+    public class InventorySaveData
+    {
+        public int capacity;
+        public ItemInstanceSaveData[] items;
+    }
+
+    [Serializable]
+    public class EquippedItemSaveData
+    {
+        public int slotIndex;
+        public ItemInstanceSaveData item;
+    }
+
+    [Serializable]
+    public class EquipmentSaveData
+    {
+        public EquippedItemSaveData[] slots;
     }
 }

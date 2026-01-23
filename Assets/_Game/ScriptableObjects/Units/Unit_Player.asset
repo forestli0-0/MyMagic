@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Unit_Player
   displayName: Player
-  prefab: {fileID: 0}
+  prefab: {fileID: 1962191944521275768, guid: a3f1e526b28879c47886947446b80359, type: 3}
   portrait: {fileID: 0}
   tags:
   - {fileID: 11400000, guid: 424ff5cc9af4798419091345410a8259, type: 2}

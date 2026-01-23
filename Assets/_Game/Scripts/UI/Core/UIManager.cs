@@ -110,6 +110,7 @@ namespace CombatSystem.UI
 
             if (clearStack)
             {
+                // 切换主屏：清空历史栈，避免返回到旧页面
                 ClearScreens();
             }
             else
@@ -174,6 +175,7 @@ namespace CombatSystem.UI
             modal.SetVisible(true);
             modal.OnEnter();
             modal.OnFocus();
+            // Modal 计数式暂停，支持多层弹窗叠加
             TrackPause(modal, true);
             SetInputMode(UIInputMode.UI);
         }
@@ -262,6 +264,7 @@ namespace CombatSystem.UI
         {
             if (modalStack.Count > 0)
             {
+                // 有弹窗时强制 UI 输入模式
                 SetInputMode(UIInputMode.UI);
                 UpdateScreenPauseState();
                 return;
@@ -294,6 +297,7 @@ namespace CombatSystem.UI
                 return;
             }
 
+            // 叠加计数，确保多弹窗关闭时正确恢复
             pauseCount = Mathf.Max(0, pauseCount + (isOpening ? 1 : -1));
             ApplyPauseState();
         }
@@ -336,6 +340,7 @@ namespace CombatSystem.UI
             {
                 if (!pausedByScreen)
                 {
+                    // 屏幕级暂停与弹窗暂停分开缓存，避免互相覆盖
                     screenCachedTimeScale = Time.timeScale;
                     if (!Mathf.Approximately(Time.timeScale, 0f))
                     {

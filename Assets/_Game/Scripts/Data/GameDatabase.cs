@@ -23,6 +23,10 @@ namespace CombatSystem.Data
 
         [Header("成长与进度")]
         [SerializeField] private List<ProgressionDefinition> progressions = new List<ProgressionDefinition>();
+
+        [Header("物品与掉落")]
+        [SerializeField] private List<ItemDefinition> items = new List<ItemDefinition>();
+        [SerializeField] private List<AffixDefinition> affixes = new List<AffixDefinition>();
         
         [Header("战斗逻辑")]
         [SerializeField] private List<BuffDefinition> buffs = new List<BuffDefinition>();
@@ -45,6 +49,8 @@ namespace CombatSystem.Data
         private Dictionary<string, SkillDefinition> skillsById;
         private Dictionary<string, LevelDefinition> levelsById;
         private Dictionary<string, ProgressionDefinition> progressionsById;
+        private Dictionary<string, ItemDefinition> itemsById;
+        private Dictionary<string, AffixDefinition> affixesById;
         private Dictionary<string, BuffDefinition> buffsById;
         private Dictionary<string, EffectDefinition> effectsById;
         private Dictionary<string, ConditionDefinition> conditionsById;
@@ -60,6 +66,8 @@ namespace CombatSystem.Data
         public IReadOnlyList<SkillDefinition> Skills => skills;
         public IReadOnlyList<LevelDefinition> Levels => levels;
         public IReadOnlyList<ProgressionDefinition> Progressions => progressions;
+        public IReadOnlyList<ItemDefinition> Items => items;
+        public IReadOnlyList<AffixDefinition> Affixes => affixes;
         public IReadOnlyList<BuffDefinition> Buffs => buffs;
         public IReadOnlyList<EffectDefinition> Effects => effects;
         public IReadOnlyList<ConditionDefinition> Conditions => conditions;
@@ -92,6 +100,8 @@ namespace CombatSystem.Data
             skillsById = BuildIndex(skills);
             levelsById = BuildIndex(levels);
             progressionsById = BuildIndex(progressions);
+            itemsById = BuildIndex(items);
+            affixesById = BuildIndex(affixes);
             buffsById = BuildIndex(buffs);
             effectsById = BuildIndex(effects);
             conditionsById = BuildIndex(conditions);
@@ -136,6 +146,18 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(progressionsById, id);
+        }
+
+        public ItemDefinition GetItem(string id)
+        {
+            EnsureIndexes();
+            return GetById(itemsById, id);
+        }
+
+        public AffixDefinition GetAffix(string id)
+        {
+            EnsureIndexes();
+            return GetById(affixesById, id);
         }
 
         public BuffDefinition GetBuff(string id)

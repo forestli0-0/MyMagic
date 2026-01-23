@@ -1,5 +1,7 @@
+using System;
 using CombatSystem.Persistence;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CombatSystem.UI
 {
@@ -10,6 +12,7 @@ namespace CombatSystem.UI
         [SerializeField] private UIScreenBase mainMenuScreen;
         [SerializeField] private UIModalBase settingsModal;
         [SerializeField] private UIScreenBase settingsScreen;
+        [SerializeField] private string mainMenuSceneName = "MainMenu";
 
         [Header("Save")]
         [SerializeField] private SaveGameManager saveManager;
@@ -74,10 +77,63 @@ namespace CombatSystem.UI
 
         public void BackToMenu()
         {
-            if (uiManager != null && mainMenuScreen != null)
+            if (uiManager != null)
             {
                 uiManager.CloseAllModals();
+            }
+
+            if (Time.timeScale != 1f)
+            {
+                Time.timeScale = 1f;
+            }
+
+            if (!string.IsNullOrWhiteSpace(mainMenuSceneName))
+            {
+                SceneManager.sceneLoaded -= HandleMainMenuLoaded;
+                SceneManager.sceneLoaded += HandleMainMenuLoaded;
+                SceneManager.LoadScene(mainMenuSceneName);
+                return;
+            }
+
+            if (uiManager != null && mainMenuScreen != null)
+            {
                 uiManager.ShowScreen(mainMenuScreen, true);
+            }
+        }
+
+        private void HandleMainMenuLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!string.Equals(scene.name, mainMenuSceneName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            SceneManager.sceneLoaded -= HandleMainMenuLoaded;
+
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>();
+            }
+
+            var targetScreen = mainMenuScreen;
+            if (targetScreen == null)
+            {
+                var screens = Resources.FindObjectsOfTypeAll<MainMenuScreen>();
+                if (screens != null && screens.Length > 0)
+                {
+                    targetScreen = screens[0];
+                }
+            }
+
+            if (uiManager != null)
+            {
+                uiManager.CloseAllModals();
+                if (targetScreen != null)
+                {
+                    uiManager.ShowScreen(targetScreen, true);
+                }
+
+                uiManager.SetHudVisible(false);
             }
         }
     }

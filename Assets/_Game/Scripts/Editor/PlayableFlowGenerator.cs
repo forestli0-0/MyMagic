@@ -258,6 +258,9 @@ namespace CombatSystem.Editor
             SetSerializedValue(flow, "startSpawnId", "Start");
             SetSerializedValue(flow, "playerTag", "Player");
             SetSerializedValue(flow, "persistAcrossScenes", true);
+            var playerDefinition = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/_Game/ScriptableObjects/Units/Unit_Player.asset");
+            SetSerializedReference(flow, "playerDefinition", playerDefinition);
+            SetSerializedValue(flow, "playerUnitId", playerDefinition != null ? playerDefinition.Id : "Unit_Player");
 
             return flow;
         }

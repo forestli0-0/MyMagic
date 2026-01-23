@@ -1,0 +1,752 @@
+using CombatSystem.Gameplay;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace CombatSystem.UI
+{
+    /// <summary>
+    /// 库存界面主屏幕，管理背包与装备的展示与交互。
+    /// </summary>
+    /// <remarks>
+    /// 职责：
+    /// - 整合背包网格、装备面板、物品对比面板
+    /// - 处理物品选择、穿戴、卸下操作
+    /// - 响应库存/装备变化事件刷新 UI
+    /// 
+    /// 使用方式：
+    /// - 通过 I 键（InventoryHotkey）开关界面
+    /// - 继承 UIScreenBase，进入时隐藏 HUD
+    /// </remarks>
+    public class InventoryScreen : UIScreenBase
+    {
+        [Header("References")]
+        [SerializeField] private UIManager uiManager;
+        [SerializeField] private InventoryComponent inventory;
+        [SerializeField] private EquipmentComponent equipment;
+
+        [Header("Widgets")]
+        [SerializeField] private InventoryGridUI inventoryGrid;
+        [SerializeField] private EquipmentPanelUI equipmentPanel;
+        [SerializeField] private ItemComparePanelUI comparePanel;
+        [SerializeField] private Button equipButton;
+        [SerializeField] private Button unequipButton;
+
+        private int selectedInventoryIndex = -1;
+        private int selectedEquipmentIndex = -1;
+        private bool subscribed;
+        private DragPayload dragPayload;
+        private bool dragActive;
+        private Image dragIcon;
+        private Canvas dragCanvas;
+
+        private void Reset()
+        {
+            inputMode = UIInputMode.UI;
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>();
+            }
+        }
+
+        public override void OnEnter()
+        {
+            EnsureReferences();
+            Subscribe();
+            RefreshAll();
+
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(false);
+            }
+        }
+
+        public override void OnExit()
+        {
+            Unsubscribe();
+            EndDrag();
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(true);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (dragIcon != null)
+            {
+                Destroy(dragIcon.gameObject);
+                dragIcon = null;
+                dragCanvas = null;
+            }
+        }
+
+        public override void OnFocus()
+        {
+            RefreshAll();
+        }
+
+        public void EquipSelected()
+        {
+            if (inventory == null || equipment == null)
+            {
+                return;
+            }
+
+            if (selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
+            {
+                return;
+            }
+
+            var item = inventory.Items[selectedInventoryIndex];
+            if (equipment.TryEquip(item, inventory))
+            {
+                selectedInventoryIndex = -1;
+                RefreshSelectionAfterChange();
+            }
+        }
+
+        public void UnequipSelected()
+        {
+            if (inventory == null || equipment == null)
+            {
+                return;
+            }
+
+            if (selectedEquipmentIndex < 0 || selectedEquipmentIndex >= equipment.Slots.Count)
+            {
+                return;
+            }
+
+            if (equipment.TryUnequip(selectedEquipmentIndex, inventory))
+            {
+                selectedEquipmentIndex = -1;
+                RefreshSelectionAfterChange();
+            }
+        }
+
+        private void EnsureReferences()
+        {
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>();
+            }
+
+            if (inventory == null)
+            {
+                inventory = FindFirstObjectByType<InventoryComponent>();
+            }
+
+            if (equipment == null)
+            {
+                equipment = FindFirstObjectByType<EquipmentComponent>();
+            }
+        }
+
+        private void Subscribe()
+        {
+            if (subscribed)
+            {
+                return;
+            }
+
+            if (inventory != null)
+            {
+                inventory.InventoryChanged += HandleInventoryChanged;
+            }
+
+            if (equipment != null)
+            {
+                equipment.EquipmentChanged += HandleEquipmentChanged;
+            }
+
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.SlotSelected += HandleInventorySlotSelected;
+                inventoryGrid.SlotDragStarted += HandleInventoryDragStarted;
+                inventoryGrid.SlotDragging += HandleInventoryDragging;
+                inventoryGrid.SlotDragEnded += HandleInventoryDragEnded;
+                inventoryGrid.SlotDropped += HandleInventorySlotDropped;
+            }
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.SlotSelected += HandleEquipmentSlotSelected;
+                equipmentPanel.SlotDragStarted += HandleEquipmentDragStarted;
+                equipmentPanel.SlotDragging += HandleEquipmentDragging;
+                equipmentPanel.SlotDragEnded += HandleEquipmentDragEnded;
+                equipmentPanel.SlotDropped += HandleEquipmentSlotDropped;
+            }
+
+            if (equipButton != null)
+            {
+                equipButton.onClick.AddListener(EquipSelected);
+            }
+
+            if (unequipButton != null)
+            {
+                unequipButton.onClick.AddListener(UnequipSelected);
+            }
+
+            subscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!subscribed)
+            {
+                return;
+            }
+
+            if (inventory != null)
+            {
+                inventory.InventoryChanged -= HandleInventoryChanged;
+            }
+
+            if (equipment != null)
+            {
+                equipment.EquipmentChanged -= HandleEquipmentChanged;
+            }
+
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.SlotSelected -= HandleInventorySlotSelected;
+                inventoryGrid.SlotDragStarted -= HandleInventoryDragStarted;
+                inventoryGrid.SlotDragging -= HandleInventoryDragging;
+                inventoryGrid.SlotDragEnded -= HandleInventoryDragEnded;
+                inventoryGrid.SlotDropped -= HandleInventorySlotDropped;
+            }
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.SlotSelected -= HandleEquipmentSlotSelected;
+                equipmentPanel.SlotDragStarted -= HandleEquipmentDragStarted;
+                equipmentPanel.SlotDragging -= HandleEquipmentDragging;
+                equipmentPanel.SlotDragEnded -= HandleEquipmentDragEnded;
+                equipmentPanel.SlotDropped -= HandleEquipmentSlotDropped;
+            }
+
+            if (equipButton != null)
+            {
+                equipButton.onClick.RemoveListener(EquipSelected);
+            }
+
+            if (unequipButton != null)
+            {
+                unequipButton.onClick.RemoveListener(UnequipSelected);
+            }
+
+            subscribed = false;
+        }
+
+        private void RefreshAll()
+        {
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.Bind(inventory);
+            }
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.Bind(equipment);
+            }
+
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleInventoryChanged()
+        {
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleEquipmentChanged()
+        {
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleInventorySlotSelected(int index)
+        {
+            selectedInventoryIndex = index;
+            selectedEquipmentIndex = -1;
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.SetSelectedIndex(-1);
+            }
+
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleEquipmentSlotSelected(int index)
+        {
+            selectedEquipmentIndex = index;
+            selectedInventoryIndex = -1;
+
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.SetSelectedIndex(-1);
+            }
+
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleInventoryDragStarted(InventorySlotUI slot, PointerEventData eventData)
+        {
+            if (slot == null || slot.Item == null)
+            {
+                return;
+            }
+
+            BeginDrag(DragSource.Inventory, slot.SlotIndex, slot.Item, eventData);
+        }
+
+        private void HandleInventoryDragging(InventorySlotUI slot, PointerEventData eventData)
+        {
+            UpdateDragIcon(eventData);
+        }
+
+        private void HandleInventoryDragEnded(InventorySlotUI slot, PointerEventData eventData)
+        {
+            EndDrag();
+        }
+
+        private void HandleInventorySlotDropped(InventorySlotUI slot, PointerEventData eventData)
+        {
+            if (!dragActive || slot == null)
+            {
+                return;
+            }
+
+            if (dragPayload.Source == DragSource.Inventory)
+            {
+                // 背包内拖拽：交换/合并/移动
+                HandleInventoryToInventory(slot.SlotIndex);
+            }
+            else if (dragPayload.Source == DragSource.Equipment)
+            {
+                // 装备拖到背包：按目标槽位放置
+                HandleEquipmentToInventory(slot.SlotIndex);
+            }
+        }
+
+        private void HandleEquipmentDragStarted(EquipmentSlotUI slot, PointerEventData eventData)
+        {
+            if (slot == null || slot.Item == null)
+            {
+                return;
+            }
+
+            BeginDrag(DragSource.Equipment, slot.SlotIndex, slot.Item, eventData);
+        }
+
+        private void HandleEquipmentDragging(EquipmentSlotUI slot, PointerEventData eventData)
+        {
+            UpdateDragIcon(eventData);
+        }
+
+        private void HandleEquipmentDragEnded(EquipmentSlotUI slot, PointerEventData eventData)
+        {
+            EndDrag();
+        }
+
+        private void HandleEquipmentSlotDropped(EquipmentSlotUI slot, PointerEventData eventData)
+        {
+            if (!dragActive || slot == null)
+            {
+                return;
+            }
+
+            if (dragPayload.Source == DragSource.Inventory)
+            {
+                // 背包拖到装备：按槽位穿戴
+                HandleInventoryToEquipment(slot.SlotIndex);
+            }
+            else if (dragPayload.Source == DragSource.Equipment)
+            {
+                // 装备内部拖拽：同类型槽位交换
+                HandleEquipmentToEquipment(slot.SlotIndex);
+            }
+        }
+
+        private void RefreshSelectionAfterChange()
+        {
+            var inventoryItem = ResolveInventorySelection();
+            var equipmentItem = ResolveEquipmentSelection();
+
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.SetSelectedIndex(selectedInventoryIndex);
+            }
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.SetSelectedIndex(selectedEquipmentIndex);
+            }
+
+            if (comparePanel != null)
+            {
+                if (inventoryItem != null)
+                {
+                    comparePanel.ShowItem(inventoryItem, FindEquippedForSlot(inventoryItem));
+                }
+                else if (equipmentItem != null)
+                {
+                    comparePanel.ShowItem(equipmentItem, null);
+                }
+                else
+                {
+                    comparePanel.ShowItem(null, null);
+                }
+            }
+
+            UpdateButtons(inventoryItem, equipmentItem);
+        }
+
+        private ItemInstance ResolveInventorySelection()
+        {
+            if (inventory == null)
+            {
+                selectedInventoryIndex = -1;
+                return null;
+            }
+
+            if (selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
+            {
+                selectedInventoryIndex = -1;
+                return null;
+            }
+
+            return inventory.Items[selectedInventoryIndex];
+        }
+
+        private ItemInstance ResolveEquipmentSelection()
+        {
+            if (equipment == null)
+            {
+                selectedEquipmentIndex = -1;
+                return null;
+            }
+
+            if (selectedEquipmentIndex < 0 || selectedEquipmentIndex >= equipment.Slots.Count)
+            {
+                selectedEquipmentIndex = -1;
+                return null;
+            }
+
+            return equipment.Slots[selectedEquipmentIndex].Item;
+        }
+
+        private void UpdateButtons(ItemInstance inventoryItem, ItemInstance equipmentItem)
+        {
+            if (equipButton != null)
+            {
+                equipButton.interactable = inventoryItem != null && inventoryItem.Definition != null && inventoryItem.Definition.IsEquippable;
+            }
+
+            if (unequipButton != null)
+            {
+                unequipButton.interactable = equipmentItem != null;
+            }
+        }
+
+        private ItemInstance FindEquippedForSlot(ItemInstance item)
+        {
+            if (equipment == null || item == null || item.Definition == null || !item.Definition.IsEquippable)
+            {
+                return null;
+            }
+
+            var slots = equipment.Slots;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot.Slot == item.Definition.Slot && slot.Item != null)
+                {
+                    return slot.Item;
+                }
+            }
+
+            return null;
+        }
+
+        private void BeginDrag(DragSource source, int sourceIndex, ItemInstance item, PointerEventData eventData)
+        {
+            if (item == null || item.Definition == null)
+            {
+                return;
+            }
+
+            // 创建/显示拖拽图标
+            EnsureDragIcon();
+            dragPayload = new DragPayload(source, sourceIndex, item);
+            dragActive = true;
+
+            if (dragIcon != null)
+            {
+                dragIcon.sprite = item.Definition.Icon;
+                dragIcon.enabled = dragIcon.sprite != null;
+            }
+
+            UpdateDragIcon(eventData);
+        }
+
+        private void EndDrag()
+        {
+            if (!dragActive)
+            {
+                return;
+            }
+
+            // 收起拖拽图标
+            dragActive = false;
+            dragPayload = default;
+
+            if (dragIcon != null)
+            {
+                dragIcon.enabled = false;
+            }
+        }
+
+        private void UpdateDragIcon(PointerEventData eventData)
+        {
+            if (!dragActive || dragIcon == null || eventData == null)
+            {
+                return;
+            }
+
+            if (dragCanvas == null)
+            {
+                dragIcon.rectTransform.position = eventData.position;
+                return;
+            }
+
+            if (dragCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                dragIcon.rectTransform.position = eventData.position;
+                return;
+            }
+
+            var canvasTransform = dragCanvas.transform as RectTransform;
+            if (canvasTransform == null)
+            {
+                dragIcon.rectTransform.position = eventData.position;
+                return;
+            }
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                canvasTransform,
+                eventData.position,
+                dragCanvas.worldCamera,
+                out var localPoint);
+            dragIcon.rectTransform.localPosition = localPoint;
+        }
+
+        private void EnsureDragIcon()
+        {
+            if (dragIcon != null)
+            {
+                return;
+            }
+
+            // 挂到 Overlay 画布，避免被 UI 遮挡
+            Canvas targetCanvas = null;
+            if (UIRoot.Instance != null)
+            {
+                targetCanvas = UIRoot.Instance.OverlayCanvas != null
+                    ? UIRoot.Instance.OverlayCanvas
+                    : UIRoot.Instance.ScreensCanvas;
+            }
+
+            if (targetCanvas == null)
+            {
+                targetCanvas = GetComponentInParent<Canvas>();
+            }
+
+            if (targetCanvas == null)
+            {
+                return;
+            }
+
+            dragCanvas = targetCanvas;
+            var root = new GameObject("InventoryDragIcon", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            var rectTransform = root.GetComponent<RectTransform>();
+            rectTransform.SetParent(targetCanvas.transform, false);
+            rectTransform.sizeDelta = new Vector2(64f, 64f);
+
+            var canvasGroup = root.GetComponent<CanvasGroup>();
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+
+            dragIcon = root.GetComponent<Image>();
+            dragIcon.raycastTarget = false;
+            dragIcon.enabled = false;
+        }
+
+        private void HandleInventoryToInventory(int targetIndex)
+        {
+            if (inventory == null)
+            {
+                return;
+            }
+
+            if (targetIndex < 0 || targetIndex >= inventory.Capacity)
+            {
+                return;
+            }
+
+            if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= inventory.Items.Count)
+            {
+                return;
+            }
+
+            if (dragPayload.SourceIndex == targetIndex)
+            {
+                return;
+            }
+
+            var targetItem = inventory.Items[targetIndex];
+            if (targetItem != null)
+            {
+                // 目标有物品：优先合并堆叠，否则交换
+                if (!inventory.TryMergeStack(dragPayload.SourceIndex, targetIndex))
+                {
+                    inventory.TrySwapItems(dragPayload.SourceIndex, targetIndex);
+                }
+
+                return;
+            }
+
+            // 目标空：直接移动
+            inventory.TryMoveItem(dragPayload.SourceIndex, targetIndex);
+        }
+
+        private void HandleInventoryToEquipment(int targetIndex)
+        {
+            if (inventory == null || equipment == null)
+            {
+                return;
+            }
+
+            if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= inventory.Items.Count)
+            {
+                return;
+            }
+
+            if (targetIndex < 0 || targetIndex >= equipment.Slots.Count)
+            {
+                return;
+            }
+
+            var item = inventory.Items[dragPayload.SourceIndex];
+            if (item == null)
+            {
+                return;
+            }
+
+            if (equipment.TryEquipToSlot(item, targetIndex, inventory))
+            {
+                return;
+            }
+        }
+
+        private void HandleEquipmentToInventory(int targetIndex)
+        {
+            if (inventory == null || equipment == null)
+            {
+                return;
+            }
+
+            if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= equipment.Slots.Count)
+            {
+                return;
+            }
+
+            if (targetIndex < 0 || targetIndex >= inventory.Capacity)
+            {
+                return;
+            }
+
+            var sourceSlot = equipment.Slots[dragPayload.SourceIndex];
+            if (sourceSlot == null || sourceSlot.Item == null)
+            {
+                return;
+            }
+
+            var inventoryItem = inventory.Items[targetIndex];
+            if (inventoryItem != null)
+            {
+                // 目标格有装备：仅允许同槽位互换
+                if (inventoryItem.Definition == null || !inventoryItem.Definition.IsEquippable)
+                {
+                    return;
+                }
+
+                if (inventoryItem.Definition.Slot != sourceSlot.Slot)
+                {
+                    return;
+                }
+
+                // 背包槽位放入装备，然后把原装备放回装备位
+                if (!inventory.TrySetItemAt(targetIndex, sourceSlot.Item, out _))
+                {
+                    return;
+                }
+
+                equipment.TryReplaceSlotItem(dragPayload.SourceIndex, inventoryItem);
+                return;
+            }
+
+            // 目标格为空：直接卸下放入该格
+            if (!inventory.TrySetItemAt(targetIndex, sourceSlot.Item, out _))
+            {
+                return;
+            }
+
+            equipment.TryReplaceSlotItem(dragPayload.SourceIndex, null);
+        }
+
+        private void HandleEquipmentToEquipment(int targetIndex)
+        {
+            if (equipment == null)
+            {
+                return;
+            }
+
+            if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= equipment.Slots.Count)
+            {
+                return;
+            }
+
+            if (targetIndex < 0 || targetIndex >= equipment.Slots.Count)
+            {
+                return;
+            }
+
+            if (equipment.TrySwapSlots(dragPayload.SourceIndex, targetIndex))
+            {
+                return;
+            }
+        }
+
+        private enum DragSource
+        {
+            None,
+            Inventory,
+            Equipment
+        }
+
+        private readonly struct DragPayload
+        {
+            public readonly DragSource Source;
+            public readonly int SourceIndex;
+            public readonly ItemInstance Item;
+
+            public DragPayload(DragSource source, int sourceIndex, ItemInstance item)
+            {
+                Source = source;
+                SourceIndex = sourceIndex;
+                Item = item;
+            }
+        }
+    }
+}

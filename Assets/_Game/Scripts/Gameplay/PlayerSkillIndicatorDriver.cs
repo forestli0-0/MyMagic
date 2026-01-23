@@ -102,6 +102,7 @@ namespace CombatSystem.Gameplay
             }
 
             ResolveInputReader();
+            ResolveTargetingSystem();
         }
 
         /// <summary>
@@ -133,6 +134,7 @@ namespace CombatSystem.Gameplay
                 eventHub = unitRoot.EventHub;
             }
 
+            ResolveTargetingSystem();
             ResolveInputReader();
             if (inputReader != null)
             {
@@ -182,6 +184,16 @@ namespace CombatSystem.Gameplay
             }
 
             inputReader = FindFirstObjectByType<InputReader>();
+        }
+
+        private void ResolveTargetingSystem()
+        {
+            if (targetingSystem != null)
+            {
+                return;
+            }
+
+            targetingSystem = FindFirstObjectByType<TargetingSystem>();
         }
 
         private void HandleSkillStarted(int slotIndex)

@@ -119,11 +119,11 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - [x] 保存/读取扩展：等级/经验/已分配属性点
 
 **Day 3: 物品与装备**
-- [ ] ItemDefinition / AffixDefinition / ItemInstance
-- [ ] InventoryComponent（背包、堆叠、容量）
-- [ ] EquipmentComponent（槽位/加成/穿脱）
-- [ ] 背包与装备 UI（拖拽或点击交互）
-- [ ] 保存/读取扩展：背包与装备
+- [x] ItemDefinition / AffixDefinition / ItemInstance
+- [x] InventoryComponent（背包、堆叠、容量）
+- [x] EquipmentComponent（槽位/加成/穿脱）
+- [x] 背包与装备 UI（拖拽或点击交互）
+- [x] 保存/读取扩展：背包与装备
 
 **Day 4: 掉落与商店**
 - [ ] LootTableDefinition + LootDropper（掉落权重）
@@ -174,15 +174,14 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 已具备：数据驱动战斗体系、基础 AI FSM、HUD/UI 框架、样例生成工具与样例场景
 - 已新增：LevelDefinition/LevelFlowController/LevelPortal/LevelSpawnPoint 与 PlayableFlowGenerator（已运行）
 - 已新增：ProgressionDefinition/PlayerProgression/经验 HUD/击杀经验/存档成长数据
+- 已新增：背包/装备 UI 拖拽交互，背包槽位固定化（支持交换/合并/指定槽位落点）
+- 已修复：主菜单返回流程/Continue 进入场景卡住问题（UI/HUD/TimeScale）
+- 已修复：存档加载物品与装备（GameDatabase items 索引补齐）
 - 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`
-- 存档范围：位置/血量/资源/场景名 + 出生点 Id + 等级/经验/属性点（物品/任务未覆盖）
+- 存档范围：位置/血量/资源/场景名 + 出生点 Id + 等级/经验/属性点 + 背包/装备
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- Day 3: ItemDefinition / AffixDefinition / ItemInstance
-- InventoryComponent（背包、堆叠、容量）
-- EquipmentComponent（槽位/加成/穿脱）
-- 背包与装备 UI（拖拽或点击交互）
-- 保存/读取扩展：背包与装备
+- Day 4: 掉落与商店
 
 ### 9.3 待确认/风险
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）
@@ -237,3 +236,20 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 **音效**
 - Free Sound Effects Pack
   https://marketplace.unity.com/packages/audio/sound-fx/free-sound-effects-pack-155776
+
+## 10. 调试与排错规范（必须遵守）
+**目标**：避免“猜测式修复”，用可复现日志快速定位根因，并在修复后清理痕迹。
+
+**流程**
+- 明确“问题边界”：发生场景、触发步骤、预期与实际差异。
+- 只在关键路径加日志（生命周期入口/流程分支/失败点），统一 tag，避免散点式输出。
+- 日志过长时允许写入文件（例如 `Logs/xxx.log`），包含时间戳与关键上下文（scene、spawnId、候选对象数量等）。
+- 收集日志 -> 锁定根因 -> 修复 -> 立即清理调试代码与日志文件。
+
+**模板（示例）**
+- Tag：`[System][SubSystem]`
+- 关键字段：`scene`、`levelId`、`spawnId`、`candidateCount`、`resolvedId`
+
+**清理要求**
+- Debug 输出必须可开关（布尔开关或编译宏）。
+- 修复完成后默认关闭并移除临时日志文件。

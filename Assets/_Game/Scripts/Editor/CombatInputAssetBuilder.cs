@@ -124,12 +124,12 @@ namespace CombatSystem.Editor
             aimPoint.AddBinding("<Pointer>/position");
 
             // 技能槽位 1-6
-            AddSkillAction(map, CombatInputIds.Skill1, "<Keyboard>/digit1");
-            AddSkillAction(map, CombatInputIds.Skill2, "<Keyboard>/digit2");
-            AddSkillAction(map, CombatInputIds.Skill3, "<Keyboard>/digit3");
-            AddSkillAction(map, CombatInputIds.Skill4, "<Keyboard>/digit4");
-            AddSkillAction(map, CombatInputIds.Skill5, "<Keyboard>/digit5");
-            AddSkillAction(map, CombatInputIds.Skill6, "<Keyboard>/digit6");
+            AddSkillAction(map, CombatInputIds.Skill1, "<Keyboard>/1");
+            AddSkillAction(map, CombatInputIds.Skill2, "<Keyboard>/2");
+            AddSkillAction(map, CombatInputIds.Skill3, "<Keyboard>/3");
+            AddSkillAction(map, CombatInputIds.Skill4, "<Keyboard>/4");
+            AddSkillAction(map, CombatInputIds.Skill5, "<Keyboard>/5");
+            AddSkillAction(map, CombatInputIds.Skill6, "<Keyboard>/6");
 
             // 取消：右键 + ESC + 手柄 B 键
             var cancel = map.AddAction(CombatInputIds.Cancel, InputActionType.Button);
@@ -141,6 +141,10 @@ namespace CombatSystem.Editor
             var pause = map.AddAction(CombatInputIds.Pause, InputActionType.Button);
             pause.AddBinding("<Keyboard>/escape");
             pause.AddBinding("<Gamepad>/start");
+
+            // 物品栏：I
+            var inventory = map.AddAction(CombatInputIds.Inventory, InputActionType.Button);
+            inventory.AddBinding("<Keyboard>/i");
 
             // 切换技能页：Tab + 手柄 RB
             var switchPage = map.AddAction(CombatInputIds.SwitchPage, InputActionType.Button);
@@ -192,13 +196,17 @@ namespace CombatSystem.Editor
             pause.AddBinding("<Keyboard>/escape");
             pause.AddBinding("<Gamepad>/start");
 
+            // 物品栏（UI 模式下也需要）
+            var inventory = map.AddAction(CombatInputIds.Inventory, InputActionType.Button);
+            inventory.AddBinding("<Keyboard>/i");
+
             // 指针位置
             var point = map.AddAction(CombatInputIds.UIPoint, InputActionType.PassThrough);
             point.expectedControlType = "Vector2";
             point.AddBinding("<Pointer>/position");
 
-            // 点击
-            var click = map.AddAction(CombatInputIds.UIClick, InputActionType.Button);
+            // 点击（指针动作建议用 PassThrough）
+            var click = map.AddAction(CombatInputIds.UIClick, InputActionType.PassThrough);
             click.AddBinding("<Pointer>/press");
 
             // 滚动

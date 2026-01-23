@@ -16,7 +16,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            var finalAmount = amount + GetScalingValue(effect, context);
+            var scaling = GetScalingValue(effect, context);
+            var finalAmount = amount + scaling;
             if (finalAmount <= 0f)
             {
                 return;
@@ -34,6 +35,8 @@ namespace CombatSystem.Gameplay
             }
 
             var wasAlive = target.Health.IsAlive;
+            var beforeHealth = target.Health.Current;
+            var beforeShield = target.Health.Shield;
             var damageSource = new DamageSourceInfo(context.CasterUnit, context.Skill, effect, trigger);
             var appliedDamage = target.Health.ApplyDamage(finalAmount, out _, damageSource);
             if (appliedDamage > 0f)

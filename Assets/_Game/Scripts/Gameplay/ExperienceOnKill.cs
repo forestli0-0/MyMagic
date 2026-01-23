@@ -39,6 +39,7 @@ namespace CombatSystem.Gameplay
         {
             if (playerProgression == null)
             {
+                // 优先按 Tag 找玩家，避免场景中有多个 Progression
                 var player = GameObject.FindGameObjectWithTag(playerTag);
                 if (player != null)
                 {
@@ -49,6 +50,7 @@ namespace CombatSystem.Gameplay
 
             if (playerProgression == null)
             {
+                // 兜底：场景中第一个 Progression
                 playerProgression = FindFirstObjectByType<PlayerProgression>();
             }
 
@@ -59,6 +61,7 @@ namespace CombatSystem.Gameplay
 
             if (eventHub == null)
             {
+                // 事件中心从玩家或任意 UnitRoot 获取
                 var unitRoot = playerProgression != null ? playerProgression.GetComponent<UnitRoot>() : null;
                 if (unitRoot == null)
                 {
@@ -91,11 +94,13 @@ namespace CombatSystem.Gameplay
 
             if (!IsPlayerOrAlly(evt.Source.SourceUnit))
             {
+                // 仅统计玩家阵营的击杀
                 return;
             }
 
             if (requireEnemyTeam && !IsEnemy(evt.Victim))
             {
+                // 需要敌对关系时过滤掉友军/无阵营目标
                 return;
             }
 

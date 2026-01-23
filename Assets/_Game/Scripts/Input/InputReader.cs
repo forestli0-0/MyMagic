@@ -42,6 +42,8 @@ namespace CombatSystem.Input
         public Vector2 Move { get; private set; }
         /// <summary>当前指针/鼠标屏幕坐标</summary>
         public Vector2 AimPoint { get; private set; }
+        /// <summary>当前使用的输入动作资产</summary>
+        public InputActionAsset Actions => actions;
 
         #endregion
 
@@ -59,6 +61,8 @@ namespace CombatSystem.Input
         public event Action CancelPerformed;
         /// <summary>暂停键按下时触发（ESC）</summary>
         public event Action PausePerformed;
+        /// <summary>物品栏按下时触发（I）</summary>
+        public event Action InventoryPerformed;
         /// <summary>切换技能页时触发（参数为方向：1=下一页，-1=上一页）</summary>
         public event Action<int> SwitchPage;
         /// <summary>切换调试覆盖层时触发（F3）</summary>
@@ -79,6 +83,8 @@ namespace CombatSystem.Input
         private InputAction cancelAction;
         private InputAction pauseAction;
         private InputAction pauseActionUi;
+        private InputAction inventoryAction;
+        private InputAction inventoryActionUi;
         private InputAction switchPageAction;
         private InputAction pageModifierAction;
         private InputAction toggleOverlayAction;
@@ -185,6 +191,7 @@ namespace CombatSystem.Input
             aimPointAction = gameplayMap.FindAction(CombatInputIds.AimPoint, false);
             cancelAction = gameplayMap.FindAction(CombatInputIds.Cancel, false);
             pauseAction = gameplayMap.FindAction(CombatInputIds.Pause, false);
+            inventoryAction = gameplayMap.FindAction(CombatInputIds.Inventory, false);
             switchPageAction = gameplayMap.FindAction(CombatInputIds.SwitchPage, false);
             pageModifierAction = gameplayMap.FindAction(CombatInputIds.PageModifier, false);
 
@@ -202,9 +209,41 @@ namespace CombatSystem.Input
             if (uiMap != null)
             {
                 pauseActionUi = uiMap.FindAction(CombatInputIds.Pause, false);
+                inventoryActionUi = uiMap.FindAction(CombatInputIds.Inventory, false);
             }
 
             initialized = true;
+        }
+
+        public void SetActions(InputActionAsset asset)
+        {
+            if (asset == null)
+            {
+                return;
+            }
+
+            if (actions == asset && initialized)
+            {
+                return;
+            }
+
+            actions = asset;
+            initialized = false;
+            callbacksBound = false;
+
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
+            Initialize();
+            if (initialized && !callbacksBound)
+            {
+                BindCallbacks();
+            }
+
+            var mode = uiManager != null ? uiManager.CurrentInputMode : UIInputMode.Gameplay;
+            EnableForMode(mode);
         }
 
         /// <summary>
@@ -236,6 +275,16 @@ namespace CombatSystem.Input
             if (pauseActionUi != null && pauseActionUi != pauseAction)
             {
                 pauseActionUi.performed += HandlePause;
+            }
+
+            if (inventoryAction != null)
+            {
+                inventoryAction.performed += HandleInventory;
+            }
+
+            if (inventoryActionUi != null && inventoryActionUi != inventoryAction)
+            {
+                inventoryActionUi.performed += HandleInventory;
             }
 
             if (switchPageAction != null)
@@ -390,6 +439,11 @@ namespace CombatSystem.Input
         private void HandlePause(InputAction.CallbackContext context)
         {
             PausePerformed?.Invoke();
+        }
+
+        private void HandleInventory(InputAction.CallbackContext context)
+        {
+            InventoryPerformed?.Invoke();
         }
 
         /// <summary>
