@@ -640,6 +640,8 @@ GameObject:
   - component: {fileID: 67463336}
   - component: {fileID: 67463335}
   - component: {fileID: 67463334}
+  - component: {fileID: 67463337}
+  - component: {fileID: 67463338}
   m_Layer: 0
   m_Name: Sample_Enemy_3
   m_TagString: Untagged
@@ -1034,6 +1036,40 @@ MonoBehaviour:
   currentExperience: 0
   unspentAttributePoints: 0
   initializeOnAwake: 1
+--- !u!114 &67463337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 67463317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 67463328}
+--- !u!114 &67463338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 67463317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 67463328}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &68461874
 GameObject:
   m_ObjectHideFlags: 0
@@ -5882,6 +5918,8 @@ GameObject:
   - component: {fileID: 413451356}
   - component: {fileID: 413451355}
   - component: {fileID: 413451354}
+  - component: {fileID: 413451369}
+  - component: {fileID: 413451370}
   m_Layer: 0
   m_Name: Sample_Enemy_1
   m_TagString: Untagged
@@ -6224,6 +6262,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 413451352}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &413451369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 413451352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 413451363}
+--- !u!114 &413451370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 413451352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 413451363}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &417656553
 GameObject:
   m_ObjectHideFlags: 0
@@ -8264,6 +8336,8 @@ MonoBehaviour:
   showDuration: 5
   showPlayer: 0
   playerTag: Player
+  discoverOnSceneLoad: 1
+  showOnDiscover: 1
 --- !u!1 &652023512
 GameObject:
   m_ObjectHideFlags: 0
@@ -12246,6 +12320,7 @@ MonoBehaviour:
   mainMenuScreen: {fileID: 1348950005}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 705574034}
+  mainMenuSceneName: MainMenu
   saveManager: {fileID: 1246380864}
 --- !u!225 &1076227393
 CanvasGroup:
@@ -13949,6 +14024,7 @@ MonoBehaviour:
   saveRotation: 1
   saveHealth: 1
   saveResource: 1
+  saveCurrency: 1
   saveProgression: 1
   saveInventory: 1
   saveEquipment: 1
@@ -15977,7 +16053,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   actions: {fileID: -944628639613478452, guid: 959188057e83cfd48803f392c338429a, type: 3}
-  uiManager: {fileID: 0}
+  uiManager: {fileID: 1246380866}
   autoFindUiManager: 1
 --- !u!4 &1369080618
 Transform:
@@ -16274,6 +16350,8 @@ GameObject:
   - component: {fileID: 1391668345}
   - component: {fileID: 1391668344}
   - component: {fileID: 1391668343}
+  - component: {fileID: 1391668358}
+  - component: {fileID: 1391668359}
   m_Layer: 0
   m_Name: Sample_Enemy_2
   m_TagString: Untagged
@@ -16616,6 +16694,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1391668341}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1391668358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391668341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 1391668352}
+--- !u!114 &1391668359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391668341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 1391668352}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &1394191846
 GameObject:
   m_ObjectHideFlags: 0
@@ -19288,6 +19400,8 @@ GameObject:
   - component: {fileID: 1650794256}
   - component: {fileID: 1650794255}
   - component: {fileID: 1650794254}
+  - component: {fileID: 1650794269}
+  - component: {fileID: 1650794270}
   m_Layer: 0
   m_Name: Sample_Enemy_5
   m_TagString: Untagged
@@ -19630,6 +19744,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1650794252}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1650794269
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650794252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 1650794263}
+--- !u!114 &1650794270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650794252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 1650794263}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &1668021451
 GameObject:
   m_ObjectHideFlags: 0
@@ -21872,6 +22020,8 @@ GameObject:
   - component: {fileID: 1887749256}
   - component: {fileID: 1887749255}
   - component: {fileID: 1887749254}
+  - component: {fileID: 1887749269}
+  - component: {fileID: 1887749270}
   m_Layer: 0
   m_Name: Sample_Enemy_6
   m_TagString: Untagged
@@ -22214,6 +22364,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1887749252}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1887749269
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1887749252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 1887749263}
+--- !u!114 &1887749270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1887749252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 1887749263}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &1893865312
 GameObject:
   m_ObjectHideFlags: 0
@@ -23354,7 +23538,6 @@ MonoBehaviour:
   playerTag: Player
   playerDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
   playerUnitId: Unit_Player
-  debugSpawn: 0
   persistAcrossScenes: 1
 --- !u!4 &2016177066
 Transform:
@@ -24725,6 +24908,8 @@ GameObject:
   - component: {fileID: 2126393911}
   - component: {fileID: 2126393910}
   - component: {fileID: 2126393909}
+  - component: {fileID: 2126393924}
+  - component: {fileID: 2126393925}
   m_Layer: 0
   m_Name: Sample_Enemy_4
   m_TagString: Untagged
@@ -25067,6 +25252,40 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2126393907}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &2126393924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2126393907}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b9f290564ca9ed45b283b941348946d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lootTable: {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  pickupPrefab: {fileID: 4015935831777596928, guid: 6fcb2a3cbeaa8f341beef1ca61fc6b3f,
+    type: 3}
+  scatterRadius: 0.5
+  dropOrigin: {fileID: 0}
+  dropOnDeath: 1
+  health: {fileID: 2126393918}
+--- !u!114 &2126393925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2126393907}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d107090442074c54fa461f817c571cc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 2126393918}
+  delaySeconds: 0
+  destroyAfterDelay: 0
 --- !u!1 &2140232965
 GameObject:
   m_ObjectHideFlags: 0

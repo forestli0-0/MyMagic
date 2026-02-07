@@ -21,6 +21,8 @@ namespace CombatSystem.Persistence
         public bool hasResource;
         public int resourceType;
         public float resource;
+        public bool hasCurrency;
+        public int currency;
         public string levelId;
         public string spawnPointId;
         public bool hasProgression;

@@ -27,6 +27,8 @@ namespace CombatSystem.Data
         [Header("物品与掉落")]
         [SerializeField] private List<ItemDefinition> items = new List<ItemDefinition>();
         [SerializeField] private List<AffixDefinition> affixes = new List<AffixDefinition>();
+        [SerializeField] private List<LootTableDefinition> lootTables = new List<LootTableDefinition>();
+        [SerializeField] private List<VendorDefinition> vendors = new List<VendorDefinition>();
         
         [Header("战斗逻辑")]
         [SerializeField] private List<BuffDefinition> buffs = new List<BuffDefinition>();
@@ -51,6 +53,8 @@ namespace CombatSystem.Data
         private Dictionary<string, ProgressionDefinition> progressionsById;
         private Dictionary<string, ItemDefinition> itemsById;
         private Dictionary<string, AffixDefinition> affixesById;
+        private Dictionary<string, LootTableDefinition> lootTablesById;
+        private Dictionary<string, VendorDefinition> vendorsById;
         private Dictionary<string, BuffDefinition> buffsById;
         private Dictionary<string, EffectDefinition> effectsById;
         private Dictionary<string, ConditionDefinition> conditionsById;
@@ -68,6 +72,8 @@ namespace CombatSystem.Data
         public IReadOnlyList<ProgressionDefinition> Progressions => progressions;
         public IReadOnlyList<ItemDefinition> Items => items;
         public IReadOnlyList<AffixDefinition> Affixes => affixes;
+        public IReadOnlyList<LootTableDefinition> LootTables => lootTables;
+        public IReadOnlyList<VendorDefinition> Vendors => vendors;
         public IReadOnlyList<BuffDefinition> Buffs => buffs;
         public IReadOnlyList<EffectDefinition> Effects => effects;
         public IReadOnlyList<ConditionDefinition> Conditions => conditions;
@@ -102,6 +108,8 @@ namespace CombatSystem.Data
             progressionsById = BuildIndex(progressions);
             itemsById = BuildIndex(items);
             affixesById = BuildIndex(affixes);
+            lootTablesById = BuildIndex(lootTables);
+            vendorsById = BuildIndex(vendors);
             buffsById = BuildIndex(buffs);
             effectsById = BuildIndex(effects);
             conditionsById = BuildIndex(conditions);
@@ -158,6 +166,18 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(affixesById, id);
+        }
+
+        public LootTableDefinition GetLootTable(string id)
+        {
+            EnsureIndexes();
+            return GetById(lootTablesById, id);
+        }
+
+        public VendorDefinition GetVendor(string id)
+        {
+            EnsureIndexes();
+            return GetById(vendorsById, id);
         }
 
         public BuffDefinition GetBuff(string id)

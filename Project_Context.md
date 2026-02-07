@@ -126,11 +126,11 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - [x] 保存/读取扩展：背包与装备
 
 **Day 4: 掉落与商店**
-- [ ] LootTableDefinition + LootDropper（掉落权重）
-- [ ] LootPickup（拾取/自动拾取可选）
-- [ ] 货币系统（单一货币）
-- [ ] VendorDefinition + VendorService + UI（买/卖）
-- [ ] 掉落与经济数值首轮校准
+- [x] LootTableDefinition + LootDropper（掉落权重）
+- [x] LootPickup（拾取/自动拾取可选）
+- [x] 货币系统（单一货币）
+- [x] VendorDefinition + VendorService + UI（买/卖）
+- [x] 掉落与经济数值首轮校准
 
 **Day 5: 任务系统**
 - [ ] QuestDefinition（目标/步骤/奖励）
@@ -175,13 +175,15 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 已新增：LevelDefinition/LevelFlowController/LevelPortal/LevelSpawnPoint 与 PlayableFlowGenerator（已运行）
 - 已新增：ProgressionDefinition/PlayerProgression/经验 HUD/击杀经验/存档成长数据
 - 已新增：背包/装备 UI 拖拽交互，背包槽位固定化（支持交换/合并/指定槽位落点）
+- 已新增：Day4 掉落与商店链路（LootTable/LootDropper/LootPickup/Currency/Vendor）
+- 已新增：Vendor UI 交互增强（双击买卖、拖拽买卖、选中高亮与详情、Esc 关闭）
 - 已修复：主菜单返回流程/Continue 进入场景卡住问题（UI/HUD/TimeScale）
 - 已修复：存档加载物品与装备（GameDatabase items 索引补齐）
 - 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`
 - 存档范围：位置/血量/资源/场景名 + 出生点 Id + 等级/经验/属性点 + 背包/装备
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- Day 4: 掉落与商店
+- Day 5: 任务系统
 
 ### 9.3 待确认/风险
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）

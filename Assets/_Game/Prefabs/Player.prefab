@@ -31,6 +31,7 @@ GameObject:
   - component: {fileID: 3005798398556773552}
   - component: {fileID: 6613619536708860046}
   - component: {fileID: 133478098221999752}
+  - component: {fileID: 6142504661308433440}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -559,6 +560,21 @@ MonoBehaviour:
   buffController: {fileID: 3185935928631741342}
   unitRoot: {fileID: 720801789383739849}
   startingEquipment: []
+--- !u!114 &6142504661308433440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962191944521275768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ce87820ed5c0434898a1586dc99b1a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startingAmount: 0
+  maxAmount: 0
+  initializeOnAwake: 1
 --- !u!1 &2080525573497573601
 GameObject:
   m_ObjectHideFlags: 0

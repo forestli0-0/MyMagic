@@ -23,3 +23,11 @@ MonoBehaviour:
   equipBuffs: []
   stackable: 0
   maxStack: 1
+  economyVersion: 1
+  basePrice: 1
+  buyPriceOverride: -1
+  sellPriceOverride: -1
+  canBuy: 1
+  canSell: 1
+  itemLevel: 1
+  itemCategory: 0

@@ -27,3 +27,6 @@
 - Phase E: 敌人生态与 Boss 机制扩展（精英词缀、AI 行为包）
 - Phase F: 反馈与体验（音效、镜头、UI 动效、掉落表现）
 - Phase G: 平衡与性能优化（数值、掉落率、池化与 GC）
+
+## 里程碑记录
+- Day4（掉落与商店）: `Docs/Milestones/Day4_Milestone.md`

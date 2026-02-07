@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee66574692c44f64a9901e234c82599f, type: 3}
+  m_Name: Vendor_Default
+  m_EditorClassIdentifier: 
+  id: Vendor_Default
+  displayName: 
+  vendorRuntimeVersion: 1
+  buyPriceMultiplier: 1
+  sellPriceMultiplier: 0.5
+  items:
+  - item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+    priceOverride: -1
+    stock: 3
+    infiniteStock: 1
+  - item: {fileID: 11400000, guid: e3dc3462f5a64d5588fa9a8b0e0bfaad, type: 2}
+    priceOverride: -1
+    stock: 3
+    infiniteStock: 1
+  - item: {fileID: 11400000, guid: 399837dac2784a21af8cae658583dcf7, type: 2}
+    priceOverride: -1
+    stock: 3
+    infiniteStock: 1
+  vendorTag: default
+  allowBuyBack: 1
+  maxBuyBackEntries: 12
+  refreshMode: 0
+  refreshIntervalMinutes: 30
+  restockOnOpen: 0

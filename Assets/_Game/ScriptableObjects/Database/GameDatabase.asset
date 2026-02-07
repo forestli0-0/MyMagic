@@ -81,6 +81,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
   - {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
   affixes: []
+  lootTables:
+  - {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
+  vendors:
+  - {fileID: 11400000, guid: 2b40d27b48ced1842bec6d6c9435c9ed, type: 2}
   buffs:
   - {fileID: 11400000, guid: b3a1e9710246cee4daea997e8414498f, type: 2}
   - {fileID: 11400000, guid: b6de9338415d76c40a6351d5243cdb96, type: 2}

@@ -20,6 +20,7 @@ namespace CombatSystem.Persistence
         [SerializeField] private bool saveRotation = true;
         [SerializeField] private bool saveHealth = true;
         [SerializeField] private bool saveResource = true;
+        [SerializeField] private bool saveCurrency = true;
         [SerializeField] private bool saveProgression = true;
         [SerializeField] private bool saveInventory = true;
         [SerializeField] private bool saveEquipment = true;
@@ -158,6 +159,16 @@ namespace CombatSystem.Persistence
                     }
                 }
 
+                if (saveCurrency)
+                {
+                    var currency = player.GetComponent<CurrencyComponent>();
+                    if (currency != null)
+                    {
+                        data.player.hasCurrency = true;
+                        data.player.currency = currency.Amount;
+                    }
+                }
+
                 if (saveProgression)
                 {
                     var progression = player.GetComponent<PlayerProgression>();
@@ -254,6 +265,15 @@ namespace CombatSystem.Persistence
                 if (resource != null && (int)resource.ResourceType == data.player.resourceType)
                 {
                     resource.SetCurrent(data.player.resource);
+                }
+            }
+
+            if (saveCurrency && data.player.hasCurrency)
+            {
+                var currency = player.GetComponent<CurrencyComponent>();
+                if (currency != null)
+                {
+                    currency.SetAmount(data.player.currency);
                 }
             }
 
