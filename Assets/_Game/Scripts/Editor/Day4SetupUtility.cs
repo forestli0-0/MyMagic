@@ -5,6 +5,7 @@ using CombatSystem.Gameplay;
 using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -21,6 +22,7 @@ namespace CombatSystem.EditorTools
         private const string PlayerPrefabPath = "Assets/_Game/Prefabs/Player.prefab";
         private const string GameDatabasePath = "Assets/_Game/ScriptableObjects/Database/GameDatabase.asset";
         private const string InputActionsPath = "Assets/_Game/Input/CombatInputActions.inputactions";
+        private const string VendorSceneName = "Vendor";
 
         [MenuItem("Combat/Day4/Setup Assets (Loot/Vendor/Pickup)")]
         public static void SetupAssets()
@@ -102,6 +104,11 @@ namespace CombatSystem.EditorTools
         [MenuItem("Combat/Day4/Setup Vendor NPC & UI")]
         public static void SetupVendorNpcAndUi()
         {
+            if (!ValidateActiveSceneForVendorSetup())
+            {
+                return;
+            }
+
             var vendor = AssetDatabase.LoadAssetAtPath<VendorDefinition>(VendorPath);
             if (vendor == null)
             {
@@ -110,7 +117,7 @@ namespace CombatSystem.EditorTools
 
             EnsureEventSystemInput();
             var vendorService = EnsureVendorService(vendor);
-            var vendorScreen = EnsureVendorScreen(vendorService, true);
+            var vendorScreen = EnsureVendorScreen(vendorService, false);
             EnsureVendorNpc(vendorScreen);
 
             if (vendorScreen != null)
@@ -119,6 +126,24 @@ namespace CombatSystem.EditorTools
             }
 
             Debug.Log("[Day4] Vendor NPC & UI setup complete.");
+        }
+
+        private static bool ValidateActiveSceneForVendorSetup()
+        {
+            var activeScene = EditorSceneManager.GetActiveScene();
+            if (!activeScene.IsValid())
+            {
+                Debug.LogWarning("[Day4] No valid active scene. Open Vendor scene and try again.");
+                return false;
+            }
+
+            if (!string.Equals(activeScene.name, VendorSceneName, System.StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"[Day4] Active scene is '{activeScene.name}'. Please open '{VendorSceneName}' before running Setup Vendor NPC & UI.");
+                return false;
+            }
+
+            return true;
         }
 
         private static LootTableDefinition CreateOrUpdateLootTable()

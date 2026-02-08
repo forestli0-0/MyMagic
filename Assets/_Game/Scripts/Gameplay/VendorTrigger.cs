@@ -1,5 +1,6 @@
 using CombatSystem.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace CombatSystem.Gameplay
 {
@@ -8,7 +9,12 @@ namespace CombatSystem.Gameplay
         [SerializeField] private string playerTag = "Player";
         [SerializeField] private UIManager uiManager;
         [SerializeField] private VendorScreen vendorScreen;
+        [SerializeField] private bool autoOpenOnEnter;
+        [SerializeField] private bool allowInteractKeyOpen = true;
+        [SerializeField] private Key interactKey = Key.E;
         [SerializeField] private bool closeOnExit;
+
+        private bool playerInRange;
 
         private void OnTriggerEnter(Collider other)
         {
@@ -17,17 +23,45 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            OpenVendor();
+            playerInRange = true;
+            if (autoOpenOnEnter)
+            {
+                OpenVendor();
+            }
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (!closeOnExit || !IsPlayer(other))
+            if (!IsPlayer(other))
             {
                 return;
             }
 
-            CloseVendor();
+            playerInRange = false;
+            if (closeOnExit)
+            {
+                CloseVendor();
+            }
+        }
+
+        private void Update()
+        {
+            if (!allowInteractKeyOpen || !playerInRange)
+            {
+                return;
+            }
+
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            var keyControl = keyboard[interactKey];
+            if (keyControl != null && keyControl.wasPressedThisFrame)
+            {
+                OpenVendor();
+            }
         }
 
         private bool IsPlayer(Component other)

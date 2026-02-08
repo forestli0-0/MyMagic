@@ -727,13 +727,11 @@ namespace CombatSystem.UI
 
         private void SetStatus(string message)
         {
-            if (statusText == null)
-            {
-                return;
-            }
-
             statusOverride = message ?? string.Empty;
-            statusText.text = statusOverride;
+            if (statusText != null)
+            {
+                statusText.text = statusOverride;
+            }
         }
 
         private void RefreshSelectionDetails()
