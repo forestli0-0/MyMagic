@@ -30,3 +30,5 @@
 
 ## 里程碑记录
 - Day4（掉落与商店）: `Docs/Milestones/Day4_Milestone.md`
+- Day5（任务系统）: `Docs/Milestones/Day5_Milestone.md`
+- Day6（敌人生态与 Boss）: `Docs/Milestones/Day6_Milestone.md`

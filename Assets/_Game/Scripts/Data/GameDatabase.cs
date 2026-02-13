@@ -21,6 +21,7 @@ namespace CombatSystem.Data
         [Header("关卡与流程")]
         [SerializeField] private List<LevelDefinition> levels = new List<LevelDefinition>();
         [SerializeField] private List<QuestDefinition> quests = new List<QuestDefinition>();
+        [SerializeField] private List<EncounterDefinition> encounters = new List<EncounterDefinition>();
 
         [Header("成长与进度")]
         [SerializeField] private List<ProgressionDefinition> progressions = new List<ProgressionDefinition>();
@@ -28,6 +29,7 @@ namespace CombatSystem.Data
         [Header("物品与掉落")]
         [SerializeField] private List<ItemDefinition> items = new List<ItemDefinition>();
         [SerializeField] private List<AffixDefinition> affixes = new List<AffixDefinition>();
+        [SerializeField] private List<EnemyAffixDefinition> enemyAffixes = new List<EnemyAffixDefinition>();
         [SerializeField] private List<LootTableDefinition> lootTables = new List<LootTableDefinition>();
         [SerializeField] private List<VendorDefinition> vendors = new List<VendorDefinition>();
         
@@ -52,9 +54,11 @@ namespace CombatSystem.Data
         private Dictionary<string, SkillDefinition> skillsById;
         private Dictionary<string, LevelDefinition> levelsById;
         private Dictionary<string, QuestDefinition> questsById;
+        private Dictionary<string, EncounterDefinition> encountersById;
         private Dictionary<string, ProgressionDefinition> progressionsById;
         private Dictionary<string, ItemDefinition> itemsById;
         private Dictionary<string, AffixDefinition> affixesById;
+        private Dictionary<string, EnemyAffixDefinition> enemyAffixesById;
         private Dictionary<string, LootTableDefinition> lootTablesById;
         private Dictionary<string, VendorDefinition> vendorsById;
         private Dictionary<string, BuffDefinition> buffsById;
@@ -72,9 +76,11 @@ namespace CombatSystem.Data
         public IReadOnlyList<SkillDefinition> Skills => skills;
         public IReadOnlyList<LevelDefinition> Levels => levels;
         public IReadOnlyList<QuestDefinition> Quests => quests;
+        public IReadOnlyList<EncounterDefinition> Encounters => encounters;
         public IReadOnlyList<ProgressionDefinition> Progressions => progressions;
         public IReadOnlyList<ItemDefinition> Items => items;
         public IReadOnlyList<AffixDefinition> Affixes => affixes;
+        public IReadOnlyList<EnemyAffixDefinition> EnemyAffixes => enemyAffixes;
         public IReadOnlyList<LootTableDefinition> LootTables => lootTables;
         public IReadOnlyList<VendorDefinition> Vendors => vendors;
         public IReadOnlyList<BuffDefinition> Buffs => buffs;
@@ -109,9 +115,11 @@ namespace CombatSystem.Data
             skillsById = BuildIndex(skills);
             levelsById = BuildIndex(levels);
             questsById = BuildIndex(quests);
+            encountersById = BuildIndex(encounters);
             progressionsById = BuildIndex(progressions);
             itemsById = BuildIndex(items);
             affixesById = BuildIndex(affixes);
+            enemyAffixesById = BuildIndex(enemyAffixes);
             lootTablesById = BuildIndex(lootTables);
             vendorsById = BuildIndex(vendors);
             buffsById = BuildIndex(buffs);
@@ -160,6 +168,12 @@ namespace CombatSystem.Data
             return GetById(questsById, id);
         }
 
+        public EncounterDefinition GetEncounter(string id)
+        {
+            EnsureIndexes();
+            return GetById(encountersById, id);
+        }
+
         public ProgressionDefinition GetProgression(string id)
         {
             EnsureIndexes();
@@ -176,6 +190,12 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(affixesById, id);
+        }
+
+        public EnemyAffixDefinition GetEnemyAffix(string id)
+        {
+            EnsureIndexes();
+            return GetById(enemyAffixesById, id);
         }
 
         public LootTableDefinition GetLootTable(string id)

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Unit_Enemy
   displayName: Enemy
-  prefab: {fileID: 0}
+  prefab: {fileID: 195245260206196433, guid: 684f608c345d55e448499e6dbd7dc350, type: 3}
   portrait: {fileID: 0}
   tags:
   - {fileID: 11400000, guid: 5694c53b3beef254ba056d7d5908bddf, type: 2}

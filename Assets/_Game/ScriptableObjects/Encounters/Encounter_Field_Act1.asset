@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b22e0b0d593c8e64a8d3722182b94d50, type: 3}
+  m_Name: Encounter_Field_Act1
+  m_EditorClassIdentifier: 
+  id: Encounter_Field_Act1
+  displayName: "\u91CE\u5916\u906D\u9047"
+  waves:
+  - waveId: field_wave_1
+    unit: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+    prefabOverride: {fileID: 0}
+    minCount: 4
+    maxCount: 6
+    guaranteedEliteCount: 1
+    eliteChance: 0.25
+    eliteAffixes: []
+  - waveId: field_wave_2
+    unit: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+    prefabOverride: {fileID: 0}
+    minCount: 3
+    maxCount: 5
+    guaranteedEliteCount: 0
+    eliteChance: 0.3
+    eliteAffixes: []
+  globalEliteAffixes:
+  - {fileID: 11400000, guid: b12458479e47d1b448e8b3d55588773f, type: 2}
+  - {fileID: 11400000, guid: 8d4c4b0d0b5f87b4d8dada9f128000db, type: 2}
+  spawnRadius: 10
+  randomSeed: 101

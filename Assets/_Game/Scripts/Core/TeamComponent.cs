@@ -20,6 +20,14 @@ namespace CombatSystem.Core
         public int TeamId => teamId;
 
         /// <summary>
+        /// 运行时设置阵营 ID（用于动态刷怪/召唤等场景）。
+        /// </summary>
+        public void SetTeamId(int value)
+        {
+            teamId = value;
+        }
+
+        /// <summary>
         /// 判断另一个单位是否与当前单位处于同一阵营。
         /// </summary>
         /// <param name="other">待比较的阵营组件</param>

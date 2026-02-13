@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05f3252136a8db941a6f44fb45c4d58a, type: 3}
+  m_Name: EnemyAffix_Juggernaut
+  m_EditorClassIdentifier: 
+  id: EnemyAffix_Juggernaut
+  displayName: "\u94A2\u94C1"
+  statModifiers:
+  - stat: {fileID: 11400000, guid: 6c7db899c0ad436419000803dbc3cd24, type: 2}
+    flatBonus: 0
+    multiplier: 1.9
+  - stat: {fileID: 11400000, guid: 0ec3c9cd3e7b4228a3e413569d7fe5b9, type: 2}
+    flatBonus: 12
+    multiplier: 1
+  bonusSkills: []
+  tintColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+  scaleMultiplier: 1.14

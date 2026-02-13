@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05f3252136a8db941a6f44fb45c4d58a, type: 3}
+  m_Name: EnemyAffix_Berserker
+  m_EditorClassIdentifier: 
+  id: EnemyAffix_Berserker
+  displayName: "\u72C2\u66B4"
+  statModifiers:
+  - stat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+    flatBonus: 0
+    multiplier: 1.4
+  - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
+    flatBonus: 0
+    multiplier: 1.2
+  bonusSkills: []
+  tintColor: {r: 1, g: 0.45, b: 0.25, a: 1}
+  scaleMultiplier: 1.08

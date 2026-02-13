@@ -8155,6 +8155,8 @@ MonoBehaviour:
   showDuration: 5
   showPlayer: 0
   playerTag: Player
+  discoverOnSceneLoad: 1
+  showOnDiscover: 1
 --- !u!1 &652023512
 GameObject:
   m_ObjectHideFlags: 0
@@ -10338,6 +10340,59 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotsRoot: {fileID: 866464017}
   slotTemplate: {fileID: 1217890859}
+--- !u!1 &874547106
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 874547108}
+  - component: {fileID: 874547107}
+  m_Layer: 0
+  m_Name: EncounterDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &874547107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 874547106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e6969485c681744a24c8a747cd44ee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  encounter: {fileID: 11400000, guid: 326881fe3b3a7614884f8a9e84c955ca, type: 2}
+  spawnCenter: {fileID: 874547108}
+  spawnParent: {fileID: 1026285339}
+  enemyTeamId: 2
+  spawnOnEnable: 1
+  clearPreviousSpawns: 1
+  autoRespawnWhenCleared: 1
+  respawnDelay: 3
+  verboseLogs: 0
+--- !u!4 &874547108
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 874547106}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &889814196
 GameObject:
   m_ObjectHideFlags: 0
@@ -11755,6 +11810,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1013063189}
   m_CullTransparentMesh: 1
+--- !u!1 &1026285338
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1026285339}
+  m_Layer: 0
+  m_Name: Encounter_RuntimeUnits
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1026285339
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1026285338}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1027207637
 GameObject:
   m_ObjectHideFlags: 0
@@ -12367,6 +12453,8 @@ MonoBehaviour:
   mainMenuScreen: {fileID: 1348950005}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 705574034}
+  questJournalScreen: {fileID: 0}
+  mainMenuSceneName: MainMenu
   saveManager: {fileID: 1246380864}
 --- !u!225 &1076227393
 CanvasGroup:
@@ -14228,9 +14316,11 @@ MonoBehaviour:
   saveRotation: 1
   saveHealth: 1
   saveResource: 1
+  saveCurrency: 1
   saveProgression: 1
   saveInventory: 1
   saveEquipment: 1
+  saveQuests: 1
   quickSaveName: Quick Save
 --- !u!114 &1246380865
 MonoBehaviour:
@@ -15330,7 +15420,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1327938790
 Transform:
   m_ObjectHideFlags: 0
@@ -17433,7 +17523,6 @@ MonoBehaviour:
   playerTag: Player
   playerDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
   playerUnitId: Unit_Player
-  debugSpawn: 0
   persistAcrossScenes: 1
 --- !u!4 &1483119677
 Transform:
@@ -25386,3 +25475,5 @@ SceneRoots:
   - {fileID: 1483119677}
   - {fileID: 1799683175}
   - {fileID: 576467499}
+  - {fileID: 874547108}
+  - {fileID: 1026285339}

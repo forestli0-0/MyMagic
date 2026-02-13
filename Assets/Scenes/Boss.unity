@@ -4843,6 +4843,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 274878155}
   m_CullTransparentMesh: 1
+--- !u!1 &275180905
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 275180906}
+  m_Layer: 0
+  m_Name: Encounter_RuntimeUnits
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &275180906
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 275180905}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &299255469
 GameObject:
   m_ObjectHideFlags: 0
@@ -4957,7 +4988,6 @@ MonoBehaviour:
   playerTag: Player
   playerDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
   playerUnitId: Unit_Player
-  debugSpawn: 0
   persistAcrossScenes: 1
 --- !u!4 &306211081
 Transform:
@@ -8541,6 +8571,8 @@ MonoBehaviour:
   showDuration: 5
   showPlayer: 0
   playerTag: Player
+  discoverOnSceneLoad: 1
+  showOnDiscover: 1
 --- !u!1 &652023512
 GameObject:
   m_ObjectHideFlags: 0
@@ -9078,6 +9110,59 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: Save Slot
+--- !u!1 &698012718
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 698012720}
+  - component: {fileID: 698012719}
+  m_Layer: 0
+  m_Name: EncounterDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &698012719
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 698012718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e6969485c681744a24c8a747cd44ee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  encounter: {fileID: 11400000, guid: 723333a3c582d7149baae84781236a3a, type: 2}
+  spawnCenter: {fileID: 698012720}
+  spawnParent: {fileID: 275180906}
+  enemyTeamId: 2
+  spawnOnEnable: 1
+  clearPreviousSpawns: 1
+  autoRespawnWhenCleared: 0
+  respawnDelay: 0
+  verboseLogs: 0
+--- !u!4 &698012720
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 698012718}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &705574033
 GameObject:
   m_ObjectHideFlags: 0
@@ -12710,6 +12795,8 @@ MonoBehaviour:
   mainMenuScreen: {fileID: 1348950005}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 705574034}
+  questJournalScreen: {fileID: 0}
+  mainMenuSceneName: MainMenu
   saveManager: {fileID: 1246380864}
 --- !u!225 &1076227393
 CanvasGroup:
@@ -14571,9 +14658,11 @@ MonoBehaviour:
   saveRotation: 1
   saveHealth: 1
   saveResource: 1
+  saveCurrency: 1
   saveProgression: 1
   saveInventory: 1
   saveEquipment: 1
+  saveQuests: 1
   quickSaveName: Quick Save
 --- !u!114 &1246380865
 MonoBehaviour:
@@ -15652,7 +15741,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1327938790
 Transform:
   m_ObjectHideFlags: 0
@@ -25235,3 +25324,5 @@ SceneRoots:
   - {fileID: 306211081}
   - {fileID: 1918251674}
   - {fileID: 1025576292}
+  - {fileID: 698012720}
+  - {fileID: 275180906}

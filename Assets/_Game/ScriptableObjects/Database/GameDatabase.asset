@@ -74,6 +74,9 @@ MonoBehaviour:
   quests:
   - {fileID: 11400000, guid: 0e676964398184949830de6aae64edec, type: 2}
   - {fileID: 11400000, guid: a7820209406036c4db458de53abbd11a, type: 2}
+  encounters:
+  - {fileID: 11400000, guid: 326881fe3b3a7614884f8a9e84c955ca, type: 2}
+  - {fileID: 11400000, guid: 723333a3c582d7149baae84781236a3a, type: 2}
   progressions:
   - {fileID: 11400000, guid: d879b19e0f14b754e86757b529c96b70, type: 2}
   items:
@@ -84,6 +87,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
   - {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
   affixes: []
+  enemyAffixes:
+  - {fileID: 11400000, guid: b12458479e47d1b448e8b3d55588773f, type: 2}
+  - {fileID: 11400000, guid: 8d4c4b0d0b5f87b4d8dada9f128000db, type: 2}
   lootTables:
   - {fileID: 11400000, guid: ab00160120cc2ec469bc0f68331eb99a, type: 2}
   vendors:
