@@ -52,14 +52,18 @@ namespace CombatSystem.Editor
             var settings = CreateScreen<SettingsScreen>("SettingsScreen", screensCanvas.transform);
             var inGame = CreateScreen<InGameScreen>("InGameScreen", screensCanvas.transform);
             var inventoryScreen = CreateScreen<InventoryScreen>("InventoryScreen", screensCanvas.transform);
+            var questJournalScreen = CreateScreen<QuestJournalScreen>("QuestJournalScreen", screensCanvas.transform);
             var pauseModal = CreateModal<PauseMenuModal>("PauseMenuModal", modalCanvas.transform);
+            var questGiverModal = CreateModal<QuestGiverModal>("QuestGiverModal", modalCanvas.transform);
 
             mainMenu.gameObject.SetActive(true);
             saveSelect.gameObject.SetActive(false);
             settings.gameObject.SetActive(false);
             inGame.gameObject.SetActive(false);
             inventoryScreen.gameObject.SetActive(false);
+            questJournalScreen.gameObject.SetActive(false);
             pauseModal.gameObject.SetActive(false);
+            questGiverModal.gameObject.SetActive(false);
 
             SetSerialized(uiRoot, "screensCanvas", screensCanvas);
             SetSerialized(uiRoot, "hudCanvas", hudCanvas);
@@ -94,10 +98,16 @@ namespace CombatSystem.Editor
             SetSerialized(inventoryScreen, "uiManager", uiManager);
             SetSerializedEnum(inventoryScreen, "inputMode", (int)UIInputMode.UI);
 
+            SetSerialized(questJournalScreen, "uiManager", uiManager);
+            SetSerializedEnum(questJournalScreen, "inputMode", (int)UIInputMode.UI);
+
             SetSerialized(pauseModal, "uiManager", uiManager);
             SetSerialized(pauseModal, "mainMenuScreen", mainMenu);
             SetSerialized(pauseModal, "settingsScreen", settings);
+            SetSerialized(pauseModal, "questJournalScreen", questJournalScreen);
             SetSerialized(pauseModal, "saveManager", saveManager);
+
+            SetSerialized(questGiverModal, "uiManager", uiManager);
 
             SetSerialized(pauseHotkey, "uiManager", uiManager);
             SetSerialized(pauseHotkey, "pauseModal", pauseModal);
@@ -138,7 +148,9 @@ namespace CombatSystem.Editor
             var settings = root.GetComponentInChildren<SettingsScreen>(true);
             var inGame = root.GetComponentInChildren<InGameScreen>(true);
             var inventoryScreen = root.GetComponentInChildren<InventoryScreen>(true);
+            var questJournalScreen = root.GetComponentInChildren<QuestJournalScreen>(true);
             var pauseModal = root.GetComponentInChildren<PauseMenuModal>(true);
+            var questGiverModal = root.GetComponentInChildren<QuestGiverModal>(true);
             var pauseHotkey = root.GetComponentInChildren<PauseMenuHotkey>(true);
             var inventoryHotkey = root.GetComponentInChildren<InventoryHotkey>(true);
             var eventSystemBootstrapper = root.GetComponentInChildren<UIEventSystemBootstrapper>(true);
@@ -158,6 +170,18 @@ namespace CombatSystem.Editor
             {
                 inventoryScreen = CreateScreen<InventoryScreen>("InventoryScreen", root.ScreensCanvas.transform);
                 inventoryScreen.gameObject.SetActive(false);
+            }
+
+            if (questJournalScreen == null && root.ScreensCanvas != null)
+            {
+                questJournalScreen = CreateScreen<QuestJournalScreen>("QuestJournalScreen", root.ScreensCanvas.transform);
+                questJournalScreen.gameObject.SetActive(false);
+            }
+
+            if (questGiverModal == null && root.ModalCanvas != null)
+            {
+                questGiverModal = CreateModal<QuestGiverModal>("QuestGiverModal", root.ModalCanvas.transform);
+                questGiverModal.gameObject.SetActive(false);
             }
 
             if (inventoryHotkey == null)
@@ -213,13 +237,29 @@ namespace CombatSystem.Editor
                 SetSerializedEnum(inventoryScreen, "inputMode", (int)UIInputMode.UI);
             }
 
+            if (questJournalScreen != null)
+            {
+                EnsureCanvasGroup(questJournalScreen);
+                BuildQuestJournalUI(questJournalScreen, sprite, font);
+                SetSerialized(questJournalScreen, "uiManager", uiManager);
+                SetSerializedEnum(questJournalScreen, "inputMode", (int)UIInputMode.UI);
+            }
+
             if (pauseModal != null)
             {
                 EnsureCanvasGroup(pauseModal);
                 BuildPauseModalUI(pauseModal, sprite, font);
                 SetSerialized(pauseModal, "uiManager", uiManager);
                 SetSerialized(pauseModal, "settingsScreen", settings);
+                SetSerialized(pauseModal, "questJournalScreen", questJournalScreen);
                 SetSerialized(pauseModal, "saveManager", saveManager);
+            }
+
+            if (questGiverModal != null)
+            {
+                EnsureCanvasGroup(questGiverModal);
+                BuildQuestGiverModalUI(questGiverModal, sprite, font);
+                SetSerialized(questGiverModal, "uiManager", uiManager);
             }
 
             if (pauseHotkey != null)
@@ -245,6 +285,8 @@ namespace CombatSystem.Editor
                 BuildUnitHealthBars(root.HudCanvas);
                 BuildCombatHUD(root.HudCanvas, sprite, font);
             }
+
+            LinkQuestGiverTriggers(uiManager, questGiverModal);
 
             if (uiManager != null)
             {
@@ -1207,7 +1249,7 @@ namespace CombatSystem.Editor
         {
             if (modal.transform.childCount > 0)
             {
-                Debug.LogWarning("[UIRootBuilder] PauseMenuModal already has children. Skipping.");
+                EnsurePauseModalQuestButton(modal, sprite, font);
                 return;
             }
 
@@ -1216,7 +1258,7 @@ namespace CombatSystem.Editor
             backgroundButton.targetGraphic = background;
             UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
 
-            var panel = CreatePanel(modal.transform, sprite, new Color(0.1f, 0.1f, 0.1f, 0.95f), new Vector2(420f, 360f));
+            var panel = CreatePanel(modal.transform, sprite, new Color(0.1f, 0.1f, 0.1f, 0.95f), new Vector2(420f, 420f));
             ConfigureVerticalLayout(panel, 20, 10, TextAnchor.MiddleCenter);
 
             CreateTitle(panel, "PAUSED", font, 30);
@@ -1227,11 +1269,308 @@ namespace CombatSystem.Editor
             var saveButton = CreateButton(panel, "Save Game", sprite, font);
             UnityEventTools.AddPersistentListener(saveButton.onClick, modal.SaveGame);
 
+            var questButton = CreateButton(panel, "Quests", sprite, font);
+            UnityEventTools.AddPersistentListener(questButton.onClick, modal.OpenQuestJournal);
+
             var settingsButton = CreateButton(panel, "Settings", sprite, font);
             UnityEventTools.AddPersistentListener(settingsButton.onClick, modal.OpenSettings);
 
             var menuButton = CreateButton(panel, "Main Menu", sprite, font);
             UnityEventTools.AddPersistentListener(menuButton.onClick, modal.BackToMenu);
+        }
+
+        private static void EnsurePauseModalQuestButton(PauseMenuModal modal, Sprite sprite, Font font)
+        {
+            if (modal == null)
+            {
+                return;
+            }
+
+            var panel = modal.transform.Find("Panel");
+            if (panel == null)
+            {
+                return;
+            }
+
+            if (panel.Find("Button_Quests") != null)
+            {
+                return;
+            }
+
+            var rect = panel as RectTransform;
+            if (rect != null && rect.sizeDelta.y < 420f)
+            {
+                rect.sizeDelta = new Vector2(rect.sizeDelta.x, 420f);
+            }
+
+            var questButton = CreateButton(panel, "Quests", sprite, font);
+            SetLayoutSize(questButton.gameObject, 48f, 320f);
+            questButton.transform.SetSiblingIndex(3);
+            UnityEventTools.AddPersistentListener(questButton.onClick, modal.OpenQuestJournal);
+        }
+
+        private static void BuildQuestGiverModalUI(QuestGiverModal modal, Sprite sprite, Font font)
+        {
+            if (modal.transform.childCount > 0)
+            {
+                return;
+            }
+
+            var background = CreateBackground(modal.transform, sprite, new Color(0f, 0f, 0f, 0.72f));
+            var backgroundButton = background.gameObject.AddComponent<Button>();
+            backgroundButton.targetGraphic = background;
+            UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
+
+            var panel = CreatePanel(modal.transform, sprite, new Color(0.09f, 0.11f, 0.16f, 0.97f), new Vector2(760f, 560f));
+            ConfigureVerticalLayout(panel, 16, 10, TextAnchor.UpperLeft);
+
+            var titleGo = CreateUIElement("Title", panel.transform);
+            var titleText = CreateText(titleGo, "任务", font, 28, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleGo, 42f);
+
+            var summaryGo = CreateUIElement("Summary", panel.transform);
+            var summaryText = CreateText(summaryGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            summaryText.color = new Color(0.9f, 0.9f, 0.92f, 1f);
+            summaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            summaryText.verticalOverflow = VerticalWrapMode.Overflow;
+            AddLayoutElement(summaryGo, 72f);
+
+            var statusGo = CreateUIElement("Status", panel.transform);
+            var statusText = CreateText(statusGo, string.Empty, font, 16, TextAnchor.MiddleLeft);
+            statusText.color = new Color(0.95f, 0.83f, 0.45f, 1f);
+            AddLayoutElement(statusGo, 30f);
+
+            var objectivesGo = CreateUIElement("Objectives", panel.transform);
+            var objectivesText = CreateText(objectivesGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            objectivesText.color = Color.white;
+            objectivesText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            objectivesText.verticalOverflow = VerticalWrapMode.Overflow;
+            var objectivesLayout = objectivesGo.AddComponent<LayoutElement>();
+            objectivesLayout.flexibleHeight = 1f;
+            objectivesLayout.preferredHeight = 220f;
+
+            var rewardGo = CreateUIElement("Reward", panel.transform);
+            var rewardText = CreateText(rewardGo, string.Empty, font, 15, TextAnchor.MiddleLeft);
+            rewardText.color = new Color(0.72f, 0.95f, 0.78f, 1f);
+            AddLayoutElement(rewardGo, 30f);
+
+            var feedbackGo = CreateUIElement("Feedback", panel.transform);
+            var feedbackText = CreateText(feedbackGo, string.Empty, font, 15, TextAnchor.MiddleLeft);
+            feedbackText.color = new Color(0.8f, 0.85f, 0.95f, 1f);
+            AddLayoutElement(feedbackGo, 28f);
+
+            var buttonsRow = CreateUIElement("Buttons", panel.transform);
+            var buttonsLayout = buttonsRow.AddComponent<HorizontalLayoutGroup>();
+            buttonsLayout.spacing = 10f;
+            buttonsLayout.childAlignment = TextAnchor.MiddleRight;
+            buttonsLayout.childControlHeight = true;
+            buttonsLayout.childControlWidth = false;
+            buttonsLayout.childForceExpandHeight = false;
+            buttonsLayout.childForceExpandWidth = false;
+            AddLayoutElement(buttonsRow, 56f);
+
+            var primaryButton = CreateButton(buttonsRow.transform, "继续", sprite, font);
+            var primaryButtonText = primaryButton.GetComponentInChildren<Text>();
+            SetLayoutSize(primaryButton.gameObject, 48f, 220f);
+
+            var closeButton = CreateButton(buttonsRow.transform, "关闭", sprite, font);
+            SetLayoutSize(closeButton.gameObject, 48f, 180f);
+
+            SetSerialized(modal, "titleText", titleText);
+            SetSerialized(modal, "summaryText", summaryText);
+            SetSerialized(modal, "statusText", statusText);
+            SetSerialized(modal, "objectivesText", objectivesText);
+            SetSerialized(modal, "rewardText", rewardText);
+            SetSerialized(modal, "feedbackText", feedbackText);
+            SetSerialized(modal, "primaryButton", primaryButton);
+            SetSerialized(modal, "primaryButtonText", primaryButtonText);
+            SetSerialized(modal, "closeButton", closeButton);
+        }
+
+        private static void LinkQuestGiverTriggers(UIManager uiManager, QuestGiverModal questGiverModal)
+        {
+            if (questGiverModal == null)
+            {
+                return;
+            }
+
+            var triggers = Object.FindObjectsByType<QuestGiverTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (triggers == null || triggers.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggers.Length; i++)
+            {
+                var trigger = triggers[i];
+                if (trigger == null)
+                {
+                    continue;
+                }
+
+                SetSerialized(trigger, "uiManager", uiManager);
+                SetSerialized(trigger, "questModal", questGiverModal);
+                SetSerialized(trigger, "useDialogUi", true);
+            }
+        }
+
+        private static void BuildQuestJournalUI(QuestJournalScreen screen, Sprite sprite, Font font)
+        {
+            if (screen.transform.childCount > 0)
+            {
+                Debug.LogWarning("[UIRootBuilder] QuestJournalScreen already has children. Skipping.");
+                return;
+            }
+
+            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.78f));
+
+            var root = CreateUIElement("JournalLayout", screen.transform);
+            var rootRect = root.GetComponent<RectTransform>();
+            StretchRect(rootRect);
+
+            var rootLayout = root.AddComponent<VerticalLayoutGroup>();
+            rootLayout.padding = new RectOffset(24, 24, 24, 24);
+            rootLayout.spacing = 12f;
+            rootLayout.childAlignment = TextAnchor.UpperCenter;
+            rootLayout.childControlHeight = true;
+            rootLayout.childControlWidth = true;
+            rootLayout.childForceExpandHeight = true;
+            rootLayout.childForceExpandWidth = true;
+
+            var titleRow = CreateUIElement("TitleRow", root.transform);
+            var titleRowLayout = titleRow.AddComponent<HorizontalLayoutGroup>();
+            titleRowLayout.spacing = 12f;
+            titleRowLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleRowLayout.childControlHeight = true;
+            titleRowLayout.childControlWidth = false;
+            titleRowLayout.childForceExpandHeight = false;
+            titleRowLayout.childForceExpandWidth = false;
+            AddLayoutElement(titleRow, 56f);
+
+            var titleGo = CreateUIElement("Title", titleRow.transform);
+            var titleText = CreateText(titleGo, "QUEST JOURNAL", font, 30, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleGo, 56f, 480f);
+
+            var backButton = CreateButton(titleRow.transform, "Back", sprite, font);
+            SetLayoutSize(backButton.gameObject, 44f, 180f);
+
+            var content = CreateUIElement("Content", root.transform);
+            var contentLayout = content.AddComponent<HorizontalLayoutGroup>();
+            contentLayout.spacing = 16f;
+            contentLayout.childAlignment = TextAnchor.UpperLeft;
+            contentLayout.childControlHeight = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = true;
+            contentLayout.childForceExpandWidth = true;
+            var contentElement = content.AddComponent<LayoutElement>();
+            contentElement.flexibleHeight = 1f;
+            contentElement.flexibleWidth = 1f;
+
+            var listPanel = CreateUIElement("QuestListPanel", content.transform);
+            var listImage = listPanel.AddComponent<Image>();
+            listImage.sprite = sprite;
+            listImage.type = Image.Type.Sliced;
+            listImage.color = new Color(0.08f, 0.1f, 0.14f, 0.95f);
+            listImage.raycastTarget = true;
+            var listElement = listPanel.AddComponent<LayoutElement>();
+            listElement.preferredWidth = 460f;
+            listElement.flexibleHeight = 1f;
+
+            var listLayout = listPanel.AddComponent<VerticalLayoutGroup>();
+            listLayout.padding = new RectOffset(12, 12, 12, 12);
+            listLayout.spacing = 8f;
+            listLayout.childAlignment = TextAnchor.UpperLeft;
+            listLayout.childControlHeight = true;
+            listLayout.childControlWidth = true;
+            listLayout.childForceExpandHeight = false;
+            listLayout.childForceExpandWidth = true;
+
+            var listTitle = CreateText(CreateUIElement("ListTitle", listPanel.transform), "任务列表", font, 22, TextAnchor.MiddleLeft);
+            listTitle.color = Color.white;
+            AddLayoutElement(listTitle.gameObject, 34f);
+
+            var listViewport = CreateUIElement("QuestListRoot", listPanel.transform);
+            var listViewportRect = listViewport.GetComponent<RectTransform>();
+            var listRootLayout = listViewport.AddComponent<VerticalLayoutGroup>();
+            listRootLayout.spacing = 8f;
+            listRootLayout.childAlignment = TextAnchor.UpperLeft;
+            listRootLayout.childControlHeight = true;
+            listRootLayout.childControlWidth = true;
+            listRootLayout.childForceExpandHeight = false;
+            listRootLayout.childForceExpandWidth = true;
+            var listRootElement = listViewport.AddComponent<LayoutElement>();
+            listRootElement.flexibleHeight = 1f;
+            listRootElement.flexibleWidth = 1f;
+
+            var emptyLabelGo = CreateUIElement("EmptyLabel", listViewport.transform);
+            var emptyLabel = CreateText(emptyLabelGo, "暂无已接任务。", font, 16, TextAnchor.MiddleLeft);
+            emptyLabel.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            AddLayoutElement(emptyLabelGo, 28f);
+
+            var entryTemplate = CreateQuestJournalEntryTemplate(listViewport.transform, sprite, font);
+            entryTemplate.gameObject.SetActive(false);
+
+            var detailPanel = CreateUIElement("QuestDetailPanel", content.transform);
+            var detailImage = detailPanel.AddComponent<Image>();
+            detailImage.sprite = sprite;
+            detailImage.type = Image.Type.Sliced;
+            detailImage.color = new Color(0.1f, 0.12f, 0.17f, 0.95f);
+            detailImage.raycastTarget = true;
+            var detailElement = detailPanel.AddComponent<LayoutElement>();
+            detailElement.flexibleWidth = 1f;
+            detailElement.flexibleHeight = 1f;
+
+            var detailLayout = detailPanel.AddComponent<VerticalLayoutGroup>();
+            detailLayout.padding = new RectOffset(14, 14, 14, 14);
+            detailLayout.spacing = 10f;
+            detailLayout.childAlignment = TextAnchor.UpperLeft;
+            detailLayout.childControlHeight = true;
+            detailLayout.childControlWidth = true;
+            detailLayout.childForceExpandHeight = false;
+            detailLayout.childForceExpandWidth = true;
+
+            var detailTitleGo = CreateUIElement("DetailTitle", detailPanel.transform);
+            var detailTitle = CreateText(detailTitleGo, "任务详情", font, 24, TextAnchor.MiddleLeft);
+            detailTitle.color = Color.white;
+            AddLayoutElement(detailTitleGo, 40f);
+
+            var detailSummaryGo = CreateUIElement("DetailSummary", detailPanel.transform);
+            var detailSummary = CreateText(detailSummaryGo, "当前没有可查看的任务。", font, 16, TextAnchor.UpperLeft);
+            detailSummary.color = new Color(0.9f, 0.9f, 0.9f, 1f);
+            detailSummary.horizontalOverflow = HorizontalWrapMode.Wrap;
+            detailSummary.verticalOverflow = VerticalWrapMode.Overflow;
+            AddLayoutElement(detailSummaryGo, 68f);
+
+            var detailStatusGo = CreateUIElement("DetailStatus", detailPanel.transform);
+            var detailStatus = CreateText(detailStatusGo, string.Empty, font, 16, TextAnchor.MiddleLeft);
+            detailStatus.color = new Color(0.95f, 0.85f, 0.5f, 1f);
+            AddLayoutElement(detailStatusGo, 28f);
+
+            var detailObjectivesGo = CreateUIElement("DetailObjectives", detailPanel.transform);
+            var detailObjectives = CreateText(detailObjectivesGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            detailObjectives.color = Color.white;
+            detailObjectives.horizontalOverflow = HorizontalWrapMode.Wrap;
+            detailObjectives.verticalOverflow = VerticalWrapMode.Overflow;
+            var objectivesElement = detailObjectivesGo.AddComponent<LayoutElement>();
+            objectivesElement.flexibleHeight = 1f;
+            objectivesElement.preferredHeight = 220f;
+
+            var detailRewardGo = CreateUIElement("DetailReward", detailPanel.transform);
+            var detailReward = CreateText(detailRewardGo, string.Empty, font, 16, TextAnchor.MiddleLeft);
+            detailReward.color = new Color(0.72f, 0.95f, 0.75f, 1f);
+            AddLayoutElement(detailRewardGo, 30f);
+
+            SetSerialized(screen, "listRoot", listViewportRect);
+            SetSerialized(screen, "entryTemplate", entryTemplate);
+            SetSerialized(screen, "emptyLabel", emptyLabel);
+            SetSerialized(screen, "detailTitleText", detailTitle);
+            SetSerialized(screen, "detailSummaryText", detailSummary);
+            SetSerialized(screen, "detailObjectivesText", detailObjectives);
+            SetSerialized(screen, "detailStatusText", detailStatus);
+            SetSerialized(screen, "detailRewardText", detailReward);
+            SetSerialized(screen, "backButton", backButton);
         }
 
         private static void BuildInventoryUI(InventoryScreen screen, Sprite sprite, Font font)
@@ -1864,6 +2203,62 @@ namespace CombatSystem.Editor
             AddLayoutElement(container, 260f);
 
             return container.GetComponent<RectTransform>();
+        }
+
+        private static QuestJournalEntryUI CreateQuestJournalEntryTemplate(Transform parent, Sprite sprite, Font font)
+        {
+            var root = new GameObject("QuestEntryTemplate", typeof(RectTransform), typeof(Image), typeof(Button), typeof(HorizontalLayoutGroup));
+            Undo.RegisterCreatedObjectUndo(root, "Create Quest Entry Template");
+            root.transform.SetParent(parent, false);
+
+            var background = root.GetComponent<Image>();
+            background.sprite = sprite;
+            background.type = Image.Type.Sliced;
+            background.color = new Color(0.14f, 0.17f, 0.22f, 1f);
+            background.raycastTarget = true;
+
+            var button = root.GetComponent<Button>();
+            button.targetGraphic = background;
+
+            var layout = root.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 8, 8);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+
+            AddLayoutElement(root, 64f);
+
+            var textRoot = CreateUIElement("Texts", root.transform);
+            var textLayout = textRoot.AddComponent<VerticalLayoutGroup>();
+            textLayout.spacing = 2f;
+            textLayout.childAlignment = TextAnchor.MiddleLeft;
+            textLayout.childControlHeight = true;
+            textLayout.childControlWidth = true;
+            textLayout.childForceExpandHeight = false;
+            textLayout.childForceExpandWidth = true;
+            var textElement = textRoot.AddComponent<LayoutElement>();
+            textElement.flexibleWidth = 1f;
+            textElement.preferredHeight = 48f;
+
+            var titleGo = CreateUIElement("Title", textRoot.transform);
+            var title = CreateText(titleGo, "Quest", font, 18, TextAnchor.MiddleLeft);
+            title.color = Color.white;
+            AddLayoutElement(titleGo, 26f);
+
+            var statusGo = CreateUIElement("Status", textRoot.transform);
+            var status = CreateText(statusGo, "进行中", font, 14, TextAnchor.MiddleLeft);
+            status.color = new Color(0.8f, 0.86f, 0.94f, 1f);
+            AddLayoutElement(statusGo, 20f);
+
+            var entry = root.AddComponent<QuestJournalEntryUI>();
+            SetSerialized(entry, "button", button);
+            SetSerialized(entry, "background", background);
+            SetSerialized(entry, "titleText", title);
+            SetSerialized(entry, "statusText", status);
+            return entry;
         }
 
         private static SaveSlotEntry CreateSaveSlotEntryTemplate(Transform parent, Sprite sprite, Font font)

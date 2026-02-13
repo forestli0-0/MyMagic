@@ -12,6 +12,7 @@ namespace CombatSystem.UI
         [SerializeField] private UIScreenBase mainMenuScreen;
         [SerializeField] private UIModalBase settingsModal;
         [SerializeField] private UIScreenBase settingsScreen;
+        [SerializeField] private UIScreenBase questJournalScreen;
         [SerializeField] private string mainMenuSceneName = "MainMenu";
 
         [Header("Save")]
@@ -73,6 +74,17 @@ namespace CombatSystem.UI
             {
                 saveManager.SaveCurrentOrNew(null);
             }
+        }
+
+        public void OpenQuestJournal()
+        {
+            if (uiManager == null || questJournalScreen == null)
+            {
+                return;
+            }
+
+            uiManager.CloseAllModals();
+            uiManager.PushScreen(questJournalScreen);
         }
 
         public void BackToMenu()
