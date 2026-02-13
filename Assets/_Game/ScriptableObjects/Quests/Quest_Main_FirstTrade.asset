@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5ae9cee7189c024a94e0437a76e2275, type: 3}
+  m_Name: Quest_Main_FirstTrade
+  m_EditorClassIdentifier: 
+  id: Quest_Main_FirstTrade
+  displayName: "\u7B2C\u4E00\u6B21\u4EA4\u6613"
+  category: 0
+  summary: "\u4E0E\u5546\u4EBA\u4EA4\u8C08\u5E76\u5B8C\u6210\u7B2C\u4E00\u6B21\u8D2D\u4E70\u3002"
+  requireTurnIn: 1
+  autoTrackOnAccept: 1
+  nextQuestId: Quest_Side_FieldSupplies
+  objectives:
+  - objectiveId: talk_vendor
+    description: "\u4E0E\u5546\u4EBA\u4EA4\u8C08"
+    objectiveType: 1
+    targetId: vendor_talk
+    requiredAmount: 1
+    optional: 0
+    hiddenUntilProgress: 0
+  - objectiveId: buy_any_item
+    description: "\u4ECE\u5546\u5E97\u8D2D\u4E70 1 \u4EF6\u7269\u54C1"
+    objectiveType: 2
+    targetId: 
+    requiredAmount: 1
+    optional: 0
+    hiddenUntilProgress: 0
+  reward:
+    currency: 40
+    experience: 30
+    items: []

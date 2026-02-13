@@ -20,6 +20,7 @@ namespace CombatSystem.Data
 
         [Header("关卡与流程")]
         [SerializeField] private List<LevelDefinition> levels = new List<LevelDefinition>();
+        [SerializeField] private List<QuestDefinition> quests = new List<QuestDefinition>();
 
         [Header("成长与进度")]
         [SerializeField] private List<ProgressionDefinition> progressions = new List<ProgressionDefinition>();
@@ -50,6 +51,7 @@ namespace CombatSystem.Data
         private Dictionary<string, UnitDefinition> unitsById;
         private Dictionary<string, SkillDefinition> skillsById;
         private Dictionary<string, LevelDefinition> levelsById;
+        private Dictionary<string, QuestDefinition> questsById;
         private Dictionary<string, ProgressionDefinition> progressionsById;
         private Dictionary<string, ItemDefinition> itemsById;
         private Dictionary<string, AffixDefinition> affixesById;
@@ -69,6 +71,7 @@ namespace CombatSystem.Data
         public IReadOnlyList<UnitDefinition> Units => units;
         public IReadOnlyList<SkillDefinition> Skills => skills;
         public IReadOnlyList<LevelDefinition> Levels => levels;
+        public IReadOnlyList<QuestDefinition> Quests => quests;
         public IReadOnlyList<ProgressionDefinition> Progressions => progressions;
         public IReadOnlyList<ItemDefinition> Items => items;
         public IReadOnlyList<AffixDefinition> Affixes => affixes;
@@ -105,6 +108,7 @@ namespace CombatSystem.Data
             unitsById = BuildIndex(units);
             skillsById = BuildIndex(skills);
             levelsById = BuildIndex(levels);
+            questsById = BuildIndex(quests);
             progressionsById = BuildIndex(progressions);
             itemsById = BuildIndex(items);
             affixesById = BuildIndex(affixes);
@@ -148,6 +152,12 @@ namespace CombatSystem.Data
         {
             EnsureIndexes();
             return GetById(levelsById, id);
+        }
+
+        public QuestDefinition GetQuest(string id)
+        {
+            EnsureIndexes();
+            return GetById(questsById, id);
         }
 
         public ProgressionDefinition GetProgression(string id)

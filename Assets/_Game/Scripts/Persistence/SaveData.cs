@@ -38,6 +38,7 @@ namespace CombatSystem.Persistence
         public PlayerSaveData player = new PlayerSaveData();
         public InventorySaveData inventory = new InventorySaveData();
         public EquipmentSaveData equipment = new EquipmentSaveData();
+        public QuestSaveData quests = new QuestSaveData();
     }
 
     [Serializable]
@@ -67,5 +68,20 @@ namespace CombatSystem.Persistence
     public class EquipmentSaveData
     {
         public EquippedItemSaveData[] slots;
+    }
+
+    [Serializable]
+    public class QuestSaveData
+    {
+        public string trackedQuestId;
+        public QuestStateSaveData[] quests;
+    }
+
+    [Serializable]
+    public class QuestStateSaveData
+    {
+        public string questId;
+        public int status;
+        public int[] objectiveProgress;
     }
 }

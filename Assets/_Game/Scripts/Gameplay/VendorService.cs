@@ -38,6 +38,8 @@ namespace CombatSystem.Gameplay
         /// 商人数据更新事件（如库存变化）
         /// </summary>
         public event Action VendorUpdated;
+        public event Action<ItemDefinition, int> ItemBought;
+        public event Action<ItemDefinition, int> ItemSold;
 
         /// <summary>商人定义配置</summary>
         public VendorDefinition Definition => vendorDefinition;
@@ -152,6 +154,12 @@ namespace CombatSystem.Gameplay
 
             // 扣减商人库存并通知更新
             item.ConsumeStock(quantity);
+            ItemBought?.Invoke(item.Definition, quantity);
+            if (QuestTracker.Instance != null)
+            {
+                QuestTracker.Instance.NotifyVendorBought(item.Definition, quantity);
+            }
+
             ClearFailure();
             VendorUpdated?.Invoke();
             return true;
@@ -265,6 +273,12 @@ namespace CombatSystem.Gameplay
             }
 
             RegisterBuyBackEntry(soldItem);
+            ItemSold?.Invoke(item.Definition, quantity);
+            if (QuestTracker.Instance != null)
+            {
+                QuestTracker.Instance.NotifyVendorSold(item.Definition, quantity);
+            }
+
             ClearFailure();
             VendorUpdated?.Invoke();
             return true;

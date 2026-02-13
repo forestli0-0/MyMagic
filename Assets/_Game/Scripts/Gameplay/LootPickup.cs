@@ -99,6 +99,11 @@ namespace CombatSystem.Gameplay
                     return false;
                 }
 
+                if (QuestTracker.Instance != null)
+                {
+                    QuestTracker.Instance.NotifyItemCollected(item.Definition, item.Stack);
+                }
+
                 Consume();
                 return true;
             }

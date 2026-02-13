@@ -71,6 +71,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6187cba41f3d0ab4f81811c30097c06a, type: 2}
   - {fileID: 11400000, guid: e16512f467156894487292d412b8c098, type: 2}
   - {fileID: 11400000, guid: 0d01ac854b2cb8742b2e5121398dd773, type: 2}
+  quests:
+  - {fileID: 11400000, guid: 0e676964398184949830de6aae64edec, type: 2}
+  - {fileID: 11400000, guid: a7820209406036c4db458de53abbd11a, type: 2}
   progressions:
   - {fileID: 11400000, guid: d879b19e0f14b754e86757b529c96b70, type: 2}
   items:

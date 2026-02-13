@@ -24,6 +24,7 @@ namespace CombatSystem.Persistence
         [SerializeField] private bool saveProgression = true;
         [SerializeField] private bool saveInventory = true;
         [SerializeField] private bool saveEquipment = true;
+        [SerializeField] private bool saveQuests = true;
         [SerializeField] private string quickSaveName = "Quick Save";
 
         private string currentSlotId;
@@ -209,6 +210,15 @@ namespace CombatSystem.Persistence
                 data.player.spawnPointId = levelFlow.CurrentSpawnPointId;
             }
 
+            if (saveQuests)
+            {
+                var questTracker = FindFirstObjectByType<QuestTracker>();
+                if (questTracker != null)
+                {
+                    data.quests = questTracker.CaptureSaveData();
+                }
+            }
+
             return data;
         }
 
@@ -305,6 +315,15 @@ namespace CombatSystem.Persistence
                 {
                     // 装备恢复会触发属性刷新，放在背包之后
                     ApplyEquipment(data.equipment, equipment, resolvedDatabase);
+                }
+            }
+
+            if (saveQuests && data.quests != null)
+            {
+                var questTracker = FindFirstObjectByType<QuestTracker>();
+                if (questTracker != null)
+                {
+                    questTracker.ApplySaveData(data.quests);
                 }
             }
         }
