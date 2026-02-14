@@ -147,7 +147,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - [x] Field/Boss 关卡难度首轮调平
 
 **Day 7: 体验与收尾**
-- [ ] 关键战斗反馈（打击音/命中特效/镜头轻微抖动）
+- [x] 关键战斗反馈（打击音/命中特效/镜头轻微抖动）
 - [ ] UI 动效（技能/掉落/任务更新提示）
 - [ ] 性能检查（池化、避免 Update GC）
 - [ ] Bug 修复 + 文档补齐（README/操作说明）
@@ -179,6 +179,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 已新增：Vendor UI 交互增强（双击买卖、拖拽买卖、选中高亮与详情、Esc 关闭）
 - 已新增：Day5 任务系统链路（QuestDefinition/QuestTracker/QuestGiverTrigger/QuestObjectiveTrigger/QuestJournal+QuestGiver UI）
 - 已新增：Day6 敌人生态与 Boss 机制（EncounterDefinition/EnemyAffixDefinition/EncounterDirector/BossSkillScheduler）
+- 已新增：Day7 战斗反馈（DamageApplied 事件链 / HitFlashReceiver / CombatFeedbackController / CameraShakeController）
 - 已修复：主菜单返回流程/Continue 进入场景卡住问题（UI/HUD/TimeScale）
 - 已修复：存档加载物品与装备（GameDatabase items 索引补齐）
 - 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`

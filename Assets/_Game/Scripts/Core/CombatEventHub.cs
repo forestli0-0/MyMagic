@@ -22,6 +22,8 @@ namespace CombatSystem.Core
         public event Action<HealthComponent> UnitDied;
         /// <summary> 当单位死亡时触发（包含击杀来源） </summary>
         public event Action<UnitKilledEvent> UnitKilled;
+        /// <summary> 当伤害结算时触发（命中反馈） </summary>
+        public event Action<DamageAppliedEvent> DamageApplied;
         /// <summary> 当单位资源（如法力）发生变化时触发 </summary>
         public event Action<ResourceChangedEvent> ResourceChanged;
         /// <summary> 当技能冷却状态发生变化时触发 </summary>
@@ -50,6 +52,7 @@ namespace CombatSystem.Core
         public void RaiseShieldChanged(ShieldChangedEvent evt) => ShieldChanged?.Invoke(evt);
         public void RaiseUnitDied(HealthComponent source) => UnitDied?.Invoke(source);
         public void RaiseUnitKilled(UnitKilledEvent evt) => UnitKilled?.Invoke(evt);
+        public void RaiseDamageApplied(DamageAppliedEvent evt) => DamageApplied?.Invoke(evt);
         public void RaiseResourceChanged(ResourceChangedEvent evt) => ResourceChanged?.Invoke(evt);
         public void RaiseCooldownChanged(CooldownChangedEvent evt) => CooldownChanged?.Invoke(evt);
         public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
@@ -69,6 +72,7 @@ namespace CombatSystem.Core
             ShieldChanged = null;
             UnitDied = null;
             UnitKilled = null;
+            DamageApplied = null;
             ResourceChanged = null;
             CooldownChanged = null;
             SkillCastStarted = null;

@@ -181,8 +181,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   hudConfig: {fileID: 11400000, guid: 30fa15c661bf3c84ca51c52cadff7d28, type: 2}
-  targetUnit: {fileID: 67463330}
+  targetUnit: {fileID: 0}
   worldCamera: {fileID: 2024685353}
+  autoRebindInterval: 0.5
   healthBar: {fileID: 1254007915}
   resourceBar: {fileID: 194524639}
   skillBar: {fileID: 156305069}
@@ -656,6 +657,7 @@ GameObject:
   - component: {fileID: 67463334}
   - component: {fileID: 67463337}
   - component: {fileID: 67463338}
+  - component: {fileID: 67463339}
   m_Layer: 0
   m_Name: Sample_Enemy_3
   m_TagString: Untagged
@@ -1084,6 +1086,25 @@ MonoBehaviour:
   health: {fileID: 67463328}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &67463339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 67463317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 67463328}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &68461874
 GameObject:
   m_ObjectHideFlags: 0
@@ -6161,6 +6182,7 @@ GameObject:
   - component: {fileID: 413451354}
   - component: {fileID: 413451369}
   - component: {fileID: 413451370}
+  - component: {fileID: 413451371}
   m_Layer: 0
   m_Name: Sample_Enemy_1
   m_TagString: Untagged
@@ -6537,6 +6559,25 @@ MonoBehaviour:
   health: {fileID: 413451363}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &413451371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 413451352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 413451363}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &417656553
 GameObject:
   m_ObjectHideFlags: 0
@@ -6673,6 +6714,7 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   autoFindInputReader: 1
   refreshInterval: 0.25
+  autoResolveInterval: 0.5
   targetUnit: {fileID: 0}
   health: {fileID: 0}
   resource: {fileID: 0}
@@ -16461,10 +16503,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
-  progression: {fileID: 67463336}
+  progression: {fileID: 0}
   experienceBar: {fileID: 289196318}
   levelText: {fileID: 93006033}
   pointsText: {fileID: 1842355376}
+  autoRebindInterval: 0.5
   levelFormat: Lv {0}
   pointsFormat: 'Points: {0}'
 --- !u!1 &1304708524
@@ -18187,6 +18230,7 @@ GameObject:
   - component: {fileID: 1391668343}
   - component: {fileID: 1391668358}
   - component: {fileID: 1391668359}
+  - component: {fileID: 1391668360}
   m_Layer: 0
   m_Name: Sample_Enemy_2
   m_TagString: Untagged
@@ -18563,6 +18607,25 @@ MonoBehaviour:
   health: {fileID: 1391668352}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &1391668360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391668341}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 1391668352}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &1394191846
 GameObject:
   m_ObjectHideFlags: 0
@@ -21422,6 +21485,7 @@ GameObject:
   - component: {fileID: 1650794254}
   - component: {fileID: 1650794269}
   - component: {fileID: 1650794270}
+  - component: {fileID: 1650794271}
   m_Layer: 0
   m_Name: Sample_Enemy_5
   m_TagString: Untagged
@@ -21798,6 +21862,25 @@ MonoBehaviour:
   health: {fileID: 1650794263}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &1650794271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650794252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 1650794263}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &1668021451
 GameObject:
   m_ObjectHideFlags: 0
@@ -24184,6 +24267,7 @@ GameObject:
   - component: {fileID: 1887749254}
   - component: {fileID: 1887749269}
   - component: {fileID: 1887749270}
+  - component: {fileID: 1887749271}
   m_Layer: 0
   m_Name: Sample_Enemy_6
   m_TagString: Untagged
@@ -24560,6 +24644,25 @@ MonoBehaviour:
   health: {fileID: 1887749263}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &1887749271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1887749252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 1887749263}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &1893349597
 GameObject:
   m_ObjectHideFlags: 0
@@ -24771,6 +24874,163 @@ MonoBehaviour:
   descriptionText: {fileID: 1609908045}
   statsRoot: {fileID: 762898412}
   statTemplate: {fileID: 689760686}
+--- !u!1 &1899095289
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1899095292}
+  - component: {fileID: 1899095291}
+  - component: {fileID: 1899095290}
+  m_Layer: 0
+  m_Name: CombatFeedback
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!82 &1899095290
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1899095289}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &1899095291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1899095289}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b53ea6772937423bad5a8f8e4d2b624a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  playerUnit: {fileID: 0}
+  cameraShake: {fileID: 2024685356}
+  audioSource: {fileID: 1899095290}
+  enemyHitClips: []
+  playerHitClips: []
+  audioVolume: 0.75
+  minPitch: 0.95
+  maxPitch: 1.05
+  useProceduralFallback: 1
+  enforceMinimumShakeTuning: 1
+  onlyWhenPlayerInvolved: 0
+  shakeOnEnemyHit: 0.1
+  shakeOnPlayerHit: 0.16
+  criticalBonus: 0.05
+  minEnemyDamageForShake: 1
+--- !u!4 &1899095292
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1899095289}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1916358083
 GameObject:
   m_ObjectHideFlags: 0
@@ -25876,6 +26136,7 @@ GameObject:
   - component: {fileID: 2024685355}
   - component: {fileID: 2024685353}
   - component: {fileID: 2024685354}
+  - component: {fileID: 2024685356}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -25957,6 +26218,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2024685356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2024685352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e93081f6af84b0bb2a89ba23249f4df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetTransform: {fileID: 0}
+  enforceMinimumPreset: 1
+  useUnscaledTime: 0
+  traumaDecay: 1.45
+  noiseFrequency: 24
+  maxOffset: 0.17
+  maxRoll: 1.15
 --- !u!1 &2024718214
 GameObject:
   m_ObjectHideFlags: 0
@@ -27378,6 +27658,7 @@ GameObject:
   - component: {fileID: 2126393909}
   - component: {fileID: 2126393924}
   - component: {fileID: 2126393925}
+  - component: {fileID: 2126393926}
   m_Layer: 0
   m_Name: Sample_Enemy_4
   m_TagString: Untagged
@@ -27754,6 +28035,25 @@ MonoBehaviour:
   health: {fileID: 2126393918}
   delaySeconds: 0
   destroyAfterDelay: 0
+--- !u!114 &2126393926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2126393907}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d4e7c8c8e64907a0c5484e8904f03f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  targetHealth: {fileID: 2126393918}
+  targetRenderers: []
+  flashColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  flashStrength: 0.62
+  flashDuration: 0.08
+  onlyWhenHealthDamage: 1
 --- !u!1 &2140232965
 GameObject:
   m_ObjectHideFlags: 0
@@ -27922,3 +28222,4 @@ SceneRoots:
   - {fileID: 2016177066}
   - {fileID: 1367224965}
   - {fileID: 576467499}
+  - {fileID: 1899095292}

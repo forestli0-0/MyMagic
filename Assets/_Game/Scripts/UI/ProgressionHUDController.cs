@@ -24,6 +24,8 @@ namespace CombatSystem.UI
         [SerializeField] private Text levelText;
         [Tooltip("属性点文本显示")]
         [SerializeField] private Text pointsText;
+        [Tooltip("当玩家运行时动态生成时，自动重绑检测间隔（秒）")]
+        [SerializeField] private float autoRebindInterval = 0.5f;
 
         [Header("显示格式")]
         [Tooltip("等级显示格式，{0} 会被替换为等级数值")]
@@ -35,6 +37,7 @@ namespace CombatSystem.UI
         /// 订阅标志，记录是否通过 EventHub 订阅事件。
         /// </summary>
         private bool subscribedToHub;
+        private float nextAutoRebindTime;
 
         private void OnEnable()
         {
@@ -48,40 +51,51 @@ namespace CombatSystem.UI
             Unsubscribe();
         }
 
+        private void Update()
+        {
+            if (Time.unscaledTime < nextAutoRebindTime)
+            {
+                return;
+            }
+
+            if (!NeedsRebind())
+            {
+                return;
+            }
+
+            nextAutoRebindTime = Time.unscaledTime + Mathf.Max(0.1f, autoRebindInterval);
+            Unsubscribe();
+            EnsureReferences();
+            Subscribe();
+            Refresh();
+        }
+
         /// <summary>
         /// 确保组件引用有效，如果未在 Inspector 中赋值则尝试自动查找。
         /// </summary>
         private void EnsureReferences()
         {
+            if (!IsPlayerProgression(progression))
+            {
+                progression = null;
+            }
+
             if (progression == null)
             {
-                var player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
+                var playerUnit = PlayerUnitLocator.FindPlayerUnit();
+                if (playerUnit != null)
                 {
-                    progression = player.GetComponent<PlayerProgression>();
-                }
-
-                if (progression == null)
-                {
-                    progression = FindFirstObjectByType<PlayerProgression>();
+                    progression = playerUnit.GetComponent<PlayerProgression>();
                 }
             }
 
             if (eventHub == null)
             {
-                var root = progression != null ? progression.GetComponent<UnitRoot>() : null;
-                if (root == null)
+                var playerUnit = PlayerUnitLocator.FindPlayerUnit();
+                var root = progression != null ? progression.GetComponent<UnitRoot>() : playerUnit;
+                if (!PlayerUnitLocator.IsPlayerUnit(root))
                 {
-                    var player = GameObject.FindGameObjectWithTag("Player");
-                    if (player != null)
-                    {
-                        root = player.GetComponent<UnitRoot>();
-                    }
-                }
-
-                if (root == null)
-                {
-                    root = FindFirstObjectByType<UnitRoot>();
+                    root = playerUnit;
                 }
 
                 if (root != null)
@@ -89,6 +103,32 @@ namespace CombatSystem.UI
                     eventHub = root.EventHub;
                 }
             }
+        }
+
+        private bool NeedsRebind()
+        {
+            if (!IsPlayerProgression(progression))
+            {
+                return true;
+            }
+
+            if (eventHub == null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsPlayerProgression(PlayerProgression value)
+        {
+            if (value == null)
+            {
+                return false;
+            }
+
+            var unit = value.GetComponent<UnitRoot>();
+            return PlayerUnitLocator.IsPlayerUnit(unit);
         }
 
         /// <summary>

@@ -23,7 +23,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            if (TryRollCritical(effect, context, out var critMultiplier))
+            var isCritical = TryRollCritical(effect, context, out var critMultiplier);
+            if (isCritical)
             {
                 finalAmount *= critMultiplier;
             }
@@ -35,14 +36,24 @@ namespace CombatSystem.Gameplay
             }
 
             var wasAlive = target.Health.IsAlive;
-            var beforeHealth = target.Health.Current;
-            var beforeShield = target.Health.Shield;
             var damageSource = new DamageSourceInfo(context.CasterUnit, context.Skill, effect, trigger);
-            var appliedDamage = target.Health.ApplyDamage(finalAmount, out _, damageSource);
+            var appliedDamage = target.Health.ApplyDamage(finalAmount, out var absorbedByShield, damageSource);
             if (appliedDamage > 0f)
             {
                 ApplyVamp(effect, context, appliedDamage);
             }
+
+            RaiseDamageAppliedEvent(
+                context,
+                target,
+                effect,
+                trigger,
+                amount,
+                finalAmount,
+                appliedDamage,
+                absorbedByShield,
+                isCritical,
+                wasAlive && target.Health != null && !target.Health.IsAlive);
 
             var canTriggerOnHit = CanTriggerOnHit(effect, context);
             var notifySkillHit = canTriggerOnHit && trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
@@ -178,6 +189,68 @@ namespace CombatSystem.Gameplay
             }
 
             return effect.TriggersOnHit;
+        }
+
+        private static void RaiseDamageAppliedEvent(
+            SkillRuntimeContext context,
+            CombatTarget target,
+            EffectDefinition effect,
+            SkillStepTrigger trigger,
+            float requestedDamage,
+            float postResistanceDamage,
+            float appliedDamage,
+            float absorbedByShield,
+            bool isCritical,
+            bool targetKilled)
+        {
+            if (target.Health == null)
+            {
+                return;
+            }
+
+            var eventHub = ResolveEventHub(context, target);
+            if (eventHub == null)
+            {
+                return;
+            }
+
+            var evt = new DamageAppliedEvent(
+                context.CasterUnit,
+                target.Health,
+                requestedDamage,
+                postResistanceDamage,
+                appliedDamage,
+                absorbedByShield,
+                isCritical,
+                targetKilled,
+                context.Skill,
+                effect,
+                trigger);
+            eventHub.RaiseDamageApplied(evt);
+        }
+
+        private static CombatEventHub ResolveEventHub(SkillRuntimeContext context, CombatTarget target)
+        {
+            if (target.Unit != null && target.Unit.EventHub != null)
+            {
+                return target.Unit.EventHub;
+            }
+
+            if (context.CasterUnit != null && context.CasterUnit.EventHub != null)
+            {
+                return context.CasterUnit.EventHub;
+            }
+
+            if (target.Health != null)
+            {
+                var unit = target.Health.GetComponent<UnitRoot>();
+                if (unit != null && unit.EventHub != null)
+                {
+                    return unit.EventHub;
+                }
+            }
+
+            return null;
         }
     }
 }

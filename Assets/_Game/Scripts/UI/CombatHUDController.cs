@@ -22,6 +22,8 @@ namespace CombatSystem.UI
         
         [Tooltip("用于 3D 坐标转屏幕坐标的相机")]
         [SerializeField] private Camera worldCamera;
+        [Tooltip("当玩家运行时动态生成时，自动重绑检测间隔（秒）")]
+        [SerializeField] private float autoRebindInterval = 0.5f;
 
         [Header("Widgets")]
         [SerializeField] private ValueBarUI healthBar;           // 血条
@@ -39,6 +41,7 @@ namespace CombatSystem.UI
         private BuffController targetBuffs;
 
         private bool initialized;
+        private float nextAutoRebindTime;
 
         private void Start()
         {
@@ -66,33 +69,55 @@ namespace CombatSystem.UI
             Unsubscribe(); // 隐藏时取消监听，防止内存泄漏或无效回调
         }
 
+        private void Update()
+        {
+            if (!initialized)
+            {
+                return;
+            }
+
+            if (Time.unscaledTime < nextAutoRebindTime)
+            {
+                return;
+            }
+
+            if (!NeedsRebind())
+            {
+                return;
+            }
+
+            nextAutoRebindTime = Time.unscaledTime + Mathf.Max(0.1f, autoRebindInterval);
+            Unsubscribe();
+            EnsureReferences();
+            Subscribe();
+            RefreshAll();
+        }
+
         /// <summary>
         /// 确保所有核心组件引用已正确获取
         /// </summary>
         private void EnsureReferences()
         {
-            if (targetUnit == null)
+            if (!PlayerUnitLocator.IsPlayerUnit(targetUnit))
             {
-                var playerObj = GameObject.FindGameObjectWithTag("Player");
-                if (playerObj != null)
-                {
-                    targetUnit = playerObj.GetComponent<UnitRoot>();
-                }
+                targetUnit = null;
             }
-            
+
             if (targetUnit == null)
             {
-                targetUnit = FindObjectOfType<UnitRoot>();
-                if (targetUnit != null)
-                {
-                    Debug.LogWarning("[CombatHUDController] 未找到 Player 标签对象，使用 FindObjectOfType 降级查找", this);
-                }
+                targetUnit = PlayerUnitLocator.FindPlayerUnit();
             }
 
             if (worldCamera == null)
             {
                 worldCamera = Camera.main;
             }
+
+            targetHealth = null;
+            targetResource = null;
+            targetCooldown = null;
+            targetSkillUser = null;
+            targetBuffs = null;
 
             if (targetUnit != null)
             {
@@ -109,6 +134,26 @@ namespace CombatSystem.UI
             {
                 eventHub = targetUnit.EventHub;
             }
+        }
+
+        private bool NeedsRebind()
+        {
+            if (!PlayerUnitLocator.IsPlayerUnit(targetUnit))
+            {
+                return true;
+            }
+
+            if (targetHealth == null || targetResource == null || targetCooldown == null || targetSkillUser == null)
+            {
+                return true;
+            }
+
+            if (worldCamera == null)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

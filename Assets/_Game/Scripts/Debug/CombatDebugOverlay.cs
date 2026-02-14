@@ -16,6 +16,7 @@ namespace CombatSystem.Debugging
         [SerializeField] private InputReader inputReader;
         [SerializeField] private bool autoFindInputReader = true;
         [SerializeField] private float refreshInterval = 0.25f;
+        [SerializeField] private float autoResolveInterval = 0.5f;
 
         [Header("Target")]
         [SerializeField] private UnitRoot targetUnit;
@@ -33,12 +34,13 @@ namespace CombatSystem.Debugging
         private float fpsTimer;
         private int fpsFrames;
         private float lastFps;
+        private float nextResolveTime;
         private readonly StringBuilder builder = new StringBuilder(256);
 
         private void Awake()
         {
             ResolveInputReader();
-            ResolveReferences();
+            ResolveReferences(true);
             SetVisible(visible);
         }
 
@@ -65,6 +67,8 @@ namespace CombatSystem.Debugging
             {
                 return;
             }
+
+            ResolveReferences(false);
 
             fpsFrames++;
             fpsTimer += Time.unscaledDeltaTime;
@@ -164,49 +168,64 @@ namespace CombatSystem.Debugging
             }
         }
 
-        private void ResolveReferences()
+        private void ResolveReferences(bool force)
         {
+            if (!force && Time.unscaledTime < nextResolveTime)
+            {
+                return;
+            }
+
+            var needsResolve = force ||
+                               !PlayerUnitLocator.IsPlayerUnit(targetUnit) ||
+                               health == null ||
+                               resource == null ||
+                               buffs == null ||
+                               cooldown == null ||
+                               skillUser == null ||
+                               projectilePool == null ||
+                               floatingText == null;
+            if (!needsResolve)
+            {
+                return;
+            }
+
+            nextResolveTime = Time.unscaledTime + Mathf.Max(0.1f, autoResolveInterval);
+
+            if (!PlayerUnitLocator.IsPlayerUnit(targetUnit))
+            {
+                targetUnit = null;
+            }
+
             if (targetUnit == null)
             {
-                targetUnit = FindFirstObjectByType<UnitRoot>();
+                targetUnit = PlayerUnitLocator.FindPlayerUnit();
             }
 
             if (targetUnit != null)
             {
-                if (health == null)
-                {
-                    health = targetUnit.GetComponent<HealthComponent>();
-                }
-
-                if (resource == null)
-                {
-                    resource = targetUnit.GetComponent<ResourceComponent>();
-                }
-
-                if (buffs == null)
-                {
-                    buffs = targetUnit.GetComponent<BuffController>();
-                }
-
-                if (cooldown == null)
-                {
-                    cooldown = targetUnit.GetComponent<CooldownComponent>();
-                }
-
-                if (skillUser == null)
-                {
-                    skillUser = targetUnit.GetComponent<SkillUserComponent>();
-                }
+                health = targetUnit.GetComponent<HealthComponent>();
+                resource = targetUnit.GetComponent<ResourceComponent>();
+                buffs = targetUnit.GetComponent<BuffController>();
+                cooldown = targetUnit.GetComponent<CooldownComponent>();
+                skillUser = targetUnit.GetComponent<SkillUserComponent>();
+            }
+            else
+            {
+                health = null;
+                resource = null;
+                buffs = null;
+                cooldown = null;
+                skillUser = null;
             }
 
             if (projectilePool == null)
             {
-                projectilePool = FindFirstObjectByType<ProjectilePool>();
+                projectilePool = FindFirstObjectByType<ProjectilePool>(FindObjectsInactive.Include);
             }
 
             if (floatingText == null)
             {
-                floatingText = FindFirstObjectByType<FloatingTextManager>();
+                floatingText = FindFirstObjectByType<FloatingTextManager>(FindObjectsInactive.Include);
             }
         }
 

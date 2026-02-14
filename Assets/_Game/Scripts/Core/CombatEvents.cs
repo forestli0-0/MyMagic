@@ -98,6 +98,52 @@ namespace CombatSystem.Core
     }
 
     /// <summary>
+    /// 伤害结算事件数据（用于命中反馈、音效与镜头效果）。
+    /// </summary>
+    public struct DamageAppliedEvent
+    {
+        public UnitRoot Attacker;
+        public HealthComponent Target;
+        public float RequestedDamage;
+        public float PostResistanceDamage;
+        public float AppliedDamage;
+        public float AbsorbedByShield;
+        public bool IsCritical;
+        public bool TargetKilled;
+        public SkillDefinition Skill;
+        public EffectDefinition Effect;
+        public SkillStepTrigger Trigger;
+
+        public float TotalImpact => AppliedDamage + AbsorbedByShield;
+
+        public DamageAppliedEvent(
+            UnitRoot attacker,
+            HealthComponent target,
+            float requestedDamage,
+            float postResistanceDamage,
+            float appliedDamage,
+            float absorbedByShield,
+            bool isCritical,
+            bool targetKilled,
+            SkillDefinition skill,
+            EffectDefinition effect,
+            SkillStepTrigger trigger)
+        {
+            Attacker = attacker;
+            Target = target;
+            RequestedDamage = requestedDamage;
+            PostResistanceDamage = postResistanceDamage;
+            AppliedDamage = appliedDamage;
+            AbsorbedByShield = absorbedByShield;
+            IsCritical = isCritical;
+            TargetKilled = targetKilled;
+            Skill = skill;
+            Effect = effect;
+            Trigger = trigger;
+        }
+    }
+
+    /// <summary>
     /// 资源（法力/能量等）变更事件数据。
     /// </summary>
     public struct ResourceChangedEvent
