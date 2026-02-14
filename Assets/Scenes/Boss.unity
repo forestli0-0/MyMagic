@@ -191,6 +191,12 @@ MonoBehaviour:
   castBar: {fileID: 197677750}
   combatLog: {fileID: 1013063191}
   floatingText: {fileID: 735965073}
+  hudToastOverlay: {fileID: 0}
+  questTracker: {fileID: 0}
+  enableQuestUpdateToast: 1
+  enableLootPickupToast: 1
+  enableSkillReleaseToast: 1
+  questProgressToastCooldown: 0.25
 --- !u!1 &21835940
 GameObject:
   m_ObjectHideFlags: 0
@@ -3205,6 +3211,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 829423564}
   cooldownText: {fileID: 610580959}
   keyText: {fileID: 123312224}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &150666299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4597,6 +4608,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 349191973}
   cooldownText: {fileID: 1149420846}
   keyText: {fileID: 1742858856}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &247168589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9794,6 +9810,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 230836840}
   cooldownText: {fileID: 360624052}
   keyText: {fileID: 909179673}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &771775459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12311,6 +12332,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 656447433}
   cooldownText: {fileID: 1233024154}
   keyText: {fileID: 1547858198}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &1027207640
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17526,6 +17552,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 1964694343}
   cooldownText: {fileID: 912306897}
   keyText: {fileID: 1165833736}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &1420090618
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23751,6 +23782,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 33440262}
   cooldownText: {fileID: 1374523503}
   keyText: {fileID: 1323528879}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &2024718217
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -34,6 +34,14 @@ namespace CombatSystem.UI
         [SerializeField] private CombatLogUI combatLog;           // 战斗日志
         [SerializeField] private FloatingTextManager floatingText;     // 飘字管理器
 
+        [Header("FX")]
+        [SerializeField] private HudToastOverlay hudToastOverlay;
+        [SerializeField] private QuestTracker questTracker;
+        [SerializeField] private bool enableQuestUpdateToast = true;
+        [SerializeField] private bool enableLootPickupToast = true;
+        [SerializeField] private bool enableSkillReleaseToast = true;
+        [SerializeField] private float questProgressToastCooldown = 0.25f;
+
         private HealthComponent targetHealth;
         private ResourceComponent targetResource;
         private CooldownComponent targetCooldown;
@@ -42,6 +50,9 @@ namespace CombatSystem.UI
 
         private bool initialized;
         private float nextAutoRebindTime;
+        private bool questEventsSubscribed;
+        private bool lootEventsSubscribed;
+        private float lastQuestProgressToastTime = -10f;
 
         private void Start()
         {
@@ -83,7 +94,10 @@ namespace CombatSystem.UI
 
             if (!NeedsRebind())
             {
-                return;
+                if (!NeedsAuxiliaryRebind())
+                {
+                    return;
+                }
             }
 
             nextAutoRebindTime = Time.unscaledTime + Mathf.Max(0.1f, autoRebindInterval);
@@ -111,6 +125,23 @@ namespace CombatSystem.UI
             if (worldCamera == null)
             {
                 worldCamera = Camera.main;
+            }
+
+            if (questTracker == null)
+            {
+                questTracker = QuestTracker.Instance != null
+                    ? QuestTracker.Instance
+                    : FindFirstObjectByType<QuestTracker>(FindObjectsInactive.Include);
+            }
+
+            if (hudToastOverlay == null)
+            {
+                hudToastOverlay = FindFirstObjectByType<HudToastOverlay>(FindObjectsInactive.Include);
+            }
+
+            if (hudToastOverlay == null)
+            {
+                EnsureHudToastOverlay();
             }
 
             targetHealth = null;
@@ -156,6 +187,21 @@ namespace CombatSystem.UI
             return false;
         }
 
+        private bool NeedsAuxiliaryRebind()
+        {
+            if (hudToastOverlay == null)
+            {
+                return true;
+            }
+
+            if (enableQuestUpdateToast && questTracker == null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// 订阅相关的战斗事件
         /// </summary>
@@ -175,6 +221,9 @@ namespace CombatSystem.UI
             {
                 targetBuffs.BuffsChanged += HandleBuffsChanged;
             }
+
+            SubscribeQuestEvents();
+            SubscribeLootEvents();
         }
 
         private void Unsubscribe()
@@ -193,6 +242,9 @@ namespace CombatSystem.UI
             {
                 targetBuffs.BuffsChanged -= HandleBuffsChanged;
             }
+
+            UnsubscribeQuestEvents();
+            UnsubscribeLootEvents();
         }
 
         /// <summary>
@@ -324,6 +376,19 @@ namespace CombatSystem.UI
             {
                 castBar.Hide();
             }
+
+            if (evt.Caster == targetUnit && evt.Skill != null)
+            {
+                if (skillBar != null)
+                {
+                    skillBar.PlaySkillCastPulse(evt.Skill);
+                }
+
+                if (enableSkillReleaseToast && hudToastOverlay != null)
+                {
+                    hudToastOverlay.ShowInfo($"施放 {evt.Skill.DisplayName}");
+                }
+            }
         }
 
         private void HandleSkillCastInterrupted(SkillCastEvent evt)
@@ -347,6 +412,181 @@ namespace CombatSystem.UI
                 var maxBuffSlots = hudConfig != null ? hudConfig.MaxBuffSlots : 12;
                 buffBar.Refresh(maxBuffSlots);
             }
+        }
+
+        private void SubscribeQuestEvents()
+        {
+            if (questEventsSubscribed || questTracker == null)
+            {
+                return;
+            }
+
+            questTracker.QuestAccepted += HandleQuestAccepted;
+            questTracker.QuestProgressed += HandleQuestProgressed;
+            questTracker.QuestReadyToTurnIn += HandleQuestReadyToTurnIn;
+            questTracker.QuestCompleted += HandleQuestCompleted;
+            questEventsSubscribed = true;
+        }
+
+        private void UnsubscribeQuestEvents()
+        {
+            if (!questEventsSubscribed || questTracker == null)
+            {
+                questEventsSubscribed = false;
+                return;
+            }
+
+            questTracker.QuestAccepted -= HandleQuestAccepted;
+            questTracker.QuestProgressed -= HandleQuestProgressed;
+            questTracker.QuestReadyToTurnIn -= HandleQuestReadyToTurnIn;
+            questTracker.QuestCompleted -= HandleQuestCompleted;
+            questEventsSubscribed = false;
+        }
+
+        private void SubscribeLootEvents()
+        {
+            if (lootEventsSubscribed)
+            {
+                return;
+            }
+
+            LootPickup.PickedUp += HandleLootPickedUp;
+            lootEventsSubscribed = true;
+        }
+
+        private void UnsubscribeLootEvents()
+        {
+            if (!lootEventsSubscribed)
+            {
+                return;
+            }
+
+            LootPickup.PickedUp -= HandleLootPickedUp;
+            lootEventsSubscribed = false;
+        }
+
+        private void HandleQuestAccepted(QuestRuntimeState state)
+        {
+            if (!enableQuestUpdateToast || hudToastOverlay == null)
+            {
+                return;
+            }
+
+            hudToastOverlay.ShowSuccess($"任务已接取：{ResolveQuestName(state)}");
+        }
+
+        private void HandleQuestProgressed(QuestRuntimeState state)
+        {
+            if (!enableQuestUpdateToast || hudToastOverlay == null)
+            {
+                return;
+            }
+
+            if (Time.unscaledTime - lastQuestProgressToastTime < Mathf.Max(0f, questProgressToastCooldown))
+            {
+                return;
+            }
+
+            lastQuestProgressToastTime = Time.unscaledTime;
+            hudToastOverlay.ShowInfo($"任务更新：{ResolveQuestName(state)}");
+        }
+
+        private void HandleQuestReadyToTurnIn(QuestRuntimeState state)
+        {
+            if (!enableQuestUpdateToast || hudToastOverlay == null)
+            {
+                return;
+            }
+
+            hudToastOverlay.ShowWarning($"可提交任务：{ResolveQuestName(state)}");
+        }
+
+        private void HandleQuestCompleted(QuestRuntimeState state)
+        {
+            if (!enableQuestUpdateToast || hudToastOverlay == null)
+            {
+                return;
+            }
+
+            hudToastOverlay.ShowSuccess($"任务完成：{ResolveQuestName(state)}");
+        }
+
+        private void HandleLootPickedUp(LootPickup.PickupEvent evt)
+        {
+            if (!enableLootPickupToast || hudToastOverlay == null || evt.Picker == null)
+            {
+                return;
+            }
+
+            var pickerUnit = evt.Picker.GetComponent<UnitRoot>();
+            if (!PlayerUnitLocator.IsPlayerUnit(pickerUnit))
+            {
+                return;
+            }
+
+            if (evt.IsCurrency)
+            {
+                hudToastOverlay.ShowSuccess($"+{evt.Amount} Gold");
+                return;
+            }
+
+            var label = string.IsNullOrWhiteSpace(evt.Label) ? "物品" : evt.Label;
+            var amount = Mathf.Max(1, evt.Amount);
+            hudToastOverlay.ShowInfo($"获得 {label} x{amount}");
+        }
+
+        private string ResolveQuestName(QuestRuntimeState state)
+        {
+            if (state == null)
+            {
+                return "任务";
+            }
+
+            var definition = questTracker != null ? questTracker.GetDefinition(state.QuestId) : null;
+            if (definition != null && !string.IsNullOrWhiteSpace(definition.DisplayName))
+            {
+                return definition.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(state.QuestId))
+            {
+                return state.QuestId;
+            }
+
+            return "任务";
+        }
+
+        private void EnsureHudToastOverlay()
+        {
+            Transform parent = null;
+            if (UIRoot.Instance != null)
+            {
+                if (UIRoot.Instance.OverlayCanvas != null)
+                {
+                    parent = UIRoot.Instance.OverlayCanvas.transform;
+                }
+                else if (UIRoot.Instance.HudCanvas != null)
+                {
+                    parent = UIRoot.Instance.HudCanvas.transform;
+                }
+            }
+
+            if (parent == null)
+            {
+                var canvas = GetComponentInParent<Canvas>();
+                parent = canvas != null ? canvas.transform : transform;
+            }
+
+            var root = new GameObject("HudToastOverlay", typeof(RectTransform), typeof(CanvasGroup), typeof(HudToastOverlay));
+            var rect = root.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -86f);
+            rect.sizeDelta = new Vector2(520f, 58f);
+
+            hudToastOverlay = root.GetComponent<HudToastOverlay>();
         }
     }
 }

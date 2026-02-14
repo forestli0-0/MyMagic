@@ -1,3 +1,4 @@
+using System.Collections;
 using CombatSystem.Data;
 using CombatSystem.Core;
 using UnityEngine;
@@ -24,6 +25,13 @@ namespace CombatSystem.UI
         [Tooltip("显示快捷键的文本组件")]
         [SerializeField] private Text keyText;
 
+        [Header("Cast FX")]
+        [SerializeField] private bool enableCastPulse = true;
+        [SerializeField] private float castPulseScale = 1.12f;
+        [SerializeField] private float castPulseDuration = 0.14f;
+        [SerializeField] private bool pulseUseUnscaledTime = true;
+        [SerializeField] private Color castPulseTint = new Color(1f, 0.96f, 0.7f, 1f);
+
         /// <summary>
         /// 当前绑定的技能定义
         /// </summary>
@@ -38,11 +46,29 @@ namespace CombatSystem.UI
         /// 上一次显示的冷却秒数（用于减少文本更新频率）
         /// </summary>
         private int lastCooldownSeconds = -1;
+        private RectTransform rectTransform;
+        private Vector3 baseScale = Vector3.one;
+        private Color baseIconColor = Color.white;
+        private Coroutine castPulseRoutine;
 
         /// <summary>
         /// 当前绑定的技能定义（只读）
         /// </summary>
         public SkillDefinition Skill => skill;
+
+        private void Awake()
+        {
+            rectTransform = transform as RectTransform;
+            if (rectTransform != null)
+            {
+                baseScale = rectTransform.localScale;
+            }
+
+            if (icon != null)
+            {
+                baseIconColor = icon.color;
+            }
+        }
 
         /// <summary>
         /// 绑定技能定义并初始化槽位显示。
@@ -54,6 +80,7 @@ namespace CombatSystem.UI
             skill = skillDef;
             cooldownDuration = 0f;
             lastCooldownSeconds = -1;
+            ResetCastPulseVisual();
 
             // 设置技能图标
             if (icon != null)
@@ -83,6 +110,22 @@ namespace CombatSystem.UI
 
             // 无技能时隐藏整个槽位
             gameObject.SetActive(skillDef != null);
+        }
+
+        public void PlayCastPulse()
+        {
+            if (!enableCastPulse || !isActiveAndEnabled)
+            {
+                return;
+            }
+
+            if (castPulseRoutine != null)
+            {
+                StopCoroutine(castPulseRoutine);
+                castPulseRoutine = null;
+            }
+
+            castPulseRoutine = StartCoroutine(PlayCastPulseRoutine());
         }
 
         /// <summary>
@@ -180,6 +223,64 @@ namespace CombatSystem.UI
 
                 cooldownText.enabled = true;
             }
+        }
+
+        private IEnumerator PlayCastPulseRoutine()
+        {
+            var duration = Mathf.Max(0.06f, castPulseDuration);
+            var half = duration * 0.5f;
+            var elapsed = 0f;
+            while (elapsed < half)
+            {
+                elapsed += GetPulseDeltaTime();
+                var t = Mathf.Clamp01(elapsed / half);
+                ApplyPulseVisual(t);
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < half)
+            {
+                elapsed += GetPulseDeltaTime();
+                var t = 1f - Mathf.Clamp01(elapsed / half);
+                ApplyPulseVisual(t);
+                yield return null;
+            }
+
+            ResetCastPulseVisual();
+            castPulseRoutine = null;
+        }
+
+        private void ApplyPulseVisual(float intensity)
+        {
+            if (rectTransform != null)
+            {
+                var targetScale = baseScale * Mathf.Max(1f, castPulseScale);
+                rectTransform.localScale = Vector3.LerpUnclamped(baseScale, targetScale, intensity);
+            }
+
+            if (icon != null)
+            {
+                icon.color = Color.Lerp(baseIconColor, castPulseTint, intensity);
+            }
+        }
+
+        private void ResetCastPulseVisual()
+        {
+            if (rectTransform != null)
+            {
+                rectTransform.localScale = baseScale;
+            }
+
+            if (icon != null)
+            {
+                icon.color = baseIconColor;
+            }
+        }
+
+        private float GetPulseDeltaTime()
+        {
+            return pulseUseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
         }
     }
 }

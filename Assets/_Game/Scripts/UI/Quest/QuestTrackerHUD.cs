@@ -1,6 +1,7 @@
 using System.Text;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,16 +26,32 @@ namespace CombatSystem.UI
         [SerializeField] private bool hideWhenNoActiveQuest = true;
         [SerializeField] private string emptyTitle = "Quest";
         [SerializeField] private string emptyContent = "No active quest.";
+        [SerializeField] private bool animateOnQuestChanged = true;
+        [SerializeField] private float changePulseScale = 1.035f;
+        [SerializeField] private float changePulseDuration = 0.18f;
+        [SerializeField] private bool pulseUseUnscaledTime = true;
 
         private CanvasGroup canvasGroup;
         private bool subscribed;
         private readonly StringBuilder builder = new StringBuilder(256);
+        private RectTransform rectTransform;
+        private Vector3 baseScale = Vector3.one;
+        private Coroutine pulseRoutine;
 
         private void OnEnable()
         {
             if (canvasGroup == null)
             {
                 canvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (rectTransform == null)
+            {
+                rectTransform = transform as RectTransform;
+                if (rectTransform != null)
+                {
+                    baseScale = rectTransform.localScale;
+                }
             }
 
             ResolveReferences();
@@ -110,6 +127,7 @@ namespace CombatSystem.UI
         private void HandleQuestChanged()
         {
             Refresh();
+            PlayChangePulse();
         }
 
         private void ResolveReferences()
@@ -340,6 +358,68 @@ namespace CombatSystem.UI
             canvasGroup.alpha = visible ? 1f : 0f;
             canvasGroup.interactable = visible;
             canvasGroup.blocksRaycasts = visible;
+        }
+
+        private void PlayChangePulse()
+        {
+            if (!animateOnQuestChanged || !isActiveAndEnabled || rectTransform == null)
+            {
+                return;
+            }
+
+            if (pulseRoutine != null)
+            {
+                StopCoroutine(pulseRoutine);
+                pulseRoutine = null;
+            }
+
+            pulseRoutine = StartCoroutine(PlayChangePulseRoutine());
+        }
+
+        private IEnumerator PlayChangePulseRoutine()
+        {
+            var duration = Mathf.Max(0.08f, changePulseDuration);
+            var half = duration * 0.5f;
+            var elapsed = 0f;
+            while (elapsed < half)
+            {
+                elapsed += GetPulseDeltaTime();
+                var t = Mathf.Clamp01(elapsed / half);
+                ApplyPulseScale(t);
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < half)
+            {
+                elapsed += GetPulseDeltaTime();
+                var t = 1f - Mathf.Clamp01(elapsed / half);
+                ApplyPulseScale(t);
+                yield return null;
+            }
+
+            if (rectTransform != null)
+            {
+                rectTransform.localScale = baseScale;
+            }
+
+            pulseRoutine = null;
+        }
+
+        private void ApplyPulseScale(float intensity)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            var targetScale = baseScale * Mathf.Max(1f, changePulseScale);
+            rectTransform.localScale = Vector3.LerpUnclamped(baseScale, targetScale, intensity);
+        }
+
+        private float GetPulseDeltaTime()
+        {
+            return pulseUseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
         }
     }
 }

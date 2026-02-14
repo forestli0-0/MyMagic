@@ -97,6 +97,26 @@ namespace CombatSystem.UI
             }
         }
 
+        public void PlaySkillCastPulse(SkillDefinition castedSkill)
+        {
+            if (castedSkill == null || slots == null || slots.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || slot.Skill != castedSkill)
+                {
+                    continue;
+                }
+
+                slot.PlayCastPulse();
+                return;
+            }
+        }
+
         private void Update()
         {
             if (cooldown == null || slots.Count == 0)

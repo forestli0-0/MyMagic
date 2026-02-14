@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace CombatSystem.Gameplay
@@ -9,6 +10,24 @@ namespace CombatSystem.Gameplay
     [RequireComponent(typeof(Collider))]
     public class LootPickup : MonoBehaviour
     {
+        public readonly struct PickupEvent
+        {
+            public readonly GameObject Picker;
+            public readonly bool IsCurrency;
+            public readonly int Amount;
+            public readonly string Label;
+
+            public PickupEvent(GameObject picker, bool isCurrency, int amount, string label)
+            {
+                Picker = picker;
+                IsCurrency = isCurrency;
+                Amount = Mathf.Max(0, amount);
+                Label = label;
+            }
+        }
+
+        public static event Action<PickupEvent> PickedUp;
+
         [Header("Settings")]
         [Tooltip("玩家标签，用于识别拾取者")]
         [SerializeField] private string playerTag = "Player";
@@ -79,7 +98,9 @@ namespace CombatSystem.Gameplay
                     return false;
                 }
 
+                var amount = currency;
                 wallet.Add(currency);
+                PickedUp?.Invoke(new PickupEvent(picker, true, amount, "Gold"));
                 Consume();
                 return true;
             }
@@ -104,6 +125,9 @@ namespace CombatSystem.Gameplay
                     QuestTracker.Instance.NotifyItemCollected(item.Definition, item.Stack);
                 }
 
+                var itemLabel = ResolveItemLabel(item);
+                var amount = item.Stack;
+                PickedUp?.Invoke(new PickupEvent(picker, false, amount, itemLabel));
                 Consume();
                 return true;
             }
@@ -120,6 +144,26 @@ namespace CombatSystem.Gameplay
             currency = 0;
             initialized = false;
             Destroy(gameObject);
+        }
+
+        private static string ResolveItemLabel(ItemInstance instance)
+        {
+            if (instance == null || instance.Definition == null)
+            {
+                return "Item";
+            }
+
+            if (!string.IsNullOrWhiteSpace(instance.Definition.DisplayName))
+            {
+                return instance.Definition.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(instance.Definition.Id))
+            {
+                return instance.Definition.Id;
+            }
+
+            return "Item";
         }
     }
 }

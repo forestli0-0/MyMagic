@@ -41,6 +41,7 @@ namespace CombatSystem.UI
 
         private void Awake()
         {
+            EnsureCanvasGroup();
             // 初始化时隐藏施法条
             Hide();
         }
@@ -150,14 +151,30 @@ namespace CombatSystem.UI
         /// <param name="visible">是否可见</param>
         private void SetVisible(bool visible)
         {
+            EnsureCanvasGroup();
+
             if (canvasGroup != null)
             {
                 canvasGroup.alpha = visible ? 1f : 0f;
+                canvasGroup.interactable = visible;
                 canvasGroup.blocksRaycasts = visible;
             }
             else
             {
                 gameObject.SetActive(visible);
+            }
+        }
+
+        private void EnsureCanvasGroup()
+        {
+            if (canvasGroup == null)
+            {
+                canvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (canvasGroup == null)
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
         }
     }
