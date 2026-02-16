@@ -17,6 +17,8 @@
 - UI 系统骨架（UIRoot + Screen/Modal/HUD/Overlay 层级）
 - 战斗 HUD（血条/蓝条/技能栏/BUFF/施法条/战斗日志/飘字/调试面板）
 - 暂停菜单、设置、存档选择与继续流程
+- Day7 反馈增强（命中闪白/命中音/镜头轻抖、任务与拾取提示、技能栏施法脉冲）
+- Day7 性能烟测（Field/Boss 场景 PlayMode 基线采样）
 
 ## 当前目标与路线
 与 `Project_Context.md` 中阶段对齐：
@@ -32,3 +34,4 @@
 - Day4（掉落与商店）: `Docs/Milestones/Day4_Milestone.md`
 - Day5（任务系统）: `Docs/Milestones/Day5_Milestone.md`
 - Day6（敌人生态与 Boss）: `Docs/Milestones/Day6_Milestone.md`
+- Day7（体验与收尾）: `Docs/Milestones/Day7_Milestone.md`

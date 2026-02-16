@@ -148,9 +148,9 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 
 **Day 7: 体验与收尾**
 - [x] 关键战斗反馈（打击音/命中特效/镜头轻微抖动）
-- [ ] UI 动效（技能/掉落/任务更新提示）
-- [ ] 性能检查（池化、避免 Update GC）
-- [ ] Bug 修复 + 文档补齐（README/操作说明）
+- [x] UI 动效（技能/掉落/任务更新提示）
+- [x] 性能检查（池化、避免 Update GC）
+- [x] Bug 修复 + 文档补齐（README/操作说明）
 - [ ] 录制演示视频脚本与流程
 
 ### 8.3 美术与表现任务清单（跨越绘画）
@@ -180,14 +180,17 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 已新增：Day5 任务系统链路（QuestDefinition/QuestTracker/QuestGiverTrigger/QuestObjectiveTrigger/QuestJournal+QuestGiver UI）
 - 已新增：Day6 敌人生态与 Boss 机制（EncounterDefinition/EnemyAffixDefinition/EncounterDirector/BossSkillScheduler）
 - 已新增：Day7 战斗反馈（DamageApplied 事件链 / HitFlashReceiver / CombatFeedbackController / CameraShakeController）
+- 已新增：Day7 UI 动效反馈（HudToastOverlay / QuestTrackerHUD 脉冲 / SkillSlotUI 施法脉冲 / LootPickup 提示事件）
+- 已新增：Day7 性能烟测（Day7PerformanceSmokeTests，Field/Boss 基线采样日志）
 - 已修复：主菜单返回流程/Continue 进入场景卡住问题（UI/HUD/TimeScale）
 - 已修复：存档加载物品与装备（GameDatabase items 索引补齐）
+- 已修复：CastBar 未施法常驻显示（`Heal` 条常显）问题
 - 现有场景：`Assets/Scenes/MainMenu.unity`、`Assets/Scenes/Town.unity`、`Assets/Scenes/Field.unity`、`Assets/Scenes/Boss.unity`
 - 存档范围：位置/血量/资源/场景名 + 出生点 Id + 等级/经验/属性点 + 背包/装备
-- 自动化验证：Day4/Day5/Day6 PlayMode 测试已建立并通过
+- 自动化验证：Day4/Day5/Day6 PlayMode 测试 + Day7 性能烟测已建立并通过
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- Day 7: 体验与收尾（反馈表现、性能与文档收敛）
+- Day 7: 录制演示视频脚本与流程（剩余收尾项）
 
 ### 9.3 待确认/风险
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）
