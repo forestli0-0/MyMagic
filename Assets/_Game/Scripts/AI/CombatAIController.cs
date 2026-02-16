@@ -58,6 +58,18 @@ namespace CombatSystem.AI
         [SerializeField] private float attackRangeBuffer = 0.25f;
         [Tooltip("转向速度（度/秒）")]
         [SerializeField] private float turnSpeed = 720f;
+        [Tooltip("是否在目标周围分散站位，避免同点挤压玩家")]
+        [SerializeField] private bool spreadAroundTarget = true;
+        [Tooltip("分散站位额外半径")]
+        [SerializeField] private float surroundRadiusOffset = 0.45f;
+        [Tooltip("同一目标允许近身的最大敌人数")]
+        [SerializeField] private int maxCloseAttackers = 3;
+        [Tooltip("超出近身人数后，每层外圈增加的半径")]
+        [SerializeField] private float queuedRingSpacing = 0.9f;
+        [Tooltip("敌人之间分离检测半径")]
+        [SerializeField] private float separationRadius = 1.2f;
+        [Tooltip("分离强度，值越大越不容易挤在一起")]
+        [SerializeField] private float separationStrength = 0.6f;
 
         [Header("撤退机制")]
         [Tooltip("是否启用撤退机制")]
@@ -78,6 +90,9 @@ namespace CombatSystem.AI
         private float nextThinkTime;
         // 目标搜索缓冲区（避免 GC）
         private Collider[] overlapBuffer;
+        // 围攻排队/分离缓冲区（避免 GC）
+        private Collider[] crowdBuffer;
+        private int[] crowdIdBuffer;
         // 当前锁定目标
         private CombatTarget currentTarget;
         // 是否有有效目标
@@ -458,11 +473,14 @@ namespace CombatSystem.AI
                 return;
             }
 
-            var destination = currentTarget.Transform.position;
+            var desiredStopDistance = selectedSkill != null
+                ? Mathf.Max(stoppingDistance, selectedMinRange)
+                : stoppingDistance;
+            var destination = ResolveApproachDestination(currentTarget.Transform.position, desiredStopDistance);
             if (useNavMesh && navAgent != null)
             {
                 navAgent.speed = movement != null ? movement.MoveSpeed : 3.5f;
-                navAgent.stoppingDistance = Mathf.Max(stoppingDistance, selectedMinRange);
+                navAgent.stoppingDistance = spreadAroundTarget ? 0.08f : desiredStopDistance;
                 navAgent.isStopped = false;
                 navAgent.SetDestination(destination);
 
@@ -479,13 +497,211 @@ namespace CombatSystem.AI
                 return;
             }
 
-            var stopDistance = stoppingDistance;
-            if (selectedSkill != null)
+            var stopDistance = spreadAroundTarget ? 0.08f : desiredStopDistance;
+            MoveDirectly(destination, stopDistance);
+        }
+
+        private Vector3 ResolveApproachDestination(Vector3 targetPosition, float desiredStopDistance)
+        {
+            if (!spreadAroundTarget || desiredStopDistance <= 0f || currentTarget.Transform == null)
             {
-                stopDistance = Mathf.Max(stopDistance, selectedMinRange);
+                return targetPosition;
             }
 
-            MoveDirectly(destination, stopDistance);
+            var ringRadius = Mathf.Max(0.75f, desiredStopDistance + Mathf.Max(0f, surroundRadiusOffset));
+            var outerRing = GetQueueRingDepth(currentTarget.Transform, ringRadius);
+            if (outerRing > 0)
+            {
+                ringRadius += outerRing * Mathf.Max(0.1f, queuedRingSpacing);
+            }
+
+            var radial = transform.position - targetPosition;
+            radial.y = 0f;
+            if (radial.sqrMagnitude <= 0.0001f)
+            {
+                radial = GetFallbackRadial();
+            }
+            else
+            {
+                radial.Normalize();
+            }
+
+            var tangent = Vector3.Cross(Vector3.up, radial);
+            var dir = radial + tangent * (GetStableSlotBias() * 0.6f);
+
+            var separation = ComputeSeparationOffset();
+            if (separation.sqrMagnitude > 0.0001f)
+            {
+                dir += separation * Mathf.Max(0f, separationStrength);
+            }
+
+            dir.y = 0f;
+            if (dir.sqrMagnitude <= 0.0001f)
+            {
+                dir = radial;
+            }
+
+            dir.Normalize();
+            return targetPosition + dir * ringRadius;
+        }
+
+        private int GetQueueRingDepth(Transform target, float baseRingRadius)
+        {
+            if (maxCloseAttackers <= 0 || target == null || crowdBuffer == null)
+            {
+                return 0;
+            }
+
+            var scanRadius = Mathf.Max(baseRingRadius + queuedRingSpacing * 3f, 4f);
+            var count = Physics.OverlapSphereNonAlloc(target.position, scanRadius, crowdBuffer, targetLayers);
+            var myId = GetInstanceID();
+            var seenCount = 0;
+            var rank = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var collider = crowdBuffer[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                var ally = collider.GetComponentInParent<CombatAIController>();
+                if (ally == null || ally == this || !ally.hasTarget || ally.currentTarget.Transform != target)
+                {
+                    continue;
+                }
+
+                if (!IsAlly(ally))
+                {
+                    continue;
+                }
+
+                if (!TryRegisterCrowdId(ally.GetInstanceID(), ref seenCount))
+                {
+                    continue;
+                }
+
+                if (ally.GetInstanceID() < myId)
+                {
+                    rank++;
+                }
+            }
+
+            if (rank < maxCloseAttackers)
+            {
+                return 0;
+            }
+
+            return rank - maxCloseAttackers + 1;
+        }
+
+        private Vector3 ComputeSeparationOffset()
+        {
+            if (separationRadius <= 0f || crowdBuffer == null)
+            {
+                return Vector3.zero;
+            }
+
+            var count = Physics.OverlapSphereNonAlloc(transform.position, separationRadius, crowdBuffer, targetLayers);
+            if (count <= 0)
+            {
+                return Vector3.zero;
+            }
+
+            var accumulated = Vector3.zero;
+            var seenCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var collider = crowdBuffer[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                var ally = collider.GetComponentInParent<CombatAIController>();
+                if (ally == null || ally == this || !IsAlly(ally))
+                {
+                    continue;
+                }
+
+                if (!TryRegisterCrowdId(ally.GetInstanceID(), ref seenCount))
+                {
+                    continue;
+                }
+
+                var delta = transform.position - ally.transform.position;
+                delta.y = 0f;
+                var sqrMag = delta.sqrMagnitude;
+                if (sqrMag <= 0.0001f)
+                {
+                    continue;
+                }
+
+                accumulated += delta.normalized * (1f / (1f + sqrMag));
+            }
+
+            if (accumulated.sqrMagnitude <= 0.0001f)
+            {
+                return Vector3.zero;
+            }
+
+            return accumulated.normalized;
+        }
+
+        private Vector3 GetFallbackRadial()
+        {
+            var angle = Mathf.Abs(GetInstanceID() % 360);
+            return Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+        }
+
+        private float GetStableSlotBias()
+        {
+            unchecked
+            {
+                var hash = GetInstanceID() * 1103515245 + 12345;
+                var normalized = (hash & 0x7fffffff) / (float)int.MaxValue;
+                return Mathf.Lerp(-1f, 1f, normalized);
+            }
+        }
+
+        private bool IsAlly(CombatAIController other)
+        {
+            if (other == null)
+            {
+                return false;
+            }
+
+            if (team == null || other.team == null)
+            {
+                return true;
+            }
+
+            return team.IsSameTeam(other.team);
+        }
+
+        private bool TryRegisterCrowdId(int id, ref int count)
+        {
+            if (crowdIdBuffer == null || crowdIdBuffer.Length == 0)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (crowdIdBuffer[i] == id)
+                {
+                    return false;
+                }
+            }
+
+            if (count < crowdIdBuffer.Length)
+            {
+                crowdIdBuffer[count] = id;
+                count++;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -930,6 +1146,17 @@ namespace CombatSystem.AI
             if (overlapBuffer == null || overlapBuffer.Length != size)
             {
                 overlapBuffer = new Collider[size];
+            }
+
+            if (crowdBuffer == null || crowdBuffer.Length != size)
+            {
+                crowdBuffer = new Collider[size];
+            }
+
+            var idSize = Mathf.Max(8, size * 2);
+            if (crowdIdBuffer == null || crowdIdBuffer.Length != idSize)
+            {
+                crowdIdBuffer = new int[idSize];
             }
         }
 

@@ -2,7 +2,7 @@
 
 Date: 2026-02-16
 Phase: Phase F (反馈与体验)
-Status: In Progress (4/5 Completed)
+Status: Completed
 
 ## Scope
 - 关键战斗反馈（打击音/命中特效/镜头轻微抖动）
@@ -28,6 +28,8 @@ Status: In Progress (4/5 Completed)
 - 文档更新：
   - `Project_Context.md`
   - `README.md`
+- 演示脚本与流程：
+  - `Docs/Demo/Day7_Demo_Script.md`
 
 ## Validation
 - PlayMode 性能烟测（CLI）：
@@ -46,8 +48,5 @@ Status: In Progress (4/5 Completed)
 - 本轮性能数据用于逻辑侧基线评估；由于场景资源仍以基础几何体为主，GPU 压力不具有最终代表性。
 - `-runTests` 建议不额外加 `-quit`，以确保测试结果 XML 稳定落盘。
 
-## Remaining
-- 完成 Day7 最后一项：演示视频脚本与流程整理（10-15 分钟通关展示）。
-
 ## Next
-- 进入演示流程编排：主菜单 -> Town -> 任务推进 -> Field 遭遇 -> Boss -> 回城 -> Continue 验证。
+- 进入 MVP 验收走查：主菜单到 Boss 全流程、任务领奖、存档恢复、10-15 分钟可通关。

@@ -123,7 +123,70 @@ namespace CombatSystem.Tests
             UnityEngine.Object.DestroyImmediate(database);
         }
 
-        private static ScriptableObject BuildQuestDefinition(string questId, bool requireTurnIn, int rewardCurrency, int requiredObjectiveCount)
+        [Test]
+        public void QuestTracker_CollectObjective_AdvancesOnCurrencyLootPickup()
+        {
+            var databaseType = GetRuntimeType("CombatSystem.Data.GameDatabase");
+            var questType = GetRuntimeType("CombatSystem.Data.QuestDefinition");
+            var trackerType = GetRuntimeType("CombatSystem.Gameplay.QuestTracker");
+            var inventoryType = GetRuntimeType("CombatSystem.Gameplay.InventoryComponent");
+            var currencyType = GetRuntimeType("CombatSystem.Gameplay.CurrencyComponent");
+            var lootPickupType = GetRuntimeType("CombatSystem.Gameplay.LootPickup");
+            var statusType = GetRuntimeType("CombatSystem.Gameplay.QuestStatus");
+
+            if (databaseType == null || questType == null || trackerType == null || inventoryType == null || currencyType == null || lootPickupType == null || statusType == null)
+            {
+                Assert.Ignore("Day5 loot/quest runtime types not found.");
+                return;
+            }
+
+            var database = ScriptableObject.CreateInstance(databaseType);
+            var quest = BuildQuestDefinition("Quest_Test_Collect", false, 0, 1, "CollectItem");
+            var questList = CreateList(questType, quest);
+            SetPrivateField(database, "quests", questList);
+            CallMethod(database, "BuildIndexes");
+
+            var player = new GameObject("QuestPlayer_Collect");
+            var inventory = player.AddComponent(inventoryType);
+            var currency = player.AddComponent(currencyType);
+            CallMethod(inventory, "Initialize");
+            CallMethod(currency, "Initialize");
+
+            var trackerGo = new GameObject("QuestTracker_Collect");
+            var tracker = trackerGo.AddComponent(trackerType);
+            SetPrivateField(tracker, "database", database);
+            SetPrivateField(tracker, "autoFindPlayer", false);
+            SetPrivateField(tracker, "playerInventory", inventory);
+            SetPrivateField(tracker, "playerCurrency", currency);
+            SetPrivateField(tracker, "playerProgression", null);
+
+            var questId = GetStringProperty(quest, "Id");
+            Assert.IsTrue(CallBoolMethod(tracker, "AcceptQuest", questId));
+
+            var pickupGo = new GameObject("LootPickup_Collect");
+            pickupGo.AddComponent<SphereCollider>().isTrigger = true;
+            var pickup = pickupGo.AddComponent(lootPickupType);
+            CallMethod(pickup, "Initialize", null, 10);
+            Assert.IsTrue(CallBoolMethod(pickup, "TryPickup", player));
+
+            var state = CallMethod(tracker, "GetState", questId);
+            Assert.NotNull(state);
+            Assert.AreEqual(1, (int)CallMethod(state, "GetObjectiveProgress", 0));
+            Assert.AreEqual(Enum.Parse(statusType, "Completed"), GetPropertyValue(state, "Status"));
+
+            UnityEngine.Object.DestroyImmediate(trackerGo);
+            UnityEngine.Object.DestroyImmediate(player);
+            UnityEngine.Object.DestroyImmediate(quest);
+            UnityEngine.Object.DestroyImmediate(database);
+        }
+
+        private static ScriptableObject BuildQuestDefinition(
+            string questId,
+            bool requireTurnIn,
+            int rewardCurrency,
+            int requiredObjectiveCount,
+            string objectiveTypeName = "Trigger",
+            string targetId = "")
         {
             var questType = GetRuntimeType("CombatSystem.Data.QuestDefinition");
             var objectiveType = GetRuntimeType("CombatSystem.Data.QuestObjectiveDefinition");
@@ -151,8 +214,8 @@ namespace CombatSystem.Tests
                 var objective = Activator.CreateInstance(objectiveType);
                 SetPrivateField(objective, "objectiveId", $"objective_{i}");
                 SetPrivateField(objective, "description", $"Objective {i}");
-                SetPrivateField(objective, "objectiveType", Enum.Parse(objectiveEnumType, "Trigger"));
-                SetPrivateField(objective, "targetId", string.Empty);
+                SetPrivateField(objective, "objectiveType", Enum.Parse(objectiveEnumType, objectiveTypeName));
+                SetPrivateField(objective, "targetId", targetId ?? string.Empty);
                 SetPrivateField(objective, "requiredAmount", 1);
                 SetPrivateField(objective, "optional", false);
                 SetPrivateField(objective, "hiddenUntilProgress", false);

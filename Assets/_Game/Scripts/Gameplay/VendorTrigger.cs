@@ -60,8 +60,34 @@ namespace CombatSystem.Gameplay
             var keyControl = keyboard[interactKey];
             if (keyControl != null && keyControl.wasPressedThisFrame)
             {
-                OpenVendor();
+                TryOpenVendor();
             }
+        }
+
+        public bool TryOpenVendor()
+        {
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>();
+            }
+
+            if (vendorScreen == null)
+            {
+                vendorScreen = FindFirstObjectByType<VendorScreen>(FindObjectsInactive.Include);
+            }
+
+            if (uiManager == null || vendorScreen == null)
+            {
+                return false;
+            }
+
+            if (uiManager.CurrentScreen == vendorScreen)
+            {
+                return true;
+            }
+
+            uiManager.PushScreen(vendorScreen);
+            return true;
         }
 
         private bool IsPlayer(Component other)
@@ -81,27 +107,7 @@ namespace CombatSystem.Gameplay
 
         private void OpenVendor()
         {
-            if (uiManager == null)
-            {
-                uiManager = FindFirstObjectByType<UIManager>();
-            }
-
-            if (vendorScreen == null)
-            {
-                vendorScreen = FindFirstObjectByType<VendorScreen>();
-            }
-
-            if (uiManager == null || vendorScreen == null)
-            {
-                return;
-            }
-
-            if (uiManager.CurrentScreen == vendorScreen)
-            {
-                return;
-            }
-
-            uiManager.PushScreen(vendorScreen);
+            TryOpenVendor();
         }
 
         private void CloseVendor()

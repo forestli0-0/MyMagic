@@ -249,6 +249,10 @@ namespace CombatSystem.Gameplay
             if (questModal == null)
             {
                 questModal = FindFirstObjectByType<QuestGiverModal>(FindObjectsInactive.Include);
+                if (questModal == null && uiManager != null)
+                {
+                    questModal = QuestGiverModal.EnsureRuntimeModal(uiManager);
+                }
             }
         }
 

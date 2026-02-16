@@ -1374,6 +1374,9 @@ namespace CombatSystem.Editor
             var primaryButtonText = primaryButton.GetComponentInChildren<Text>();
             SetLayoutSize(primaryButton.gameObject, 48f, 220f);
 
+            var tradeButton = CreateButton(buttonsRow.transform, "交易", sprite, font);
+            SetLayoutSize(tradeButton.gameObject, 48f, 180f);
+
             var closeButton = CreateButton(buttonsRow.transform, "关闭", sprite, font);
             SetLayoutSize(closeButton.gameObject, 48f, 180f);
 
@@ -1385,6 +1388,7 @@ namespace CombatSystem.Editor
             SetSerialized(modal, "feedbackText", feedbackText);
             SetSerialized(modal, "primaryButton", primaryButton);
             SetSerialized(modal, "primaryButtonText", primaryButtonText);
+            SetSerialized(modal, "tradeButton", tradeButton);
             SetSerialized(modal, "closeButton", closeButton);
         }
 

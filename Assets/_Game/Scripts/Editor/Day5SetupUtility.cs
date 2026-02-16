@@ -3,6 +3,7 @@ using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using CombatSystem.UI;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -338,8 +339,14 @@ namespace CombatSystem.EditorTools
             }
 
             var serialized = new SerializedObject(giver);
-            var uiManager = Object.FindFirstObjectByType<UIManager>();
-            var questModal = Object.FindFirstObjectByType<QuestGiverModal>(FindObjectsInactive.Include);
+            var uiRoot = Object.FindFirstObjectByType<UIRoot>(FindObjectsInactive.Include);
+            var uiManager = Object.FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
+            if (uiManager == null && uiRoot != null)
+            {
+                uiManager = uiRoot.Manager;
+            }
+
+            var questModal = EnsureQuestGiverModal(uiRoot, uiManager);
             serialized.FindProperty("quest").objectReferenceValue = mainQuest;
             serialized.FindProperty("questTracker").objectReferenceValue = tracker;
             serialized.FindProperty("autoAcceptOnEnter").boolValue = false;
@@ -354,6 +361,224 @@ namespace CombatSystem.EditorTools
             serialized.FindProperty("objectiveTargetId").stringValue = "vendor_talk";
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(giver);
+
+            var vendorTriggerOnNpc = target.GetComponent<VendorTrigger>();
+            if (vendorTriggerOnNpc != null)
+            {
+                var vendorSerialized = new SerializedObject(vendorTriggerOnNpc);
+                var allowInteractProp = vendorSerialized.FindProperty("allowInteractKeyOpen");
+                if (allowInteractProp != null)
+                {
+                    allowInteractProp.boolValue = false;
+                }
+
+                vendorSerialized.ApplyModifiedProperties();
+                EditorUtility.SetDirty(vendorTriggerOnNpc);
+            }
+        }
+
+        private static QuestGiverModal EnsureQuestGiverModal(UIRoot uiRoot, UIManager uiManager)
+        {
+            var modal = Object.FindFirstObjectByType<QuestGiverModal>(FindObjectsInactive.Include);
+            if (modal == null)
+            {
+                if (uiRoot == null || uiRoot.ModalCanvas == null)
+                {
+                    Debug.LogWarning("[Day5] QuestGiverModal missing and ModalCanvas not found.");
+                    return null;
+                }
+
+                modal = CreateQuestGiverModal(uiRoot.ModalCanvas.transform);
+            }
+
+            if (modal != null)
+            {
+                var serialized = new SerializedObject(modal);
+                serialized.FindProperty("uiManager").objectReferenceValue = uiManager;
+                serialized.ApplyModifiedProperties();
+                EditorUtility.SetDirty(modal);
+            }
+
+            return modal;
+        }
+
+        private static QuestGiverModal CreateQuestGiverModal(Transform modalRoot)
+        {
+            if (modalRoot == null)
+            {
+                return null;
+            }
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var modalGo = new GameObject("QuestGiverModal", typeof(RectTransform), typeof(CanvasGroup), typeof(QuestGiverModal));
+            var modalRect = modalGo.GetComponent<RectTransform>();
+            modalRect.SetParent(modalRoot, false);
+            StretchRect(modalRect);
+
+            var modal = modalGo.GetComponent<QuestGiverModal>();
+            var canvasGroup = modalGo.GetComponent<CanvasGroup>();
+
+            var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image), typeof(Button));
+            var backdropRect = backdrop.GetComponent<RectTransform>();
+            backdropRect.SetParent(modalGo.transform, false);
+            StretchRect(backdropRect);
+            var backdropImage = backdrop.GetComponent<Image>();
+            backdropImage.color = new Color(0f, 0f, 0f, 0.72f);
+            var backdropButton = backdrop.GetComponent<Button>();
+            backdropButton.targetGraphic = backdropImage;
+            UnityEventTools.AddPersistentListener(backdropButton.onClick, modal.HandleBackgroundClick);
+
+            var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
+            panel.transform.SetParent(modalGo.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panelRect.sizeDelta = new Vector2(760f, 560f);
+
+            var panelImage = panel.GetComponent<Image>();
+            panelImage.color = new Color(0.09f, 0.11f, 0.16f, 0.97f);
+
+            var panelLayout = panel.GetComponent<VerticalLayoutGroup>();
+            panelLayout.padding = new RectOffset(16, 16, 16, 16);
+            panelLayout.spacing = 10f;
+            panelLayout.childAlignment = TextAnchor.UpperLeft;
+            panelLayout.childControlWidth = true;
+            panelLayout.childControlHeight = true;
+            panelLayout.childForceExpandHeight = false;
+            panelLayout.childForceExpandWidth = true;
+
+            var titleText = CreateModalText(panel.transform, "Title", font, 28, TextAnchor.MiddleLeft, Color.white, 42f);
+            titleText.text = "任务";
+
+            var summaryText = CreateModalText(panel.transform, "Summary", font, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.9f, 0.92f, 1f), 72f);
+            summaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            summaryText.verticalOverflow = VerticalWrapMode.Overflow;
+
+            var statusText = CreateModalText(panel.transform, "Status", font, 16, TextAnchor.MiddleLeft, new Color(0.95f, 0.83f, 0.45f, 1f), 30f);
+
+            var objectivesText = CreateModalText(panel.transform, "Objectives", font, 16, TextAnchor.UpperLeft, Color.white, 220f);
+            objectivesText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            objectivesText.verticalOverflow = VerticalWrapMode.Overflow;
+            var objectivesLayout = objectivesText.GetComponent<LayoutElement>();
+            objectivesLayout.flexibleHeight = 1f;
+
+            var rewardText = CreateModalText(panel.transform, "Reward", font, 15, TextAnchor.MiddleLeft, new Color(0.72f, 0.95f, 0.78f, 1f), 30f);
+            var feedbackText = CreateModalText(panel.transform, "Feedback", font, 15, TextAnchor.MiddleLeft, new Color(0.8f, 0.85f, 0.95f, 1f), 28f);
+
+            var buttonsRow = new GameObject("Buttons", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            buttonsRow.transform.SetParent(panel.transform, false);
+            var rowLayout = buttonsRow.GetComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 10f;
+            rowLayout.childAlignment = TextAnchor.MiddleRight;
+            rowLayout.childControlHeight = true;
+            rowLayout.childControlWidth = false;
+            rowLayout.childForceExpandHeight = false;
+            rowLayout.childForceExpandWidth = false;
+            var rowElement = buttonsRow.GetComponent<LayoutElement>();
+            rowElement.preferredHeight = 56f;
+
+            var primaryButton = CreateModalButton(buttonsRow.transform, "Button_Primary", "接取任务", font, 220f);
+            var primaryButtonText = primaryButton.GetComponentInChildren<Text>(true);
+            var tradeButton = CreateModalButton(buttonsRow.transform, "Button_Trade", "交易", font, 180f);
+            var closeButton = CreateModalButton(buttonsRow.transform, "Button_Close", "暂不接取", font, 180f);
+
+            var serialized = new SerializedObject(modal);
+            serialized.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            serialized.FindProperty("titleText").objectReferenceValue = titleText;
+            serialized.FindProperty("summaryText").objectReferenceValue = summaryText;
+            serialized.FindProperty("statusText").objectReferenceValue = statusText;
+            serialized.FindProperty("objectivesText").objectReferenceValue = objectivesText;
+            serialized.FindProperty("rewardText").objectReferenceValue = rewardText;
+            serialized.FindProperty("feedbackText").objectReferenceValue = feedbackText;
+            serialized.FindProperty("primaryButton").objectReferenceValue = primaryButton;
+            serialized.FindProperty("primaryButtonText").objectReferenceValue = primaryButtonText;
+            serialized.FindProperty("tradeButton").objectReferenceValue = tradeButton;
+            serialized.FindProperty("closeButton").objectReferenceValue = closeButton;
+            serialized.ApplyModifiedProperties();
+
+            modalGo.SetActive(false);
+            EditorUtility.SetDirty(modal);
+            return modal;
+        }
+
+        private static Text CreateModalText(
+            Transform parent,
+            string name,
+            Font font,
+            int fontSize,
+            TextAnchor alignment,
+            Color color,
+            float preferredHeight)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Text), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+
+            var text = go.GetComponent<Text>();
+            text.font = font;
+            text.text = string.Empty;
+            text.fontSize = fontSize;
+            text.fontStyle = FontStyle.Normal;
+            text.color = color;
+            text.alignment = alignment;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.raycastTarget = false;
+
+            var layout = go.GetComponent<LayoutElement>();
+            layout.preferredHeight = preferredHeight;
+            return text;
+        }
+
+        private static Button CreateModalButton(Transform parent, string name, string label, Font font, float preferredWidth)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+
+            var image = go.GetComponent<Image>();
+            image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.21f, 0.25f, 0.34f, 1f);
+
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = image;
+
+            var layout = go.GetComponent<LayoutElement>();
+            layout.preferredWidth = preferredWidth;
+            layout.minWidth = Mathf.Max(120f, preferredWidth - 20f);
+            layout.preferredHeight = 48f;
+
+            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
+            var labelRect = labelGo.GetComponent<RectTransform>();
+            labelRect.SetParent(go.transform, false);
+            StretchRect(labelRect);
+
+            var text = labelGo.GetComponent<Text>();
+            text.font = font;
+            text.text = label;
+            text.fontSize = 18;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
+
+            return button;
+        }
+
+        private static void StretchRect(RectTransform rect)
+        {
+            if (rect == null)
+            {
+                return;
+            }
+
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
         }
 
         private static Text CreateHudText(string name, Transform parent, string content, int fontSize, FontStyle style)

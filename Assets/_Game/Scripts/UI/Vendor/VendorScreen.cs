@@ -435,6 +435,7 @@ namespace CombatSystem.UI
                 return;
             }
 
+            PauseMenuHotkey.SuppressOpenForFrames();
             uiManager.PopScreen();
         }
 

@@ -35,3 +35,6 @@
 - Day5（任务系统）: `Docs/Milestones/Day5_Milestone.md`
 - Day6（敌人生态与 Boss）: `Docs/Milestones/Day6_Milestone.md`
 - Day7（体验与收尾）: `Docs/Milestones/Day7_Milestone.md`
+
+## 演示脚本
+- Day7 录制脚本（10-15 分钟）: `Docs/Demo/Day7_Demo_Script.md`

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
@@ -66,12 +67,25 @@ namespace CombatSystem.UI
 
         public void Back()
         {
+            EnsureReferences();
             if (uiManager == null)
             {
                 return;
             }
 
+            var current = uiManager.CurrentScreen;
             uiManager.PopScreen();
+
+            // 栈异常兜底：若未成功弹栈（例如 Journal 成为栈底），
+            // 直接切回一个 Gameplay 屏幕，避免“Back 看起来不可点击”。
+            if (uiManager.CurrentScreen == current)
+            {
+                var fallback = FindFallbackGameplayScreen();
+                if (fallback != null && fallback != this)
+                {
+                    uiManager.ShowScreen(fallback, true);
+                }
+            }
         }
 
         private void EnsureReferences()
@@ -98,6 +112,8 @@ namespace CombatSystem.UI
                     }
                 }
             }
+
+            ResolveBackButton();
         }
 
         private void Subscribe()
@@ -114,6 +130,7 @@ namespace CombatSystem.UI
 
             if (backButton != null)
             {
+                backButton.onClick.RemoveListener(Back);
                 backButton.onClick.AddListener(Back);
             }
 
@@ -138,6 +155,62 @@ namespace CombatSystem.UI
             }
 
             subscribed = false;
+        }
+
+        private void ResolveBackButton()
+        {
+            if (backButton != null)
+            {
+                return;
+            }
+
+            var buttons = GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                var button = buttons[i];
+                if (button == null)
+                {
+                    continue;
+                }
+
+                var name = button.gameObject.name;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                if (name.IndexOf("Back", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    backButton = button;
+                    break;
+                }
+            }
+        }
+
+        private UIScreenBase FindFallbackGameplayScreen()
+        {
+            var inGame = FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
+            if (inGame != null)
+            {
+                return inGame;
+            }
+
+            var screens = FindObjectsByType<UIScreenBase>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < screens.Length; i++)
+            {
+                var screen = screens[i];
+                if (screen == null || screen == this)
+                {
+                    continue;
+                }
+
+                if (screen.InputMode == UIInputMode.Gameplay)
+                {
+                    return screen;
+                }
+            }
+
+            return null;
         }
 
         private void HandleQuestListChanged()

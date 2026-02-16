@@ -151,7 +151,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - [x] UI 动效（技能/掉落/任务更新提示）
 - [x] 性能检查（池化、避免 Update GC）
 - [x] Bug 修复 + 文档补齐（README/操作说明）
-- [ ] 录制演示视频脚本与流程
+- [x] 录制演示视频脚本与流程
 
 ### 8.3 美术与表现任务清单（跨越绘画）
 - [ ] 确定视觉基调与调色板（Town/Field/Boss 各 1 套）
@@ -190,7 +190,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 自动化验证：Day4/Day5/Day6 PlayMode 测试 + Day7 性能烟测已建立并通过
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- Day 7: 录制演示视频脚本与流程（剩余收尾项）
+- Day7 已完成，下一步进入 MVP 验收走查（8.4 清单逐项打勾）
 
 ### 9.3 待确认/风险
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）

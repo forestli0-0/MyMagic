@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
@@ -9,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
@@ -23,6 +25,8 @@ namespace CombatSystem.EditorTools
         private const string GameDatabasePath = "Assets/_Game/ScriptableObjects/Database/GameDatabase.asset";
         private const string InputActionsPath = "Assets/_Game/Input/CombatInputActions.inputactions";
         private const string VendorSceneName = "Vendor";
+        private const string TownScenePath = "Assets/Scenes/Town.unity";
+        private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
 
         [MenuItem("Combat/Day4/Setup Assets (Loot/Vendor/Pickup)")]
         public static void SetupAssets()
@@ -109,6 +113,115 @@ namespace CombatSystem.EditorTools
                 return;
             }
 
+            SetupVendorNpcAndUiInActiveScene();
+        }
+
+        [MenuItem("Combat/Day4/Migrate Vendor Runtime To Town")]
+        public static void MigrateVendorRuntimeToTown()
+        {
+            SetupVendorRuntimeForScene(TownScenePath);
+            Selection.activeObject = null;
+            var removedCount = CleanupVendorRuntimeForScene(MainMenuScenePath);
+            if (File.Exists(TownScenePath))
+            {
+                var townScene = EditorSceneManager.OpenScene(TownScenePath, OpenSceneMode.Single);
+                SceneManager.SetActiveScene(townScene);
+            }
+
+            Selection.activeObject = null;
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"[Day4] Vendor runtime migration complete. Town updated, MainMenu removed roots: {removedCount}.");
+        }
+
+        private static void SetupVendorRuntimeForScene(string scenePath)
+        {
+            if (!File.Exists(scenePath))
+            {
+                Debug.LogWarning($"[Day4] Scene not found: {scenePath}");
+                return;
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            SceneManager.SetActiveScene(scene);
+
+            SetupVendorNpcAndUiInActiveScene();
+            Day5SetupUtility.SetupQuestRuntime();
+            if (Application.isBatchMode)
+            {
+                Selection.activeObject = null;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        private static int CleanupVendorRuntimeForScene(string scenePath)
+        {
+            if (!File.Exists(scenePath))
+            {
+                Debug.LogWarning($"[Day4] Scene not found: {scenePath}");
+                return 0;
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            SceneManager.SetActiveScene(scene);
+
+            var removed = RemoveVendorRuntimeRootsInActiveScene();
+            if (removed > 0)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+            }
+
+            return removed;
+        }
+
+        private static int RemoveVendorRuntimeRootsInActiveScene()
+        {
+            var roots = new HashSet<GameObject>();
+            CollectRootObjects<VendorService>(roots);
+            CollectRootObjects<VendorTrigger>(roots);
+            CollectRootObjects<VendorScreen>(roots);
+            CollectRootObjects<QuestTracker>(roots);
+            CollectRootObjects<QuestTrackerHUD>(roots);
+            CollectRootObjects<QuestGiverTrigger>(roots);
+
+            var removed = 0;
+            foreach (var root in roots)
+            {
+                if (root == null)
+                {
+                    continue;
+                }
+
+                Object.DestroyImmediate(root);
+                removed++;
+            }
+
+            return removed;
+        }
+
+        private static void CollectRootObjects<T>(HashSet<GameObject> roots) where T : Component
+        {
+            if (roots == null)
+            {
+                return;
+            }
+
+            var components = Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < components.Length; i++)
+            {
+                if (components[i] != null)
+                {
+                    roots.Add(components[i].gameObject);
+                }
+            }
+        }
+
+        private static void SetupVendorNpcAndUiInActiveScene()
+        {
             var vendor = AssetDatabase.LoadAssetAtPath<VendorDefinition>(VendorPath);
             if (vendor == null)
             {
@@ -120,7 +233,7 @@ namespace CombatSystem.EditorTools
             var vendorScreen = EnsureVendorScreen(vendorService, false);
             EnsureVendorNpc(vendorScreen);
 
-            if (vendorScreen != null)
+            if (!Application.isBatchMode && vendorScreen != null)
             {
                 Selection.activeObject = vendorScreen.gameObject;
             }
@@ -759,10 +872,12 @@ namespace CombatSystem.EditorTools
         private static void EnsureVendorNpc(VendorScreen vendorScreen)
         {
             var npc = GameObject.Find("VendorNPC");
+            var created = false;
             if (npc == null)
             {
                 npc = new GameObject("VendorNPC");
-                npc.transform.position = Vector3.zero;
+                npc.transform.position = new Vector3(2f, 0f, 1f);
+                created = true;
             }
 
             var collider = npc.GetComponent<SphereCollider>();
@@ -780,10 +895,54 @@ namespace CombatSystem.EditorTools
                 trigger = npc.AddComponent<VendorTrigger>();
             }
 
+            EnsureVendorNpcVisual(npc, created);
+
             var serialized = new SerializedObject(trigger);
             serialized.FindProperty("vendorScreen").objectReferenceValue = vendorScreen;
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(trigger);
+        }
+
+        private static void EnsureVendorNpcVisual(GameObject npc, bool created)
+        {
+            if (npc == null)
+            {
+                return;
+            }
+
+            var visual = npc.transform.Find("Visual");
+            if (visual == null)
+            {
+                var visualGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                visualGo.name = "Visual";
+                visualGo.transform.SetParent(npc.transform, false);
+                visualGo.transform.localPosition = new Vector3(0f, 1f, 0f);
+                visualGo.transform.localScale = new Vector3(0.9f, 1.1f, 0.9f);
+
+                var collider = visualGo.GetComponent<Collider>();
+                if (collider != null)
+                {
+                    Object.DestroyImmediate(collider);
+                }
+
+                visual = visualGo.transform;
+            }
+
+            if (visual != null && visual.localPosition.y < 0.2f)
+            {
+                visual.localPosition = new Vector3(visual.localPosition.x, 1f, visual.localPosition.z);
+            }
+
+            if (created)
+            {
+                var renderer = visual != null ? visual.GetComponent<Renderer>() : null;
+                if (renderer != null && renderer.sharedMaterial != null)
+                {
+                    var instanceMaterial = new Material(renderer.sharedMaterial);
+                    instanceMaterial.color = new Color(0.82f, 0.74f, 0.45f, 1f);
+                    renderer.sharedMaterial = instanceMaterial;
+                }
+            }
         }
 
         private static GameObject CreateUiPanel(string name, Transform parent, Vector2 size)

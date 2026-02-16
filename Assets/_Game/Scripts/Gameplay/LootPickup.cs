@@ -100,6 +100,13 @@ namespace CombatSystem.Gameplay
 
                 var amount = currency;
                 wallet.Add(currency);
+                var tracker = ResolveQuestTracker();
+                if (tracker != null)
+                {
+                    // 货币也属于战利品拾取，按 1 次推进通用收集目标。
+                    tracker.NotifyItemCollected(null, 1);
+                }
+
                 PickedUp?.Invoke(new PickupEvent(picker, true, amount, "Gold"));
                 Consume();
                 return true;
@@ -120,9 +127,10 @@ namespace CombatSystem.Gameplay
                     return false;
                 }
 
-                if (QuestTracker.Instance != null)
+                var tracker = ResolveQuestTracker();
+                if (tracker != null)
                 {
-                    QuestTracker.Instance.NotifyItemCollected(item.Definition, item.Stack);
+                    tracker.NotifyItemCollected(item.Definition, item.Stack);
                 }
 
                 var itemLabel = ResolveItemLabel(item);
@@ -133,6 +141,16 @@ namespace CombatSystem.Gameplay
             }
 
             return false;
+        }
+
+        private static QuestTracker ResolveQuestTracker()
+        {
+            if (QuestTracker.Instance != null)
+            {
+                return QuestTracker.Instance;
+            }
+
+            return FindFirstObjectByType<QuestTracker>();
         }
 
         /// <summary>

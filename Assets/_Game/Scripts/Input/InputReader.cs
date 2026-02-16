@@ -44,6 +44,10 @@ namespace CombatSystem.Input
         public Vector2 AimPoint { get; private set; }
         /// <summary>当前使用的输入动作资产</summary>
         public InputActionAsset Actions => actions;
+        /// <summary>最近一次 Pause 按键触发时的输入模式</summary>
+        public UIInputMode LastPauseInputMode { get; private set; } = UIInputMode.Gameplay;
+        /// <summary>最近一次在 UI 模式下触发 Pause 的时间（unscaled）</summary>
+        public float LastUiPauseTime { get; private set; } = float.NegativeInfinity;
 
         #endregion
 
@@ -438,6 +442,13 @@ namespace CombatSystem.Input
 
         private void HandlePause(InputAction.CallbackContext context)
         {
+            var mode = ResolveCurrentInputMode();
+            LastPauseInputMode = mode;
+            if (mode == UIInputMode.UI)
+            {
+                LastUiPauseTime = Time.unscaledTime;
+            }
+
             PausePerformed?.Invoke();
         }
 
@@ -461,6 +472,21 @@ namespace CombatSystem.Input
         private void HandleToggleOverlay(InputAction.CallbackContext context)
         {
             ToggleOverlay?.Invoke();
+        }
+
+        private UIInputMode ResolveCurrentInputMode()
+        {
+            if (uiManager != null)
+            {
+                return uiManager.CurrentInputMode;
+            }
+
+            if (uiMap != null && uiMap.enabled && (gameplayMap == null || !gameplayMap.enabled))
+            {
+                return UIInputMode.UI;
+            }
+
+            return UIInputMode.Gameplay;
         }
 
         #endregion

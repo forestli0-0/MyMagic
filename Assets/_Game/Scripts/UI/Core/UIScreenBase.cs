@@ -10,14 +10,17 @@ namespace CombatSystem.UI
 
         public UIInputMode InputMode => inputMode;
 
+        private void Awake()
+        {
+            EnsureCanvasGroup();
+        }
+
         internal void SetVisible(bool visible)
         {
-            if (canvasGroup != null)
-            {
-                canvasGroup.alpha = visible ? 1f : 0f;
-                canvasGroup.interactable = visible;
-                canvasGroup.blocksRaycasts = visible;
-            }
+            var group = EnsureCanvasGroup();
+            group.alpha = visible ? 1f : 0f;
+            group.interactable = visible;
+            group.blocksRaycasts = visible;
 
             gameObject.SetActive(visible);
         }
@@ -26,5 +29,20 @@ namespace CombatSystem.UI
         public virtual void OnExit() { }
         public virtual void OnFocus() { }
         public virtual void OnBlur() { }
+
+        private CanvasGroup EnsureCanvasGroup()
+        {
+            if (canvasGroup == null)
+            {
+                canvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            if (canvasGroup == null)
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            return canvasGroup;
+        }
     }
 }
