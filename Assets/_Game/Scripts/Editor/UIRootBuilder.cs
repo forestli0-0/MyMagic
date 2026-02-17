@@ -1286,6 +1286,12 @@ namespace CombatSystem.Editor
             var moveModeRow = CreateSettingRow(panel, "Move Mode", font, 40f);
             var moveModeDropdown = CreateDropdown(moveModeRow, resources);
 
+            var cameraModeRow = CreateSettingRow(panel, "Camera Mode", font, 40f);
+            var cameraModeDropdown = CreateDropdown(cameraModeRow, resources);
+
+            var edgePanRow = CreateSettingRow(panel, "Edge Pan", font, 36f);
+            var edgePanToggle = CreateToggle(edgePanRow, resources);
+
             var applyButton = CreateButton(panel, "Apply", sprite, font);
             UnityEventTools.AddPersistentListener(applyButton.onClick, screen.Apply);
 
@@ -1298,6 +1304,8 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "qualityDropdown", qualityDropdown);
             SetSerialized(screen, "fpsDropdown", fpsDropdown);
             SetSerialized(screen, "movementModeDropdown", moveModeDropdown);
+            SetSerialized(screen, "cameraModeDropdown", cameraModeDropdown);
+            SetSerialized(screen, "edgePanToggle", edgePanToggle);
             SetSerialized(screen, "applyButton", applyButton);
         }
 
@@ -1316,6 +1324,10 @@ namespace CombatSystem.Editor
 
             var moveModeRow = panel.Find("MoveMode_Row");
             Dropdown moveModeDropdown = null;
+            var cameraModeRow = panel.Find("CameraMode_Row");
+            Dropdown cameraModeDropdown = null;
+            var edgePanRow = panel.Find("EdgePan_Row");
+            Toggle edgePanToggle = null;
 
             if (moveModeRow == null)
             {
@@ -1334,9 +1346,53 @@ namespace CombatSystem.Editor
                 moveModeDropdown = moveModeRow.GetComponentInChildren<Dropdown>(true);
             }
 
+            if (cameraModeRow == null)
+            {
+                var resources = GetDefaultResources(sprite);
+                var row = CreateSettingRow(panel, "Camera Mode", font, 40f);
+                cameraModeDropdown = CreateDropdown(row, resources);
+
+                var moveRowForInsert = panel.Find("MoveMode_Row");
+                if (moveRowForInsert != null)
+                {
+                    row.SetSiblingIndex(moveRowForInsert.GetSiblingIndex() + 1);
+                }
+            }
+            else
+            {
+                cameraModeDropdown = cameraModeRow.GetComponentInChildren<Dropdown>(true);
+            }
+
+            if (edgePanRow == null)
+            {
+                var resources = GetDefaultResources(sprite);
+                var row = CreateSettingRow(panel, "Edge Pan", font, 36f);
+                edgePanToggle = CreateToggle(row, resources);
+
+                var cameraRowForInsert = panel.Find("CameraMode_Row");
+                if (cameraRowForInsert != null)
+                {
+                    row.SetSiblingIndex(cameraRowForInsert.GetSiblingIndex() + 1);
+                }
+            }
+            else
+            {
+                edgePanToggle = edgePanRow.GetComponentInChildren<Toggle>(true);
+            }
+
             if (moveModeDropdown != null)
             {
                 SetSerialized(screen, "movementModeDropdown", moveModeDropdown);
+            }
+
+            if (cameraModeDropdown != null)
+            {
+                SetSerialized(screen, "cameraModeDropdown", cameraModeDropdown);
+            }
+
+            if (edgePanToggle != null)
+            {
+                SetSerialized(screen, "edgePanToggle", edgePanToggle);
             }
         }
 

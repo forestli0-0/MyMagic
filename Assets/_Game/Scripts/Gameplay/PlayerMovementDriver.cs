@@ -50,6 +50,13 @@ namespace CombatSystem.Gameplay
         [Tooltip("按住右键时持续刷新目标点（模拟 LoL 连续点地）")]
         [SerializeField] private bool refreshTargetWhileHoldingRightButton = true;
 
+        [Header("Camera")]
+        [Tooltip("是否自动确保主相机挂载 GameplayCameraController")]
+        [SerializeField] private bool autoSetupGameplayCamera = true;
+
+        [Tooltip("玩法相机控制器（可留空自动获取）")]
+        [SerializeField] private GameplayCameraController gameplayCamera;
+
         #endregion
 
         #region 运行时状态
@@ -83,12 +90,15 @@ namespace CombatSystem.Gameplay
                 skillUser = GetComponent<SkillUserComponent>();
             }
 
+            TryResolveViewCamera();
+            EnsureGameplayCameraController(true);
             ApplyMovementMode(SettingsService.LoadOrCreate());
         }
 
         private void OnEnable()
         {
             SettingsService.SettingsApplied += ApplyMovementMode;
+            EnsureGameplayCameraController(true);
 
             var current = SettingsService.Current ?? SettingsService.LoadOrCreate();
             ApplyMovementMode(current);
@@ -119,11 +129,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 懒加载主相机
-            if (viewCamera == null)
-            {
-                viewCamera = Camera.main;
-            }
+            TryResolveViewCamera();
+            EnsureGameplayCameraController(false);
 
             if (movementControlMode == MovementControlMode.RightClickMove)
             {
@@ -258,6 +265,46 @@ namespace CombatSystem.Gameplay
             {
                 hasClickDestination = false;
             }
+        }
+
+        private void TryResolveViewCamera()
+        {
+            if (viewCamera != null)
+            {
+                return;
+            }
+
+            viewCamera = Camera.main;
+            if (viewCamera == null)
+            {
+                viewCamera = FindFirstObjectByType<Camera>();
+            }
+        }
+
+        private void EnsureGameplayCameraController(bool snapToTarget)
+        {
+            if (!autoSetupGameplayCamera)
+            {
+                return;
+            }
+
+            TryResolveViewCamera();
+            if (viewCamera == null)
+            {
+                return;
+            }
+
+            if (gameplayCamera == null || gameplayCamera.gameObject != viewCamera.gameObject)
+            {
+                gameplayCamera = viewCamera.GetComponent<GameplayCameraController>();
+            }
+
+            if (gameplayCamera == null)
+            {
+                gameplayCamera = viewCamera.gameObject.AddComponent<GameplayCameraController>();
+            }
+
+            gameplayCamera.SetFollowTarget(transform, snapToTarget);
         }
 
         /// <summary>

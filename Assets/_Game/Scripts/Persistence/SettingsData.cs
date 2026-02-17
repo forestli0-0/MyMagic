@@ -8,6 +8,12 @@ namespace CombatSystem.Persistence
         RightClickMove = 1
     }
 
+    public enum CameraControlMode
+    {
+        LockedFollow = 0,
+        FreePan = 1
+    }
+
     [Serializable]
     public class SettingsData
     {
@@ -17,5 +23,13 @@ namespace CombatSystem.Persistence
         public int qualityLevel = 0;
         public int targetFps = 60;
         public MovementControlMode movementControlMode = MovementControlMode.KeyboardWASD;
+        public CameraControlMode cameraControlMode = CameraControlMode.LockedFollow;
+        public bool edgePanEnabled = true;
+        public float cameraZoomDistance = 28.1f;
+
+        public SettingsData Clone()
+        {
+            return (SettingsData)MemberwiseClone();
+        }
     }
 }

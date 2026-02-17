@@ -2480,6 +2480,10 @@ namespace CombatSystem.Editor
             }
 
             camera.fieldOfView = 40f;
+            if (camera.GetComponent<GameplayCameraController>() == null)
+            {
+                camera.gameObject.AddComponent<GameplayCameraController>();
+            }
 
             return camera;
         }

@@ -18,12 +18,15 @@ namespace CombatSystem.UI
         [SerializeField] private Dropdown qualityDropdown;
         [SerializeField] private Dropdown fpsDropdown;
         [SerializeField] private Dropdown movementModeDropdown;
+        [SerializeField] private Dropdown cameraModeDropdown;
+        [SerializeField] private Toggle edgePanToggle;
         [SerializeField] private Button applyButton;
         [SerializeField] private bool pauseGameplay = false;
 
         private static readonly int[] FpsOptions = { -1, 30, 60, 120 };
         private static readonly string[] FpsLabels = { "Unlimited", "30", "60", "120" };
         private static readonly string[] MovementModeLabels = { "WASD", "Right Click Move" };
+        private static readonly string[] CameraModeLabels = { "Locked Follow", "Free Pan (Edge Scroll)" };
         private bool initialized;
         private bool pauseRequested;
         private bool pausedByScreen;
@@ -110,6 +113,7 @@ namespace CombatSystem.UI
             BuildQualityOptions();
             BuildFpsOptions();
             BuildMovementModeOptions();
+            BuildCameraModeOptions();
 
             if (applyButton != null)
             {
@@ -162,11 +166,22 @@ namespace CombatSystem.UI
                 var index = Mathf.Clamp((int)data.movementControlMode, 0, MovementModeLabels.Length - 1);
                 movementModeDropdown.SetValueWithoutNotify(index);
             }
+
+            if (cameraModeDropdown != null)
+            {
+                var index = Mathf.Clamp((int)data.cameraControlMode, 0, CameraModeLabels.Length - 1);
+                cameraModeDropdown.SetValueWithoutNotify(index);
+            }
+
+            if (edgePanToggle != null)
+            {
+                edgePanToggle.SetIsOnWithoutNotify(data.edgePanEnabled);
+            }
         }
 
         private SettingsData ReadFromUI()
         {
-            var data = new SettingsData();
+            var data = (SettingsService.Current ?? SettingsService.LoadOrCreate())?.Clone() ?? new SettingsData();
 
             if (masterVolume != null)
             {
@@ -198,6 +213,17 @@ namespace CombatSystem.UI
             {
                 var index = Mathf.Clamp(movementModeDropdown.value, 0, MovementModeLabels.Length - 1);
                 data.movementControlMode = (MovementControlMode)index;
+            }
+
+            if (cameraModeDropdown != null)
+            {
+                var index = Mathf.Clamp(cameraModeDropdown.value, 0, CameraModeLabels.Length - 1);
+                data.cameraControlMode = (CameraControlMode)index;
+            }
+
+            if (edgePanToggle != null)
+            {
+                data.edgePanEnabled = edgePanToggle.isOn;
             }
 
             return data;
@@ -235,6 +261,17 @@ namespace CombatSystem.UI
 
             movementModeDropdown.ClearOptions();
             movementModeDropdown.AddOptions(new List<string>(MovementModeLabels));
+        }
+
+        private void BuildCameraModeOptions()
+        {
+            if (cameraModeDropdown == null)
+            {
+                return;
+            }
+
+            cameraModeDropdown.ClearOptions();
+            cameraModeDropdown.AddOptions(new List<string>(CameraModeLabels));
         }
 
         private void ApplyPauseState()
