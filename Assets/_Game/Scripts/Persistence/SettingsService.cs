@@ -45,6 +45,8 @@ namespace CombatSystem.Persistence
             }
 
             current = data;
+            var modeIndex = Mathf.Clamp((int)current.movementControlMode, 0, (int)MovementControlMode.RightClickMove);
+            current.movementControlMode = (MovementControlMode)modeIndex;
 
             AudioListener.volume = Mathf.Clamp01(current.masterVolume);
             Screen.fullScreen = current.fullscreen;

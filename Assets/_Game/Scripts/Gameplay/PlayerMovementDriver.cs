@@ -1,7 +1,10 @@
 using CombatSystem.Core;
 using CombatSystem.Input;
+using CombatSystem.Persistence;
 using CombatSystem.UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace CombatSystem.Gameplay
 {
@@ -37,6 +40,24 @@ namespace CombatSystem.Gameplay
         [Tooltip("是否使用相机朝向作为移动参考（按 W 向相机前方移动）")]
         [SerializeField] private bool useCameraYaw = true;
 
+        [Header("Right Click Move")]
+        [Tooltip("右键移动检测层，默认全部层")]
+        [SerializeField] private LayerMask clickMoveMask = ~0;
+
+        [Tooltip("右键移动到目标点的停止距离")]
+        [SerializeField] private float clickStopDistance = 0.2f;
+
+        [Tooltip("按住右键时持续刷新目标点（模拟 LoL 连续点地）")]
+        [SerializeField] private bool refreshTargetWhileHoldingRightButton = true;
+
+        #endregion
+
+        #region 运行时状态
+
+        private MovementControlMode movementControlMode = MovementControlMode.KeyboardWASD;
+        private bool hasClickDestination;
+        private Vector3 clickDestination;
+
         #endregion
 
         #region Unity 生命周期
@@ -61,6 +82,21 @@ namespace CombatSystem.Gameplay
             {
                 skillUser = GetComponent<SkillUserComponent>();
             }
+
+            ApplyMovementMode(SettingsService.LoadOrCreate());
+        }
+
+        private void OnEnable()
+        {
+            SettingsService.SettingsApplied += ApplyMovementMode;
+
+            var current = SettingsService.Current ?? SettingsService.LoadOrCreate();
+            ApplyMovementMode(current);
+        }
+
+        private void OnDisable()
+        {
+            SettingsService.SettingsApplied -= ApplyMovementMode;
         }
 
         /// <summary>
@@ -89,6 +125,21 @@ namespace CombatSystem.Gameplay
                 viewCamera = Camera.main;
             }
 
+            if (movementControlMode == MovementControlMode.RightClickMove)
+            {
+                ProcessRightClickMove();
+                return;
+            }
+
+            ProcessKeyboardMove();
+        }
+
+        #endregion
+
+        #region 内部方法
+
+        private void ProcessKeyboardMove()
+        {
             // 读取输入（-1 到 1 的原始值）
             var input = inputReader.Move;
             if (input.sqrMagnitude <= 0.0001f)
@@ -115,9 +166,99 @@ namespace CombatSystem.Gameplay
             movement.SetMoveInput(direction);
         }
 
-        #endregion
+        private void ProcessRightClickMove()
+        {
+            if (Mouse.current == null)
+            {
+                return;
+            }
 
-        #region 内部方法
+            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (!pointerOverUi && Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                UpdateClickDestination();
+            }
+
+            if (!pointerOverUi && refreshTargetWhileHoldingRightButton && Mouse.current.rightButton.isPressed)
+            {
+                UpdateClickDestination();
+            }
+
+            if (!hasClickDestination)
+            {
+                return;
+            }
+
+            if (skillUser != null && skillUser.IsChanneling && !skillUser.CanMoveWhileCasting)
+            {
+                skillUser.InterruptCast();
+                return;
+            }
+
+            var delta = clickDestination - transform.position;
+            delta.y = 0f;
+
+            var stopDistance = Mathf.Max(0.01f, clickStopDistance);
+            if (delta.sqrMagnitude <= stopDistance * stopDistance)
+            {
+                hasClickDestination = false;
+                return;
+            }
+
+            movement.SetMoveInput(delta.normalized);
+        }
+
+        private void UpdateClickDestination()
+        {
+            if (viewCamera == null || Mouse.current == null)
+            {
+                return;
+            }
+
+            var pointerPosition = Mouse.current.position.ReadValue();
+            if (!TryResolvePointerWorldPoint(pointerPosition, out var worldPoint))
+            {
+                return;
+            }
+
+            clickDestination = worldPoint;
+            hasClickDestination = true;
+        }
+
+        private bool TryResolvePointerWorldPoint(Vector2 screenPoint, out Vector3 worldPoint)
+        {
+            worldPoint = Vector3.zero;
+
+            if (viewCamera == null)
+            {
+                return false;
+            }
+
+            var ray = viewCamera.ScreenPointToRay(screenPoint);
+            if (Physics.Raycast(ray, out var hit, 500f, clickMoveMask, QueryTriggerInteraction.Ignore))
+            {
+                worldPoint = hit.point;
+                return true;
+            }
+
+            var plane = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
+            if (!plane.Raycast(ray, out var enter))
+            {
+                return false;
+            }
+
+            worldPoint = ray.GetPoint(enter);
+            return true;
+        }
+
+        private void ApplyMovementMode(SettingsData data)
+        {
+            movementControlMode = data != null ? data.movementControlMode : MovementControlMode.KeyboardWASD;
+            if (movementControlMode == MovementControlMode.KeyboardWASD)
+            {
+                hasClickDestination = false;
+            }
+        }
 
         /// <summary>
         /// 根据输入计算世界空间移动方向。

@@ -17,11 +17,13 @@ namespace CombatSystem.UI
         [SerializeField] private Toggle vSyncToggle;
         [SerializeField] private Dropdown qualityDropdown;
         [SerializeField] private Dropdown fpsDropdown;
+        [SerializeField] private Dropdown movementModeDropdown;
         [SerializeField] private Button applyButton;
         [SerializeField] private bool pauseGameplay = false;
 
         private static readonly int[] FpsOptions = { -1, 30, 60, 120 };
         private static readonly string[] FpsLabels = { "Unlimited", "30", "60", "120" };
+        private static readonly string[] MovementModeLabels = { "WASD", "Right Click Move" };
         private bool initialized;
         private bool pauseRequested;
         private bool pausedByScreen;
@@ -107,6 +109,7 @@ namespace CombatSystem.UI
 
             BuildQualityOptions();
             BuildFpsOptions();
+            BuildMovementModeOptions();
 
             if (applyButton != null)
             {
@@ -153,6 +156,12 @@ namespace CombatSystem.UI
                 var index = GetFpsIndex(data.targetFps);
                 fpsDropdown.SetValueWithoutNotify(index);
             }
+
+            if (movementModeDropdown != null)
+            {
+                var index = Mathf.Clamp((int)data.movementControlMode, 0, MovementModeLabels.Length - 1);
+                movementModeDropdown.SetValueWithoutNotify(index);
+            }
         }
 
         private SettingsData ReadFromUI()
@@ -185,6 +194,12 @@ namespace CombatSystem.UI
                 data.targetFps = FpsOptions[index];
             }
 
+            if (movementModeDropdown != null)
+            {
+                var index = Mathf.Clamp(movementModeDropdown.value, 0, MovementModeLabels.Length - 1);
+                data.movementControlMode = (MovementControlMode)index;
+            }
+
             return data;
         }
 
@@ -209,6 +224,17 @@ namespace CombatSystem.UI
 
             fpsDropdown.ClearOptions();
             fpsDropdown.AddOptions(new List<string>(FpsLabels));
+        }
+
+        private void BuildMovementModeOptions()
+        {
+            if (movementModeDropdown == null)
+            {
+                return;
+            }
+
+            movementModeDropdown.ClearOptions();
+            movementModeDropdown.AddOptions(new List<string>(MovementModeLabels));
         }
 
         private void ApplyPauseState()

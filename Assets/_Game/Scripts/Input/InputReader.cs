@@ -97,6 +97,7 @@ namespace CombatSystem.Input
         // 状态标记
         private bool initialized;
         private bool callbacksBound;
+        private bool uiManagerSubscribed;
 
         // 技能动作名称列表
         private static readonly string[] SkillActionNames =
@@ -121,10 +122,7 @@ namespace CombatSystem.Input
         /// </summary>
         private void Awake()
         {
-            if (autoFindUiManager && uiManager == null)
-            {
-                uiManager = UIRoot.Instance != null ? UIRoot.Instance.Manager : FindFirstObjectByType<UIManager>();
-            }
+            TryResolveUiManager();
         }
 
         /// <summary>
@@ -142,15 +140,8 @@ namespace CombatSystem.Input
                 BindCallbacks();
             }
 
-            if (uiManager != null)
-            {
-                uiManager.InputModeChanged += HandleInputModeChanged;
-                EnableForMode(uiManager.CurrentInputMode);
-            }
-            else
-            {
-                EnableForMode(UIInputMode.Gameplay);
-            }
+            TryResolveUiManager();
+            ApplyInputModeFromUiManager();
         }
 
         /// <summary>
@@ -158,12 +149,20 @@ namespace CombatSystem.Input
         /// </summary>
         private void OnDisable()
         {
-            if (uiManager != null)
-            {
-                uiManager.InputModeChanged -= HandleInputModeChanged;
-            }
+            UnsubscribeFromUiManager();
 
             DisableAllMaps();
+        }
+
+        private void LateUpdate()
+        {
+            if (uiManager != null || !autoFindUiManager)
+            {
+                return;
+            }
+
+            TryResolveUiManager();
+            ApplyInputModeFromUiManager();
         }
 
         #endregion
@@ -379,6 +378,58 @@ namespace CombatSystem.Input
         private void HandleInputModeChanged(UIInputMode mode)
         {
             EnableForMode(mode);
+        }
+
+        private void TryResolveUiManager()
+        {
+            if (uiManager != null || !autoFindUiManager)
+            {
+                SubscribeToUiManager();
+                return;
+            }
+
+            var resolved = UIRoot.Instance != null ? UIRoot.Instance.Manager : FindFirstObjectByType<UIManager>();
+            if (resolved == null)
+            {
+                return;
+            }
+
+            uiManager = resolved;
+            SubscribeToUiManager();
+        }
+
+        private void SubscribeToUiManager()
+        {
+            if (uiManager == null || uiManagerSubscribed)
+            {
+                return;
+            }
+
+            uiManager.InputModeChanged -= HandleInputModeChanged;
+            uiManager.InputModeChanged += HandleInputModeChanged;
+            uiManagerSubscribed = true;
+        }
+
+        private void UnsubscribeFromUiManager()
+        {
+            if (uiManager == null || !uiManagerSubscribed)
+            {
+                return;
+            }
+
+            uiManager.InputModeChanged -= HandleInputModeChanged;
+            uiManagerSubscribed = false;
+        }
+
+        private void ApplyInputModeFromUiManager()
+        {
+            if (uiManager != null)
+            {
+                EnableForMode(uiManager.CurrentInputMode);
+                return;
+            }
+
+            EnableForMode(UIInputMode.Gameplay);
         }
 
         #endregion

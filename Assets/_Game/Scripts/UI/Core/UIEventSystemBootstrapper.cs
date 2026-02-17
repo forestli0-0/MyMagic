@@ -12,6 +12,12 @@ namespace CombatSystem.UI
         [SerializeField] private InputReader inputReader;
         [SerializeField] private InputActionAsset actionsAsset;
         [SerializeField] private bool autoFindInputReader = true;
+        [SerializeField] private bool isolateEventSystemActionsAtRuntime = true;
+        [SerializeField] private bool forceDynamicInputUpdateForUi = true;
+
+        private InputActionAsset runtimeModuleActions;
+        private InputActionAsset runtimeModuleActionsSource;
+        private bool inputUpdateModeAdjustedLogged;
 
         private void Awake()
         {
@@ -30,6 +36,7 @@ namespace CombatSystem.UI
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            ReleaseRuntimeModuleActions();
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -39,17 +46,29 @@ namespace CombatSystem.UI
 
         private void EnsureEventSystem()
         {
-            var system = EventSystem.current;
-            if (system == null)
-            {
-                system = FindFirstObjectByType<EventSystem>();
-            }
-
+            var system = ResolvePrimaryEventSystem();
             if (system == null)
             {
                 var go = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
                 go.transform.SetParent(transform, false);
                 system = go.GetComponent<EventSystem>();
+            }
+
+            if (system == null)
+            {
+                return;
+            }
+
+            EnsureInputUpdateMode();
+
+            if (!system.gameObject.activeSelf)
+            {
+                system.gameObject.SetActive(true);
+            }
+
+            if (!system.enabled)
+            {
+                system.enabled = true;
             }
 
             var module = system.GetComponent<InputSystemUIInputModule>();
@@ -64,14 +83,55 @@ namespace CombatSystem.UI
                 Destroy(legacy);
             }
 
-            var actions = ResolveActions();
-            if (actions == null)
+            var sourceActions = ResolveActions();
+            if (sourceActions == null)
             {
                 return;
             }
 
-            ConfigureModule(module, actions);
-            EnsureInputReader(actions);
+            var moduleActions = ResolveModuleActions(sourceActions);
+            if (moduleActions == null)
+            {
+                return;
+            }
+
+            ConfigureModule(module, moduleActions);
+            EnsureModuleActionsEnabled(module);
+            EnsureInputReader(sourceActions);
+        }
+
+        private static EventSystem ResolvePrimaryEventSystem()
+        {
+            var systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (systems == null || systems.Length == 0)
+            {
+                return null;
+            }
+
+            var primary = EventSystem.current;
+            if (primary != null && (!primary.isActiveAndEnabled || !primary.gameObject.activeInHierarchy))
+            {
+                primary = null;
+            }
+
+            if (primary == null)
+            {
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    if (systems[i] != null && systems[i].isActiveAndEnabled && systems[i].gameObject.activeInHierarchy)
+                    {
+                        primary = systems[i];
+                        break;
+                    }
+                }
+            }
+
+            if (primary == null)
+            {
+                primary = systems[0];
+            }
+
+            return primary;
         }
 
         private InputActionAsset ResolveActions()
@@ -129,6 +189,103 @@ namespace CombatSystem.UI
         {
             var action = asset != null ? asset.FindAction(actionPath) : null;
             return action != null ? InputActionReference.Create(action) : null;
+        }
+
+        private static void EnsureModuleActionsEnabled(InputSystemUIInputModule module)
+        {
+            if (module == null)
+            {
+                return;
+            }
+
+            TryEnable(module.point);
+            TryEnable(module.leftClick);
+            TryEnable(module.rightClick);
+            TryEnable(module.middleClick);
+            TryEnable(module.scrollWheel);
+            TryEnable(module.move);
+            TryEnable(module.submit);
+            TryEnable(module.cancel);
+        }
+
+        private static void TryEnable(InputActionReference reference)
+        {
+            var action = reference != null ? reference.action : null;
+            if (action != null && !action.enabled)
+            {
+                action.Enable();
+            }
+        }
+
+        private void EnsureInputUpdateMode()
+        {
+            if (!forceDynamicInputUpdateForUi || !Application.isPlaying)
+            {
+                return;
+            }
+
+            var settings = InputSystem.settings;
+            if (settings == null)
+            {
+                return;
+            }
+
+            if (settings.updateMode != InputSettings.UpdateMode.ProcessEventsInFixedUpdate)
+            {
+                return;
+            }
+
+            settings.updateMode = InputSettings.UpdateMode.ProcessEventsInDynamicUpdate;
+            if (!inputUpdateModeAdjustedLogged)
+            {
+                Debug.Log("[UIEventSystemBootstrapper] Input update mode forced to Dynamic for UI interaction while paused.", this);
+                inputUpdateModeAdjustedLogged = true;
+            }
+        }
+
+        private InputActionAsset ResolveModuleActions(InputActionAsset sourceActions)
+        {
+            if (sourceActions == null)
+            {
+                return null;
+            }
+
+            if (!isolateEventSystemActionsAtRuntime || !Application.isPlaying)
+            {
+                ReleaseRuntimeModuleActions();
+                return sourceActions;
+            }
+
+            if (runtimeModuleActions != null && runtimeModuleActionsSource == sourceActions)
+            {
+                return runtimeModuleActions;
+            }
+
+            ReleaseRuntimeModuleActions();
+            runtimeModuleActions = Instantiate(sourceActions);
+            runtimeModuleActions.name = $"{sourceActions.name}_UIRuntime";
+            runtimeModuleActionsSource = sourceActions;
+            return runtimeModuleActions;
+        }
+
+        private void ReleaseRuntimeModuleActions()
+        {
+            if (runtimeModuleActions == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(runtimeModuleActions);
+            }
+            else
+            {
+                DestroyImmediate(runtimeModuleActions);
+            }
+
+            runtimeModuleActions = null;
+            runtimeModuleActionsSource = null;
         }
     }
 }

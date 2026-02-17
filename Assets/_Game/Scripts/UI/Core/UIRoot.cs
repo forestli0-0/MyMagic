@@ -40,6 +40,7 @@ namespace CombatSystem.UI
             if (instance != null && instance != this)
             {
                 instance.MergeUniqueUiFrom(this);
+                instance.EnsureCanvasTransforms();
                 Destroy(gameObject);
                 return;
             }
@@ -50,6 +51,8 @@ namespace CombatSystem.UI
             {
                 DontDestroyOnLoad(gameObject);
             }
+
+            EnsureCanvasTransforms();
 
             if (uiManager == null)
             {
@@ -76,6 +79,7 @@ namespace CombatSystem.UI
             MoveUniqueChildrenByComponentType<UIOverlayBase>(incoming.overlayCanvas, overlayCanvas);
             MoveMissingDirectChildrenByName(incoming.hudCanvas, hudCanvas);
             EnsureQuestJournalHotkey();
+            EnsureCanvasTransforms();
         }
 
         private static void MoveUniqueChildrenByComponentType<T>(Canvas fromCanvas, Canvas toCanvas) where T : Component
@@ -168,6 +172,43 @@ namespace CombatSystem.UI
             }
 
             gameObject.AddComponent<QuestJournalHotkey>();
+        }
+
+        private void EnsureCanvasTransforms()
+        {
+            NormalizeCanvasRect(screensCanvas);
+            NormalizeCanvasRect(hudCanvas);
+            NormalizeCanvasRect(modalCanvas);
+            NormalizeCanvasRect(overlayCanvas);
+
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var canvas = transform.GetChild(i).GetComponent<Canvas>();
+                NormalizeCanvasRect(canvas);
+            }
+        }
+
+        private static void NormalizeCanvasRect(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var rect = canvas.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                return;
+            }
+
+            rect.localScale = Vector3.one;
+            rect.localPosition = Vector3.zero;
+            rect.localRotation = Quaternion.identity;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
     }
 }

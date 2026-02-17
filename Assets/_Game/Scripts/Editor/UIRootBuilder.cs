@@ -19,6 +19,7 @@ namespace CombatSystem.Editor
 {
     public static class UIRootBuilder
     {
+        private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
         private const float CanvasReferenceWidth = 1920f;
         private const float CanvasReferenceHeight = 1080f;
 
@@ -127,7 +128,7 @@ namespace CombatSystem.Editor
         [MenuItem("Combat/UI/Build Basic UI")]
         public static void BuildBasicUI()
         {
-            var root = Object.FindFirstObjectByType<UIRoot>();
+            var root = ResolveRootForBuild();
             if (root == null)
             {
                 Debug.LogWarning("[UIRootBuilder] No UIRoot found in the scene.");
@@ -312,7 +313,18 @@ namespace CombatSystem.Editor
             }
 
             EnsureEventSystem();
-            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(activeScene);
+
+            if (Application.isBatchMode)
+            {
+                if (!EditorSceneManager.SaveScene(activeScene))
+                {
+                    Debug.LogError($"[UIRootBuilder] Failed to save scene: {activeScene.path}");
+                }
+
+                AssetDatabase.SaveAssets();
+            }
         }
 
         [MenuItem("Combat/UI/Fix UIRoot Canvases")]
@@ -359,6 +371,46 @@ namespace CombatSystem.Editor
             NormalizeCanvasTransform(root.HudCanvas);
             NormalizeCanvasTransform(root.ModalCanvas);
             NormalizeCanvasTransform(root.OverlayCanvas);
+
+            var rootTransform = root.transform;
+            for (int i = 0; i < rootTransform.childCount; i++)
+            {
+                var canvas = rootTransform.GetChild(i).GetComponent<Canvas>();
+                NormalizeCanvasTransform(canvas);
+            }
+        }
+
+        private static UIRoot ResolveRootForBuild()
+        {
+            var mainMenuScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(MainMenuScenePath);
+            if (mainMenuScene == null)
+            {
+                Debug.LogWarning($"[UIRootBuilder] MainMenu scene not found at {MainMenuScenePath}.");
+                return null;
+            }
+
+            var activeScene = SceneManager.GetActiveScene();
+            var activeScenePath = activeScene.path ?? string.Empty;
+            var isMainMenuActive = !string.IsNullOrEmpty(activeScenePath) &&
+                activeScenePath.Equals(MainMenuScenePath, System.StringComparison.OrdinalIgnoreCase);
+
+            if (!isMainMenuActive)
+            {
+                if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                {
+                    Debug.LogWarning("[UIRootBuilder] Build Basic UI canceled.");
+                    return null;
+                }
+
+                var openedScene = EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+                if (!openedScene.IsValid() || !openedScene.isLoaded)
+                {
+                    Debug.LogWarning($"[UIRootBuilder] Failed to open scene: {MainMenuScenePath}");
+                    return null;
+                }
+            }
+
+            return Object.FindFirstObjectByType<UIRoot>();
         }
 
         private static void NormalizeCanvasTransform(Canvas canvas)
@@ -1203,12 +1255,12 @@ namespace CombatSystem.Editor
         {
             if (screen.transform.childCount > 0)
             {
-                Debug.LogWarning("[UIRootBuilder] SettingsScreen already has children. Skipping.");
+                EnsureSettingsMoveMode(screen, sprite, font);
                 return;
             }
 
             CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.65f));
-            var panel = CreatePanel(screen.transform, sprite, new Color(0.08f, 0.08f, 0.08f, 0.9f), new Vector2(640f, 520f));
+            var panel = CreatePanel(screen.transform, sprite, new Color(0.08f, 0.08f, 0.08f, 0.9f), new Vector2(640f, 560f));
             ConfigureVerticalLayout(panel, 20, 12, TextAnchor.UpperCenter);
 
             CreateTitle(panel, "SETTINGS", font, 32);
@@ -1231,6 +1283,9 @@ namespace CombatSystem.Editor
             var fpsRow = CreateSettingRow(panel, "Target FPS", font, 40f);
             var fpsDropdown = CreateDropdown(fpsRow, resources);
 
+            var moveModeRow = CreateSettingRow(panel, "Move Mode", font, 40f);
+            var moveModeDropdown = CreateDropdown(moveModeRow, resources);
+
             var applyButton = CreateButton(panel, "Apply", sprite, font);
             UnityEventTools.AddPersistentListener(applyButton.onClick, screen.Apply);
 
@@ -1242,7 +1297,47 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "vSyncToggle", vSyncToggle);
             SetSerialized(screen, "qualityDropdown", qualityDropdown);
             SetSerialized(screen, "fpsDropdown", fpsDropdown);
+            SetSerialized(screen, "movementModeDropdown", moveModeDropdown);
             SetSerialized(screen, "applyButton", applyButton);
+        }
+
+        private static void EnsureSettingsMoveMode(SettingsScreen screen, Sprite sprite, Font font)
+        {
+            if (screen == null)
+            {
+                return;
+            }
+
+            var panel = screen.transform.Find("Panel");
+            if (panel == null)
+            {
+                return;
+            }
+
+            var moveModeRow = panel.Find("MoveMode_Row");
+            Dropdown moveModeDropdown = null;
+
+            if (moveModeRow == null)
+            {
+                var resources = GetDefaultResources(sprite);
+                var row = CreateSettingRow(panel, "Move Mode", font, 40f);
+                moveModeDropdown = CreateDropdown(row, resources);
+
+                var fpsRow = panel.Find("TargetFPS_Row");
+                if (fpsRow != null)
+                {
+                    row.SetSiblingIndex(fpsRow.GetSiblingIndex() + 1);
+                }
+            }
+            else
+            {
+                moveModeDropdown = moveModeRow.GetComponentInChildren<Dropdown>(true);
+            }
+
+            if (moveModeDropdown != null)
+            {
+                SetSerialized(screen, "movementModeDropdown", moveModeDropdown);
+            }
         }
 
         private static void BuildPauseModalUI(PauseMenuModal modal, Sprite sprite, Font font)
