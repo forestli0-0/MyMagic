@@ -1258,32 +1258,158 @@ namespace CombatSystem.Editor
 
         private static void BuildMainMenuUI(MainMenuScreen screen, Sprite sprite, Font font)
         {
-            if (screen.transform.childCount > 0)
+            if (screen == null)
             {
-                Debug.LogWarning("[UIRootBuilder] MainMenuScreen already has children. Skipping.");
                 return;
             }
 
-            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.65f));
-            var panel = CreatePanel(screen.transform, sprite, new Color(0.08f, 0.08f, 0.08f, 0.9f), new Vector2(520f, 520f));
-            ConfigureVerticalLayout(panel, 24, 12, TextAnchor.MiddleCenter);
+            ClearTransformChildren(screen.transform);
 
-            CreateTitle(panel, "COMBAT SYSTEM", font, 36);
+            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
 
-            var continueButton = CreateButton(panel, "Continue", sprite, font);
+            var layoutRoot = CreateUIElement("MainMenuLayout", screen.transform);
+            var layoutRect = layoutRoot.GetComponent<RectTransform>();
+            StretchRect(layoutRect);
+
+            var rootPadding = layoutRoot.AddComponent<HorizontalLayoutGroup>();
+            rootPadding.padding = new RectOffset(24, 24, 24, 24);
+            rootPadding.spacing = 0f;
+            rootPadding.childAlignment = TextAnchor.MiddleCenter;
+            rootPadding.childControlHeight = true;
+            rootPadding.childControlWidth = true;
+            rootPadding.childForceExpandHeight = true;
+            rootPadding.childForceExpandWidth = true;
+
+            var frame = CreateUIElement("Frame", layoutRoot.transform);
+            var frameImage = frame.AddComponent<Image>();
+            frameImage.sprite = sprite;
+            frameImage.type = Image.Type.Sliced;
+            frameImage.color = GameplayMenuPanelAltColor;
+            frameImage.raycastTarget = true;
+
+            var frameLayout = frame.AddComponent<HorizontalLayoutGroup>();
+            frameLayout.padding = new RectOffset(20, 20, 20, 20);
+            frameLayout.spacing = 18f;
+            frameLayout.childAlignment = TextAnchor.MiddleCenter;
+            frameLayout.childControlHeight = true;
+            frameLayout.childControlWidth = true;
+            frameLayout.childForceExpandHeight = true;
+            frameLayout.childForceExpandWidth = true;
+
+            var frameElement = frame.AddComponent<LayoutElement>();
+            frameElement.flexibleWidth = 1f;
+            frameElement.flexibleHeight = 1f;
+
+            var actionPanel = CreateUIElement("ActionPanel", frame.transform);
+            var actionPanelImage = actionPanel.AddComponent<Image>();
+            actionPanelImage.sprite = sprite;
+            actionPanelImage.type = Image.Type.Sliced;
+            actionPanelImage.color = GameplayMenuPanelColor;
+            actionPanelImage.raycastTarget = true;
+
+            var actionPanelLayout = actionPanel.AddComponent<VerticalLayoutGroup>();
+            actionPanelLayout.padding = new RectOffset(24, 24, 24, 24);
+            actionPanelLayout.spacing = 14f;
+            actionPanelLayout.childAlignment = TextAnchor.UpperCenter;
+            actionPanelLayout.childControlHeight = true;
+            actionPanelLayout.childControlWidth = true;
+            actionPanelLayout.childForceExpandHeight = false;
+            actionPanelLayout.childForceExpandWidth = true;
+
+            var actionPanelElement = actionPanel.AddComponent<LayoutElement>();
+            actionPanelElement.preferredWidth = 560f;
+            actionPanelElement.flexibleHeight = 1f;
+
+            var titleBlock = CreateUIElement("TitleBlock", actionPanel.transform);
+            var titleBlockLayout = titleBlock.AddComponent<VerticalLayoutGroup>();
+            titleBlockLayout.spacing = 6f;
+            titleBlockLayout.childAlignment = TextAnchor.UpperLeft;
+            titleBlockLayout.childControlHeight = true;
+            titleBlockLayout.childControlWidth = true;
+            titleBlockLayout.childForceExpandHeight = false;
+            titleBlockLayout.childForceExpandWidth = true;
+            AddLayoutElement(titleBlock, 132f);
+
+            var gameTitle = CreateText(CreateUIElement("GameTitle", titleBlock.transform), "战斗系统", font, 44, TextAnchor.MiddleLeft);
+            gameTitle.color = Color.white;
+            AddLayoutElement(gameTitle.gameObject, 58f);
+
+            var gameSubtitle = CreateText(CreateUIElement("Subtitle", titleBlock.transform), "战术动作 RPG", font, 18, TextAnchor.MiddleLeft);
+            gameSubtitle.color = new Color(0.78f, 0.84f, 0.93f, 1f);
+            AddLayoutElement(gameSubtitle.gameObject, 30f);
+
+            var continueButton = CreateButton(actionPanel.transform, "继续游戏", sprite, font);
+            ConfigureMainMenuActionButton(continueButton, true);
             UnityEventTools.AddPersistentListener(continueButton.onClick, screen.ContinueGame);
 
-            var newGameButton = CreateButton(panel, "New Game", sprite, font);
+            var newGameButton = CreateButton(actionPanel.transform, "新游戏", sprite, font);
+            ConfigureMainMenuActionButton(newGameButton, false);
             UnityEventTools.AddPersistentListener(newGameButton.onClick, screen.StartNewGame);
 
-            var loadButton = CreateButton(panel, "Load Game", sprite, font);
+            var loadButton = CreateButton(actionPanel.transform, "读取存档", sprite, font);
+            ConfigureMainMenuActionButton(loadButton, false);
             UnityEventTools.AddPersistentListener(loadButton.onClick, screen.OpenSaveSelect);
 
-            var settingsButton = CreateButton(panel, "Settings", sprite, font);
+            var settingsButton = CreateButton(actionPanel.transform, "设置", sprite, font);
+            ConfigureMainMenuActionButton(settingsButton, false);
             UnityEventTools.AddPersistentListener(settingsButton.onClick, screen.OpenSettings);
 
-            var quitButton = CreateButton(panel, "Quit", sprite, font);
+            var spacer = CreateUIElement("ButtonsSpacer", actionPanel.transform);
+            var spacerElement = spacer.AddComponent<LayoutElement>();
+            spacerElement.flexibleHeight = 1f;
+
+            var quitButton = CreateButton(actionPanel.transform, "退出游戏", sprite, font);
+            ConfigureMainMenuActionButton(quitButton, false);
             UnityEventTools.AddPersistentListener(quitButton.onClick, screen.QuitGame);
+
+            var footer = CreateText(CreateUIElement("Footer", actionPanel.transform), "ESC: 系统菜单   TAB: 功能菜单   I: 背包", font, 14, TextAnchor.MiddleLeft);
+            footer.color = new Color(0.7f, 0.75f, 0.82f, 1f);
+            AddLayoutElement(footer.gameObject, 24f);
+
+            var showcasePanel = CreateUIElement("ShowcasePanel", frame.transform);
+            var showcaseImage = showcasePanel.AddComponent<Image>();
+            showcaseImage.sprite = sprite;
+            showcaseImage.type = Image.Type.Sliced;
+            showcaseImage.color = GameplayMenuHeaderColor;
+            showcaseImage.raycastTarget = true;
+
+            var showcaseLayout = showcasePanel.AddComponent<VerticalLayoutGroup>();
+            showcaseLayout.padding = new RectOffset(20, 20, 20, 20);
+            showcaseLayout.spacing = 0f;
+            showcaseLayout.childAlignment = TextAnchor.MiddleCenter;
+            showcaseLayout.childControlHeight = true;
+            showcaseLayout.childControlWidth = true;
+            showcaseLayout.childForceExpandHeight = true;
+            showcaseLayout.childForceExpandWidth = true;
+
+            var showcaseElement = showcasePanel.AddComponent<LayoutElement>();
+            showcaseElement.flexibleWidth = 1f;
+            showcaseElement.flexibleHeight = 1f;
+
+            var visualFrame = CreateUIElement("VisualFrame", showcasePanel.transform);
+            var visualFrameImage = visualFrame.AddComponent<Image>();
+            visualFrameImage.sprite = sprite;
+            visualFrameImage.type = Image.Type.Sliced;
+            visualFrameImage.color = GameplayMenuPanelColor;
+            visualFrameImage.raycastTarget = true;
+            var visualFrameElement = visualFrame.AddComponent<LayoutElement>();
+            visualFrameElement.flexibleWidth = 1f;
+            visualFrameElement.flexibleHeight = 1f;
+
+            var visualRoot = CreateUIElement("Visual", visualFrame.transform);
+            var visualRootRect = visualRoot.GetComponent<RectTransform>();
+            visualRootRect.anchorMin = Vector2.zero;
+            visualRootRect.anchorMax = Vector2.one;
+            visualRootRect.offsetMin = new Vector2(10f, 10f);
+            visualRootRect.offsetMax = new Vector2(-10f, -10f);
+
+            var visualSprite = ResolveMainMenuVisualSprite(sprite);
+            var visualImage = visualRoot.AddComponent<Image>();
+            visualImage.sprite = visualSprite;
+            visualImage.type = Image.Type.Simple;
+            visualImage.preserveAspect = true;
+            visualImage.color = visualSprite != null ? Color.white : new Color(0.22f, 0.26f, 0.34f, 1f);
+            visualImage.raycastTarget = false;
         }
 
         private static void BuildSaveSelectUI(SaveSelectScreen screen, Sprite sprite, Font font, SaveGameManager saveManager)
@@ -2314,6 +2440,71 @@ namespace CombatSystem.Editor
                 label.fontSize = 16;
                 label.color = GameplayMenuTabInactiveTextColor;
             }
+        }
+
+        private static void ConfigureMainMenuActionButton(Button button, bool primary)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 58f;
+            layout.preferredWidth = -1f;
+            layout.minWidth = 0f;
+            layout.flexibleWidth = 1f;
+
+            var image = button.targetGraphic as Image;
+            if (image != null)
+            {
+                image.color = primary ? GameplayMenuTabActiveColor : GameplayMenuTabInactiveColor;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.alignment = TextAnchor.MiddleLeft;
+                label.fontSize = 22;
+                label.color = primary ? GameplayMenuTabActiveTextColor : GameplayMenuTabInactiveTextColor;
+
+                var labelRect = label.rectTransform;
+                labelRect.offsetMin = new Vector2(22f, labelRect.offsetMin.y);
+                labelRect.offsetMax = new Vector2(-18f, labelRect.offsetMax.y);
+            }
+        }
+
+        private static Sprite ResolveMainMenuVisualSprite(Sprite fallback)
+        {
+            var preferredPaths = new[]
+            {
+                "Assets/_Game/Art/UI/MainMenuVisual.png",
+                "Assets/_Game/Art/UI/MainMenuKeyArt.png",
+                "Assets/_Game/Art/Icons/ItemPlaceholder.png",
+                "Assets/_Game/Art/Icons/Item.png"
+            };
+
+            for (int i = 0; i < preferredPaths.Length; i++)
+            {
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(preferredPaths[i]);
+                if (sprite != null)
+                {
+                    return sprite;
+                }
+            }
+
+            return fallback;
         }
 
         private static void ConfigureGameplayMenuTabsComponent(
