@@ -1643,6 +1643,7 @@ namespace CombatSystem.Editor
         private struct GameplayMenuShell
         {
             public RectTransform Root;
+            public RectTransform SecondaryTabs;
             public RectTransform Content;
         }
 
@@ -1853,6 +1854,11 @@ namespace CombatSystem.Editor
                 questJournalScreen,
                 GameplayMenuTab.Inventory);
 
+            var filterAllButton = (Button)null;
+            var filterEquipmentButton = (Button)null;
+            var filterConsumableButton = (Button)null;
+            var filterQuestButton = (Button)null;
+
             var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
             contentLayout.childAlignment = TextAnchor.UpperCenter;
             contentLayout.childControlHeight = true;
@@ -1893,6 +1899,35 @@ namespace CombatSystem.Editor
             inventoryElement.preferredWidth = 980f;
             inventoryElement.flexibleWidth = 1f;
             inventoryElement.flexibleHeight = 1f;
+
+            var inventoryFiltersRow = CreateUIElement("InventorySecondaryTabs", inventoryPanel.transform);
+            var inventoryFiltersImage = inventoryFiltersRow.AddComponent<Image>();
+            inventoryFiltersImage.sprite = sprite;
+            inventoryFiltersImage.type = Image.Type.Sliced;
+            inventoryFiltersImage.color = GameplayMenuHeaderColor;
+            inventoryFiltersImage.raycastTarget = true;
+
+            var inventoryFiltersLayout = inventoryFiltersRow.AddComponent<HorizontalLayoutGroup>();
+            inventoryFiltersLayout.padding = new RectOffset(8, 8, 6, 6);
+            inventoryFiltersLayout.spacing = 10f;
+            inventoryFiltersLayout.childAlignment = TextAnchor.MiddleLeft;
+            inventoryFiltersLayout.childControlHeight = true;
+            inventoryFiltersLayout.childControlWidth = true;
+            inventoryFiltersLayout.childForceExpandHeight = false;
+            inventoryFiltersLayout.childForceExpandWidth = true;
+            AddLayoutElement(inventoryFiltersRow, 52f);
+            var inventoryFiltersElement = inventoryFiltersRow.GetComponent<LayoutElement>();
+            inventoryFiltersElement.flexibleWidth = 1f;
+
+            filterAllButton = CreateButton(inventoryFiltersRow.transform, "All", sprite, font);
+            filterEquipmentButton = CreateButton(inventoryFiltersRow.transform, "Equipment", sprite, font);
+            filterConsumableButton = CreateButton(inventoryFiltersRow.transform, "Consumables", sprite, font);
+            filterQuestButton = CreateButton(inventoryFiltersRow.transform, "Quest", sprite, font);
+
+            ConfigureSecondaryFilterButtonLayout(filterAllButton);
+            ConfigureSecondaryFilterButtonLayout(filterEquipmentButton);
+            ConfigureSecondaryFilterButtonLayout(filterConsumableButton);
+            ConfigureSecondaryFilterButtonLayout(filterQuestButton);
 
             var gridRoot = CreateUIElement("InventoryGrid", inventoryPanel.transform);
             var gridRect = gridRoot.GetComponent<RectTransform>();
@@ -2078,8 +2113,16 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "inventoryGrid", inventoryGrid);
             SetSerialized(screen, "equipmentPanel", equipmentPanel);
             SetSerialized(screen, "comparePanel", comparePanel);
+            SetSerialized(screen, "allFilterButton", filterAllButton);
+            SetSerialized(screen, "equipmentFilterButton", filterEquipmentButton);
+            SetSerialized(screen, "consumableFilterButton", filterConsumableButton);
+            SetSerialized(screen, "questFilterButton", filterQuestButton);
             SetSerialized(screen, "equipButton", equipButton);
             SetSerialized(screen, "unequipButton", unequipButton);
+            SetSerializedColor(screen, "filterActiveColor", GameplayMenuTabActiveColor);
+            SetSerializedColor(screen, "filterInactiveColor", GameplayMenuTabInactiveColor);
+            SetSerializedColor(screen, "filterActiveTextColor", GameplayMenuTabActiveTextColor);
+            SetSerializedColor(screen, "filterInactiveTextColor", GameplayMenuTabInactiveTextColor);
         }
 
         private static RectTransform CreateGameplayMenuTabsRow(Transform parent, Sprite sprite, Font font, out Button characterButton, out Button inventoryButton, out Button questButton)
@@ -2191,6 +2234,7 @@ namespace CombatSystem.Editor
 
             // Secondary tabs placeholder for future page-specific navigation.
             var secondaryTabs = CreateUIElement("SecondaryTabs", frame.transform);
+            var secondaryTabsRect = secondaryTabs.GetComponent<RectTransform>();
             secondaryTabs.SetActive(false);
 
             var divider = CreateUIElement("Divider", frame.transform);
@@ -2210,6 +2254,7 @@ namespace CombatSystem.Editor
             return new GameplayMenuShell
             {
                 Root = rootRect,
+                SecondaryTabs = secondaryTabsRect,
                 Content = contentRect
             };
         }
@@ -2231,6 +2276,44 @@ namespace CombatSystem.Editor
             layout.preferredWidth = -1f;
             layout.minWidth = 0f;
             layout.flexibleWidth = 1f;
+        }
+
+        private static void ConfigureSecondaryFilterButtonLayout(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 38f;
+            layout.preferredWidth = -1f;
+            layout.minWidth = 0f;
+            layout.flexibleWidth = 1f;
+
+            var buttonImage = button.targetGraphic as Image;
+            if (buttonImage != null)
+            {
+                buttonImage.color = GameplayMenuTabInactiveColor;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.fontSize = 16;
+                label.color = GameplayMenuTabInactiveTextColor;
+            }
         }
 
         private static void ConfigureGameplayMenuTabsComponent(

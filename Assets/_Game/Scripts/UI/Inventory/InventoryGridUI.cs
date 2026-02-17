@@ -21,7 +21,9 @@ namespace CombatSystem.UI
         [SerializeField] private InventorySlotUI slotTemplate;
 
         private readonly List<InventorySlotUI> slots = new List<InventorySlotUI>();
+        private readonly List<int> customDisplayIndices = new List<int>(32);
         private InventoryComponent inventory;
+        private bool useCustomDisplayIndices;
 
         public event Action<int> SlotSelected;
         public event Action<InventorySlotUI, PointerEventData> SlotDragStarted;
@@ -35,20 +37,19 @@ namespace CombatSystem.UI
             DetachSlotEvents();
         }
 
-        public void Bind(InventoryComponent targetInventory)
+        public void Bind(InventoryComponent targetInventory, IReadOnlyList<int> displayIndices = null)
         {
-            if (inventory == targetInventory)
+            if (inventory != targetInventory)
             {
-                Refresh();
-                return;
+                Unbind();
+                inventory = targetInventory;
+                if (inventory != null)
+                {
+                    inventory.InventoryChanged += HandleInventoryChanged;
+                }
             }
 
-            Unbind();
-            inventory = targetInventory;
-            if (inventory != null)
-            {
-                inventory.InventoryChanged += HandleInventoryChanged;
-            }
+            ApplyDisplayIndices(displayIndices);
 
             EnsureSlots();
             Refresh();
@@ -58,7 +59,7 @@ namespace CombatSystem.UI
         {
             for (int i = 0; i < slots.Count; i++)
             {
-                slots[i].SetSelected(i == index);
+                slots[i].SetSelected(slots[i].SlotIndex == index);
             }
         }
 
@@ -83,7 +84,7 @@ namespace CombatSystem.UI
                 return;
             }
 
-            var targetCount = inventory != null ? inventory.Capacity : 0;
+            var targetCount = ResolveTargetSlotCount();
             while (slots.Count < targetCount)
             {
                 var instance = Instantiate(slotTemplate, slotsRoot);
@@ -122,12 +123,15 @@ namespace CombatSystem.UI
             for (int i = 0; i < slots.Count; i++)
             {
                 var slot = slots[i];
-                slot.SetSlotIndex(i);
+                var inventoryIndex = ResolveInventoryIndexForDisplaySlot(i);
+                slot.SetSlotIndex(inventoryIndex);
 
                 ItemInstance item = null;
-                if (inventory != null && i < inventory.Items.Count)
+                if (inventory != null &&
+                    inventoryIndex >= 0 &&
+                    inventoryIndex < inventory.Items.Count)
                 {
-                    item = inventory.Items[i];
+                    item = inventory.Items[inventoryIndex];
                 }
 
                 slot.SetItem(item);
@@ -136,7 +140,7 @@ namespace CombatSystem.UI
 
         private void HandleSlotClicked(InventorySlotUI slot)
         {
-            if (slot == null)
+            if (slot == null || slot.SlotIndex < 0)
             {
                 return;
             }
@@ -161,7 +165,75 @@ namespace CombatSystem.UI
 
         private void HandleSlotDropped(InventorySlotUI slot, PointerEventData eventData)
         {
+            if (slot == null || slot.SlotIndex < 0)
+            {
+                return;
+            }
+
             SlotDropped?.Invoke(slot, eventData);
+        }
+
+        private int ResolveTargetSlotCount()
+        {
+            if (inventory == null)
+            {
+                return 0;
+            }
+
+            if (useCustomDisplayIndices)
+            {
+                return customDisplayIndices.Count;
+            }
+
+            return inventory.Capacity;
+        }
+
+        private int ResolveInventoryIndexForDisplaySlot(int displaySlotIndex)
+        {
+            if (displaySlotIndex < 0)
+            {
+                return -1;
+            }
+
+            if (useCustomDisplayIndices)
+            {
+                if (displaySlotIndex >= customDisplayIndices.Count)
+                {
+                    return -1;
+                }
+
+                return customDisplayIndices[displaySlotIndex];
+            }
+
+            return displaySlotIndex;
+        }
+
+        private void ApplyDisplayIndices(IReadOnlyList<int> displayIndices)
+        {
+            customDisplayIndices.Clear();
+            useCustomDisplayIndices = displayIndices != null;
+
+            if (!useCustomDisplayIndices || inventory == null)
+            {
+                return;
+            }
+
+            var capacity = inventory.Capacity;
+            for (int i = 0; i < displayIndices.Count; i++)
+            {
+                var index = displayIndices[i];
+                if (index < 0 || index >= capacity)
+                {
+                    continue;
+                }
+
+                if (customDisplayIndices.Contains(index))
+                {
+                    continue;
+                }
+
+                customDisplayIndices.Add(index);
+            }
         }
 
         private void DetachSlotEvents()

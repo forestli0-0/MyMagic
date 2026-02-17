@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -29,16 +31,34 @@ namespace CombatSystem.UI
         [SerializeField] private InventoryGridUI inventoryGrid;
         [SerializeField] private EquipmentPanelUI equipmentPanel;
         [SerializeField] private ItemComparePanelUI comparePanel;
+        [SerializeField] private Button allFilterButton;
+        [SerializeField] private Button equipmentFilterButton;
+        [SerializeField] private Button consumableFilterButton;
+        [SerializeField] private Button questFilterButton;
         [SerializeField] private Button equipButton;
         [SerializeField] private Button unequipButton;
+        [SerializeField] private Color filterActiveColor = new Color(0.26f, 0.38f, 0.56f, 1f);
+        [SerializeField] private Color filterInactiveColor = new Color(0.2f, 0.22f, 0.26f, 1f);
+        [SerializeField] private Color filterActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
+        [SerializeField] private Color filterInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
 
         private int selectedInventoryIndex = -1;
         private int selectedEquipmentIndex = -1;
+        private InventoryFilter activeFilter = InventoryFilter.All;
+        private readonly List<int> filteredDisplayIndices = new List<int>(32);
         private bool subscribed;
         private DragPayload dragPayload;
         private bool dragActive;
         private Image dragIcon;
         private Canvas dragCanvas;
+
+        private enum InventoryFilter
+        {
+            All = 0,
+            Equipment = 1,
+            Consumable = 2,
+            Quest = 3
+        }
 
         private void Reset()
         {
@@ -125,6 +145,26 @@ namespace CombatSystem.UI
             }
         }
 
+        public void ShowAllItems()
+        {
+            SetFilter(InventoryFilter.All);
+        }
+
+        public void ShowEquipmentItems()
+        {
+            SetFilter(InventoryFilter.Equipment);
+        }
+
+        public void ShowConsumableItems()
+        {
+            SetFilter(InventoryFilter.Consumable);
+        }
+
+        public void ShowQuestItems()
+        {
+            SetFilter(InventoryFilter.Quest);
+        }
+
         private void EnsureReferences()
         {
             if (uiManager == null)
@@ -188,6 +228,26 @@ namespace CombatSystem.UI
                 unequipButton.onClick.AddListener(UnequipSelected);
             }
 
+            if (allFilterButton != null)
+            {
+                allFilterButton.onClick.AddListener(ShowAllItems);
+            }
+
+            if (equipmentFilterButton != null)
+            {
+                equipmentFilterButton.onClick.AddListener(ShowEquipmentItems);
+            }
+
+            if (consumableFilterButton != null)
+            {
+                consumableFilterButton.onClick.AddListener(ShowConsumableItems);
+            }
+
+            if (questFilterButton != null)
+            {
+                questFilterButton.onClick.AddListener(ShowQuestItems);
+            }
+
             subscribed = true;
         }
 
@@ -236,15 +296,32 @@ namespace CombatSystem.UI
                 unequipButton.onClick.RemoveListener(UnequipSelected);
             }
 
+            if (allFilterButton != null)
+            {
+                allFilterButton.onClick.RemoveListener(ShowAllItems);
+            }
+
+            if (equipmentFilterButton != null)
+            {
+                equipmentFilterButton.onClick.RemoveListener(ShowEquipmentItems);
+            }
+
+            if (consumableFilterButton != null)
+            {
+                consumableFilterButton.onClick.RemoveListener(ShowConsumableItems);
+            }
+
+            if (questFilterButton != null)
+            {
+                questFilterButton.onClick.RemoveListener(ShowQuestItems);
+            }
+
             subscribed = false;
         }
 
         private void RefreshAll()
         {
-            if (inventoryGrid != null)
-            {
-                inventoryGrid.Bind(inventory);
-            }
+            RefreshInventoryGrid();
 
             if (equipmentPanel != null)
             {
@@ -252,16 +329,29 @@ namespace CombatSystem.UI
             }
 
             RefreshSelectionAfterChange();
+            RefreshFilterButtonStates();
         }
 
         private void HandleInventoryChanged()
         {
+            RefreshInventoryGrid();
             RefreshSelectionAfterChange();
         }
 
         private void HandleEquipmentChanged()
         {
             RefreshSelectionAfterChange();
+        }
+
+        private void RefreshInventoryGrid()
+        {
+            if (inventoryGrid == null)
+            {
+                return;
+            }
+
+            BuildFilteredDisplayIndices(filteredDisplayIndices);
+            inventoryGrid.Bind(inventory, filteredDisplayIndices);
         }
 
         private void HandleInventorySlotSelected(int index)
@@ -416,7 +506,14 @@ namespace CombatSystem.UI
                 return null;
             }
 
-            return inventory.Items[selectedInventoryIndex];
+            var selected = inventory.Items[selectedInventoryIndex];
+            if (selected != null && !MatchesCurrentFilter(selected))
+            {
+                selectedInventoryIndex = -1;
+                return null;
+            }
+
+            return selected;
         }
 
         private ItemInstance ResolveEquipmentSelection()
@@ -446,6 +543,112 @@ namespace CombatSystem.UI
             if (unequipButton != null)
             {
                 unequipButton.interactable = equipmentItem != null;
+            }
+        }
+
+        private void SetFilter(InventoryFilter filter)
+        {
+            activeFilter = filter;
+            selectedInventoryIndex = -1;
+            RefreshAll();
+        }
+
+        private void BuildFilteredDisplayIndices(List<int> output)
+        {
+            output.Clear();
+            if (inventory == null)
+            {
+                return;
+            }
+
+            var items = inventory.Items;
+            if (activeFilter == InventoryFilter.All)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    output.Add(i);
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item == null || !MatchesCurrentFilter(item))
+                {
+                    continue;
+                }
+
+                output.Add(i);
+            }
+
+            // 在分类模式下追加空格，保留拖拽落位能力。
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] == null)
+                {
+                    output.Add(i);
+                }
+            }
+        }
+
+        private bool MatchesCurrentFilter(ItemInstance item)
+        {
+            if (activeFilter == InventoryFilter.All)
+            {
+                return true;
+            }
+
+            if (item == null || item.Definition == null)
+            {
+                return false;
+            }
+
+            var category = item.Definition.Category;
+            switch (activeFilter)
+            {
+                case InventoryFilter.Equipment:
+                    return item.Definition.IsEquippable ||
+                           category == ItemCategory.Weapon ||
+                           category == ItemCategory.Armor ||
+                           category == ItemCategory.Accessory;
+                case InventoryFilter.Consumable:
+                    return category == ItemCategory.Consumable;
+                case InventoryFilter.Quest:
+                    return category == ItemCategory.Quest;
+                default:
+                    return true;
+            }
+        }
+
+        private void RefreshFilterButtonStates()
+        {
+            ApplyFilterButtonState(allFilterButton, activeFilter == InventoryFilter.All);
+            ApplyFilterButtonState(equipmentFilterButton, activeFilter == InventoryFilter.Equipment);
+            ApplyFilterButtonState(consumableFilterButton, activeFilter == InventoryFilter.Consumable);
+            ApplyFilterButtonState(questFilterButton, activeFilter == InventoryFilter.Quest);
+        }
+
+        private void ApplyFilterButtonState(Button button, bool active)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.interactable = !active;
+
+            var image = button.targetGraphic as Image;
+            if (image != null)
+            {
+                image.color = active ? filterActiveColor : filterInactiveColor;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                labels[i].color = active ? filterActiveTextColor : filterInactiveTextColor;
             }
         }
 
