@@ -1951,56 +1951,231 @@ namespace CombatSystem.Editor
                 questJournalScreen,
                 GameplayMenuTab.Character);
 
-            var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
-            contentLayout.childAlignment = TextAnchor.UpperCenter;
+            var contentLayout = shell.Content.gameObject.AddComponent<HorizontalLayoutGroup>();
+            contentLayout.spacing = 16f;
+            contentLayout.childAlignment = TextAnchor.UpperLeft;
             contentLayout.childControlHeight = true;
             contentLayout.childControlWidth = true;
             contentLayout.childForceExpandHeight = true;
             contentLayout.childForceExpandWidth = true;
 
-            var panel = CreateUIElement("CharacterPanel", shell.Content);
-            var panelImage = panel.AddComponent<Image>();
-            panelImage.sprite = sprite;
-            panelImage.type = Image.Type.Sliced;
-            panelImage.color = GameplayMenuPanelColor;
-            panelImage.raycastTarget = true;
-            var panelLayout = panel.AddComponent<VerticalLayoutGroup>();
-            panelLayout.padding = new RectOffset(20, 20, 20, 20);
-            panelLayout.spacing = 12f;
-            panelLayout.childAlignment = TextAnchor.UpperLeft;
-            panelLayout.childControlHeight = true;
-            panelLayout.childControlWidth = true;
-            panelLayout.childForceExpandHeight = false;
-            panelLayout.childForceExpandWidth = true;
-            var panelElement = panel.AddComponent<LayoutElement>();
-            panelElement.flexibleHeight = 1f;
-            panelElement.flexibleWidth = 1f;
+            var leftColumn = CreateUIElement("LeftColumn", shell.Content);
+            var leftColumnLayout = leftColumn.AddComponent<VerticalLayoutGroup>();
+            leftColumnLayout.spacing = 12f;
+            leftColumnLayout.childAlignment = TextAnchor.UpperLeft;
+            leftColumnLayout.childControlHeight = true;
+            leftColumnLayout.childControlWidth = true;
+            leftColumnLayout.childForceExpandHeight = false;
+            leftColumnLayout.childForceExpandWidth = true;
+            var leftColumnElement = leftColumn.AddComponent<LayoutElement>();
+            leftColumnElement.flexibleWidth = 1f;
+            leftColumnElement.flexibleHeight = 1f;
 
-            var nameText = CreateText(CreateUIElement("PlayerName", panel.transform), "Player", font, 28, TextAnchor.MiddleLeft);
+            var rightColumn = CreateUIElement("RightColumn", shell.Content);
+            var rightColumnLayout = rightColumn.AddComponent<VerticalLayoutGroup>();
+            rightColumnLayout.spacing = 12f;
+            rightColumnLayout.childAlignment = TextAnchor.UpperLeft;
+            rightColumnLayout.childControlHeight = true;
+            rightColumnLayout.childControlWidth = true;
+            rightColumnLayout.childForceExpandHeight = false;
+            rightColumnLayout.childForceExpandWidth = true;
+            var rightColumnElement = rightColumn.AddComponent<LayoutElement>();
+            rightColumnElement.flexibleWidth = 1f;
+            rightColumnElement.flexibleHeight = 1f;
+
+            var profileBody = CreateCharacterCard(leftColumn.transform, "ProfileCard", sprite, font, "角色概览", 210f, 0f);
+            var nameText = CreateCharacterLine(profileBody, "Player", font, 34, Color.white, 44f);
             nameText.color = Color.white;
-            AddLayoutElement(nameText.gameObject, 40f);
+            var levelText = CreateCharacterLine(profileBody, "等级: -", font, 19, new Color(0.95f, 0.95f, 0.95f, 1f));
+            var pointsText = CreateCharacterLine(profileBody, "未分配属性点: -", font, 18, new Color(0.81f, 0.93f, 0.67f, 1f));
+            var currencyText = CreateCharacterLine(profileBody, "金币: -", font, 18, new Color(0.95f, 0.86f, 0.57f, 1f));
 
-            var levelText = CreateText(CreateUIElement("LevelText", panel.transform), "等级: -", font, 20, TextAnchor.MiddleLeft);
-            levelText.color = new Color(0.95f, 0.95f, 0.95f, 1f);
-            AddLayoutElement(levelText.gameObject, 32f);
+            var survivabilityBody = CreateCharacterCard(leftColumn.transform, "SurvivabilityCard", sprite, font, "生存状态", 200f, 0f);
+            var healthText = CreateCharacterLine(survivabilityBody, "生命: -", font, 18, new Color(0.93f, 0.64f, 0.64f, 1f));
+            var shieldText = CreateCharacterLine(survivabilityBody, "护盾: -", font, 18, new Color(0.75f, 0.85f, 1f, 1f));
+            var resourceText = CreateCharacterLine(survivabilityBody, "资源: -", font, 18, new Color(0.67f, 0.8f, 0.97f, 1f));
+            var moveSpeedText = CreateCharacterLine(survivabilityBody, "移动速度: -", font, 18, new Color(0.84f, 0.92f, 0.98f, 1f));
 
-            var healthText = CreateText(CreateUIElement("HealthText", panel.transform), "生命: -", font, 20, TextAnchor.MiddleLeft);
-            healthText.color = new Color(0.93f, 0.64f, 0.64f, 1f);
-            AddLayoutElement(healthText.gameObject, 32f);
+            var defenseBody = CreateCharacterCard(leftColumn.transform, "DefenseCard", sprite, font, "防御属性", 0f, 1f);
+            var armorText = CreateCharacterLine(defenseBody, "护甲: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var magicResistText = CreateCharacterLine(defenseBody, "魔抗: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var tenacityText = CreateCharacterLine(defenseBody, "韧性: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
 
-            var resourceText = CreateText(CreateUIElement("ResourceText", panel.transform), "资源: -", font, 20, TextAnchor.MiddleLeft);
-            resourceText.color = new Color(0.67f, 0.8f, 0.97f, 1f);
-            AddLayoutElement(resourceText.gameObject, 32f);
+            var offenseBody = CreateCharacterCard(rightColumn.transform, "OffenseCard", sprite, font, "进攻属性", 0f, 1f);
+            var attackPowerText = CreateCharacterLine(offenseBody, "攻击力: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var attackSpeedText = CreateCharacterLine(offenseBody, "攻速加成: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var abilityHasteText = CreateCharacterLine(offenseBody, "技能急速: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var lifestealText = CreateCharacterLine(offenseBody, "生命偷取: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var omnivampText = CreateCharacterLine(offenseBody, "全能吸血: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var armorPenFlatText = CreateCharacterLine(offenseBody, "护甲穿透(固定): -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var armorPenPercentText = CreateCharacterLine(offenseBody, "护甲穿透(%): -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var magicPenFlatText = CreateCharacterLine(offenseBody, "法穿(固定): -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var magicPenPercentText = CreateCharacterLine(offenseBody, "法穿(%): -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
 
-            var pointsText = CreateText(CreateUIElement("AttributePointsText", panel.transform), "未分配属性点: -", font, 20, TextAnchor.MiddleLeft);
-            pointsText.color = new Color(0.81f, 0.93f, 0.67f, 1f);
-            AddLayoutElement(pointsText.gameObject, 32f);
+            var loadoutBody = CreateCharacterCard(rightColumn.transform, "LoadoutCard", sprite, font, "构筑与养成", 220f, 0f);
+            var inventoryText = CreateCharacterLine(loadoutBody, "背包: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var equipmentText = CreateCharacterLine(loadoutBody, "装备槽: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var skillCountText = CreateCharacterLine(loadoutBody, "技能总数: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var basicAttackText = CreateCharacterLine(loadoutBody, "普攻技能: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+
+            var allocationBody = CreateCharacterCard(rightColumn.transform, "AttributeAllocationCard", sprite, font, "属性分配", 250f, 0f);
+            CreateCharacterAllocationRow(allocationBody, sprite, font, "体质", out var maxHealthAllocationText, out var maxHealthAllocateButton);
+            CreateCharacterAllocationRow(allocationBody, sprite, font, "力量", out var attackPowerAllocationText, out var attackPowerAllocateButton);
+            CreateCharacterAllocationRow(allocationBody, sprite, font, "防御", out var armorAllocationText, out var armorAllocateButton);
+            CreateCharacterAllocationRow(allocationBody, sprite, font, "迅捷", out var moveSpeedAllocationText, out var moveSpeedAllocateButton);
+            var allocationFeedbackText = CreateCharacterLine(allocationBody, "可用属性点: -", font, 16, new Color(0.86f, 0.9f, 0.95f, 1f), 30f);
+
+            var maxHealthStat = AssetDatabase.LoadAssetAtPath<StatDefinition>("Assets/_Game/ScriptableObjects/Stats/Stat_MaxHealth.asset");
+            var attackPowerStat = AssetDatabase.LoadAssetAtPath<StatDefinition>("Assets/_Game/ScriptableObjects/Stats/Stat_AttackPower.asset");
+            var armorStat = AssetDatabase.LoadAssetAtPath<StatDefinition>("Assets/_Game/ScriptableObjects/Stats/Stat_Armor.asset");
+            var moveSpeedStat = AssetDatabase.LoadAssetAtPath<StatDefinition>("Assets/_Game/ScriptableObjects/Stats/Stat_MoveSpeed.asset");
 
             SetSerialized(screen, "nameText", nameText);
             SetSerialized(screen, "levelText", levelText);
             SetSerialized(screen, "healthText", healthText);
+            SetSerialized(screen, "shieldText", shieldText);
             SetSerialized(screen, "resourceText", resourceText);
             SetSerialized(screen, "attributePointsText", pointsText);
+            SetSerialized(screen, "currencyText", currencyText);
+            SetSerialized(screen, "moveSpeedText", moveSpeedText);
+            SetSerialized(screen, "armorText", armorText);
+            SetSerialized(screen, "magicResistText", magicResistText);
+            SetSerialized(screen, "tenacityText", tenacityText);
+            SetSerialized(screen, "attackPowerText", attackPowerText);
+            SetSerialized(screen, "attackSpeedText", attackSpeedText);
+            SetSerialized(screen, "abilityHasteText", abilityHasteText);
+            SetSerialized(screen, "lifestealText", lifestealText);
+            SetSerialized(screen, "omnivampText", omnivampText);
+            SetSerialized(screen, "armorPenFlatText", armorPenFlatText);
+            SetSerialized(screen, "armorPenPercentText", armorPenPercentText);
+            SetSerialized(screen, "magicPenFlatText", magicPenFlatText);
+            SetSerialized(screen, "magicPenPercentText", magicPenPercentText);
+            SetSerialized(screen, "inventoryText", inventoryText);
+            SetSerialized(screen, "equipmentText", equipmentText);
+            SetSerialized(screen, "skillCountText", skillCountText);
+            SetSerialized(screen, "basicAttackText", basicAttackText);
+            SetSerialized(screen, "maxHealthAllocationStat", maxHealthStat);
+            SetSerialized(screen, "attackPowerAllocationStat", attackPowerStat);
+            SetSerialized(screen, "armorAllocationStat", armorStat);
+            SetSerialized(screen, "moveSpeedAllocationStat", moveSpeedStat);
+            SetSerialized(screen, "maxHealthAllocationText", maxHealthAllocationText);
+            SetSerialized(screen, "attackPowerAllocationText", attackPowerAllocationText);
+            SetSerialized(screen, "armorAllocationText", armorAllocationText);
+            SetSerialized(screen, "moveSpeedAllocationText", moveSpeedAllocationText);
+            SetSerialized(screen, "allocationFeedbackText", allocationFeedbackText);
+            SetSerialized(screen, "maxHealthAllocateButton", maxHealthAllocateButton);
+            SetSerialized(screen, "attackPowerAllocateButton", attackPowerAllocateButton);
+            SetSerialized(screen, "armorAllocateButton", armorAllocateButton);
+            SetSerialized(screen, "moveSpeedAllocateButton", moveSpeedAllocateButton);
+        }
+
+        private static RectTransform CreateCharacterCard(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            Font font,
+            string title,
+            float preferredHeight,
+            float flexibleHeight)
+        {
+            var card = CreateUIElement(name, parent);
+            var cardImage = card.AddComponent<Image>();
+            cardImage.sprite = sprite;
+            cardImage.type = Image.Type.Sliced;
+            cardImage.color = GameplayMenuPanelColor;
+            cardImage.raycastTarget = true;
+
+            var cardLayout = card.AddComponent<VerticalLayoutGroup>();
+            cardLayout.padding = new RectOffset(16, 16, 14, 14);
+            cardLayout.spacing = 8f;
+            cardLayout.childAlignment = TextAnchor.UpperLeft;
+            cardLayout.childControlHeight = true;
+            cardLayout.childControlWidth = true;
+            cardLayout.childForceExpandHeight = false;
+            cardLayout.childForceExpandWidth = true;
+
+            var cardElement = card.AddComponent<LayoutElement>();
+            if (preferredHeight > 0f)
+            {
+                cardElement.preferredHeight = preferredHeight;
+            }
+            cardElement.flexibleHeight = Mathf.Max(0f, flexibleHeight);
+            cardElement.flexibleWidth = 1f;
+
+            var titleText = CreateText(CreateUIElement("Title", card.transform), title, font, 24, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleText.gameObject, 34f);
+
+            var divider = CreateUIElement("Divider", card.transform);
+            var dividerImage = divider.AddComponent<Image>();
+            dividerImage.color = new Color(1f, 1f, 1f, 0.08f);
+            dividerImage.raycastTarget = false;
+            AddLayoutElement(divider, 1f);
+
+            var body = CreateUIElement("Body", card.transform);
+            var bodyLayout = body.AddComponent<VerticalLayoutGroup>();
+            bodyLayout.spacing = 6f;
+            bodyLayout.childAlignment = TextAnchor.UpperLeft;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childForceExpandHeight = false;
+            bodyLayout.childForceExpandWidth = true;
+            var bodyElement = body.AddComponent<LayoutElement>();
+            bodyElement.flexibleHeight = 1f;
+            bodyElement.flexibleWidth = 1f;
+
+            return body.GetComponent<RectTransform>();
+        }
+
+        private static Text CreateCharacterLine(Transform parent, string text, Font font, int fontSize, Color color, float height = 28f)
+        {
+            var go = CreateUIElement("Line", parent);
+            var label = CreateText(go, text, font, fontSize, TextAnchor.MiddleLeft);
+            label.color = color;
+            AddLayoutElement(go, height);
+            return label;
+        }
+
+        private static void CreateCharacterAllocationRow(
+            Transform parent,
+            Sprite sprite,
+            Font font,
+            string title,
+            out Text valueText,
+            out Button addButton)
+        {
+            var row = CreateUIElement($"AllocationRow_{title}", parent);
+            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 10f;
+            rowLayout.childAlignment = TextAnchor.MiddleLeft;
+            rowLayout.childControlHeight = true;
+            rowLayout.childControlWidth = true;
+            rowLayout.childForceExpandHeight = false;
+            rowLayout.childForceExpandWidth = false;
+            AddLayoutElement(row, 34f);
+
+            var valueGo = CreateUIElement("Value", row.transform);
+            valueText = CreateText(valueGo, $"{title}: -", font, 16, TextAnchor.MiddleLeft);
+            valueText.color = new Color(0.9f, 0.9f, 0.92f, 1f);
+            var valueElement = valueGo.AddComponent<LayoutElement>();
+            valueElement.flexibleWidth = 1f;
+            valueElement.minWidth = 0f;
+            valueElement.preferredHeight = 34f;
+
+            addButton = CreateButton(row.transform, "加点", sprite, font);
+            SetLayoutSize(addButton.gameObject, 32f, 110f);
+            var labels = addButton.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.alignment = TextAnchor.MiddleCenter;
+                label.fontSize = 16;
+            }
         }
 
         private static void BuildQuestJournalUI(QuestJournalScreen screen, Sprite sprite, Font font, UIScreenBase characterScreen, UIScreenBase inventoryScreen)
@@ -2149,8 +2324,10 @@ namespace CombatSystem.Editor
             var filterEquipmentButton = (Button)null;
             var filterConsumableButton = (Button)null;
             var filterQuestButton = (Button)null;
+            var capacityText = (Text)null;
 
             var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 8f;
             contentLayout.childAlignment = TextAnchor.UpperCenter;
             contentLayout.childControlHeight = true;
             contentLayout.childControlWidth = true;
@@ -2159,8 +2336,8 @@ namespace CombatSystem.Editor
 
             var layoutRoot = CreateUIElement("InventoryLayout", shell.Content);
             var layout = layoutRoot.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(32, 32, 20, 20);
-            layout.spacing = 24f;
+            layout.padding = new RectOffset(24, 24, 12, 12);
+            layout.spacing = 16f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
@@ -2178,8 +2355,8 @@ namespace CombatSystem.Editor
             inventoryImage.raycastTarget = true;
 
             var inventoryLayout = inventoryPanel.AddComponent<VerticalLayoutGroup>();
-            inventoryLayout.padding = new RectOffset(20, 20, 20, 20);
-            inventoryLayout.spacing = 12f;
+            inventoryLayout.padding = new RectOffset(16, 16, 16, 16);
+            inventoryLayout.spacing = 10f;
             inventoryLayout.childAlignment = TextAnchor.UpperCenter;
             inventoryLayout.childControlHeight = true;
             inventoryLayout.childControlWidth = true;
@@ -2187,47 +2364,100 @@ namespace CombatSystem.Editor
             inventoryLayout.childForceExpandWidth = true;
 
             var inventoryElement = inventoryPanel.AddComponent<LayoutElement>();
-            inventoryElement.preferredWidth = 980f;
-            inventoryElement.flexibleWidth = 1f;
+            inventoryElement.preferredWidth = 1040f;
+            inventoryElement.flexibleWidth = 1.35f;
             inventoryElement.flexibleHeight = 1f;
+
+            var inventoryInfoRow = CreateUIElement("InventoryInfoRow", inventoryPanel.transform);
+            var inventoryInfoImage = inventoryInfoRow.AddComponent<Image>();
+            inventoryInfoImage.sprite = sprite;
+            inventoryInfoImage.type = Image.Type.Sliced;
+            inventoryInfoImage.color = GameplayMenuHeaderColor;
+            inventoryInfoImage.raycastTarget = true;
+
+            var inventoryInfoLayout = inventoryInfoRow.AddComponent<HorizontalLayoutGroup>();
+            inventoryInfoLayout.padding = new RectOffset(10, 10, 6, 6);
+            inventoryInfoLayout.spacing = 10f;
+            inventoryInfoLayout.childAlignment = TextAnchor.MiddleLeft;
+            inventoryInfoLayout.childControlHeight = true;
+            inventoryInfoLayout.childControlWidth = true;
+            inventoryInfoLayout.childForceExpandHeight = false;
+            inventoryInfoLayout.childForceExpandWidth = false;
+            AddLayoutElement(inventoryInfoRow, 44f);
+            var inventoryInfoElement = inventoryInfoRow.GetComponent<LayoutElement>();
+            inventoryInfoElement.flexibleWidth = 1f;
+
+            var capacityGo = CreateUIElement("CapacityText", inventoryInfoRow.transform);
+            capacityText = CreateText(capacityGo, "容量 0/0", font, 18, TextAnchor.MiddleLeft);
+            capacityText.color = new Color(0.8f, 0.88f, 0.98f, 1f);
+            var capacityElement = capacityGo.AddComponent<LayoutElement>();
+            capacityElement.flexibleWidth = 1f;
+            capacityElement.preferredHeight = 30f;
+            capacityElement.minWidth = 0f;
+
+            var dragHintGo = CreateUIElement("DragHint", inventoryInfoRow.transform);
+            var dragHintText = CreateText(dragHintGo, "拖拽交换 | 双击装备", font, 14, TextAnchor.MiddleRight);
+            dragHintText.color = new Color(0.76f, 0.8f, 0.86f, 1f);
+            AddLayoutElement(dragHintGo, 30f, 280f);
 
             var inventoryFiltersRow = CreateUIElement("InventorySecondaryTabs", inventoryPanel.transform);
             var inventoryFiltersImage = inventoryFiltersRow.AddComponent<Image>();
             inventoryFiltersImage.sprite = sprite;
             inventoryFiltersImage.type = Image.Type.Sliced;
-            inventoryFiltersImage.color = GameplayMenuHeaderColor;
+            inventoryFiltersImage.color = GameplayMenuPanelAltColor;
             inventoryFiltersImage.raycastTarget = true;
 
             var inventoryFiltersLayout = inventoryFiltersRow.AddComponent<HorizontalLayoutGroup>();
-            inventoryFiltersLayout.padding = new RectOffset(8, 8, 6, 6);
-            inventoryFiltersLayout.spacing = 10f;
+            inventoryFiltersLayout.padding = new RectOffset(6, 6, 6, 6);
+            inventoryFiltersLayout.spacing = 8f;
             inventoryFiltersLayout.childAlignment = TextAnchor.MiddleLeft;
             inventoryFiltersLayout.childControlHeight = true;
             inventoryFiltersLayout.childControlWidth = true;
             inventoryFiltersLayout.childForceExpandHeight = false;
             inventoryFiltersLayout.childForceExpandWidth = true;
-            AddLayoutElement(inventoryFiltersRow, 52f);
+            AddLayoutElement(inventoryFiltersRow, 50f);
             var inventoryFiltersElement = inventoryFiltersRow.GetComponent<LayoutElement>();
             inventoryFiltersElement.flexibleWidth = 1f;
 
-            filterAllButton = CreateButton(inventoryFiltersRow.transform, "All", sprite, font);
-            filterEquipmentButton = CreateButton(inventoryFiltersRow.transform, "Equipment", sprite, font);
-            filterConsumableButton = CreateButton(inventoryFiltersRow.transform, "Consumables", sprite, font);
-            filterQuestButton = CreateButton(inventoryFiltersRow.transform, "Quest", sprite, font);
+            filterAllButton = CreateButton(inventoryFiltersRow.transform, "全部", sprite, font);
+            filterEquipmentButton = CreateButton(inventoryFiltersRow.transform, "装备", sprite, font);
+            filterConsumableButton = CreateButton(inventoryFiltersRow.transform, "消耗品", sprite, font);
+            filterQuestButton = CreateButton(inventoryFiltersRow.transform, "任务", sprite, font);
 
             ConfigureSecondaryFilterButtonLayout(filterAllButton);
             ConfigureSecondaryFilterButtonLayout(filterEquipmentButton);
             ConfigureSecondaryFilterButtonLayout(filterConsumableButton);
             ConfigureSecondaryFilterButtonLayout(filterQuestButton);
 
-            var gridRoot = CreateUIElement("InventoryGrid", inventoryPanel.transform);
+            var gridFrame = CreateUIElement("InventoryGridFrame", inventoryPanel.transform);
+            var gridFrameImage = gridFrame.AddComponent<Image>();
+            gridFrameImage.sprite = sprite;
+            gridFrameImage.type = Image.Type.Sliced;
+            gridFrameImage.color = new Color(0.08f, 0.11f, 0.17f, 0.97f);
+            gridFrameImage.raycastTarget = true;
+
+            var gridFrameLayout = gridFrame.AddComponent<VerticalLayoutGroup>();
+            gridFrameLayout.padding = new RectOffset(10, 10, 10, 10);
+            gridFrameLayout.spacing = 0f;
+            gridFrameLayout.childAlignment = TextAnchor.UpperLeft;
+            gridFrameLayout.childControlHeight = true;
+            gridFrameLayout.childControlWidth = true;
+            gridFrameLayout.childForceExpandHeight = true;
+            gridFrameLayout.childForceExpandWidth = true;
+
+            var gridFrameElement = gridFrame.AddComponent<LayoutElement>();
+            gridFrameElement.flexibleHeight = 1f;
+            gridFrameElement.flexibleWidth = 1f;
+
+            var gridRoot = CreateUIElement("InventoryGrid", gridFrame.transform);
             var gridRect = gridRoot.GetComponent<RectTransform>();
             var gridLayout = gridRoot.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(80f, 80f);
+            gridLayout.cellSize = new Vector2(88f, 88f);
             gridLayout.spacing = new Vector2(10f, 10f);
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridLayout.constraintCount = 6;
+            gridLayout.constraintCount = 8;
             gridLayout.childAlignment = TextAnchor.UpperLeft;
+            gridLayout.padding = new RectOffset(2, 2, 2, 2);
 
             var gridElement = gridRoot.AddComponent<LayoutElement>();
             gridElement.flexibleHeight = 1f;
@@ -2247,8 +2477,8 @@ namespace CombatSystem.Editor
             sideImage.raycastTarget = true;
 
             var sideLayout = sidePanel.AddComponent<VerticalLayoutGroup>();
-            sideLayout.padding = new RectOffset(20, 20, 20, 20);
-            sideLayout.spacing = 16f;
+            sideLayout.padding = new RectOffset(16, 16, 16, 16);
+            sideLayout.spacing = 12f;
             sideLayout.childAlignment = TextAnchor.UpperCenter;
             sideLayout.childControlHeight = true;
             sideLayout.childControlWidth = true;
@@ -2256,7 +2486,7 @@ namespace CombatSystem.Editor
             sideLayout.childForceExpandWidth = true;
 
             var sideElement = sidePanel.AddComponent<LayoutElement>();
-            sideElement.preferredWidth = 720f;
+            sideElement.preferredWidth = 680f;
             sideElement.flexibleWidth = 1f;
             sideElement.flexibleHeight = 1f;
 
@@ -2268,29 +2498,35 @@ namespace CombatSystem.Editor
             equipmentImage.raycastTarget = true;
 
             var equipmentLayout = equipmentSection.AddComponent<VerticalLayoutGroup>();
-            equipmentLayout.padding = new RectOffset(16, 16, 16, 16);
-            equipmentLayout.spacing = 8f;
-            equipmentLayout.childAlignment = TextAnchor.UpperCenter;
+            equipmentLayout.padding = new RectOffset(14, 14, 14, 14);
+            equipmentLayout.spacing = 6f;
+            equipmentLayout.childAlignment = TextAnchor.UpperLeft;
             equipmentLayout.childControlHeight = true;
             equipmentLayout.childControlWidth = true;
             equipmentLayout.childForceExpandHeight = false;
             equipmentLayout.childForceExpandWidth = true;
 
             var equipmentElement = equipmentSection.AddComponent<LayoutElement>();
-            equipmentElement.preferredHeight = 320f;
+            equipmentElement.preferredHeight = 390f;
             equipmentElement.flexibleHeight = 0f;
 
-            CreateTitle(equipmentSection.transform, "EQUIPMENT", font, 22);
+            var equipmentTitleGo = CreateUIElement("EquipmentTitle", equipmentSection.transform);
+            var equipmentTitle = CreateText(equipmentTitleGo, "装备栏", font, 24, TextAnchor.MiddleLeft);
+            equipmentTitle.color = Color.white;
+            AddLayoutElement(equipmentTitleGo, 38f);
 
             var equipmentSlotsRoot = CreateUIElement("EquipmentSlots", equipmentSection.transform);
             var equipmentSlotsRect = equipmentSlotsRoot.GetComponent<RectTransform>();
             var equipmentSlotsLayout = equipmentSlotsRoot.AddComponent<VerticalLayoutGroup>();
-            equipmentSlotsLayout.spacing = 8f;
-            equipmentSlotsLayout.childAlignment = TextAnchor.UpperCenter;
+            equipmentSlotsLayout.spacing = 6f;
+            equipmentSlotsLayout.childAlignment = TextAnchor.UpperLeft;
             equipmentSlotsLayout.childControlHeight = true;
             equipmentSlotsLayout.childControlWidth = true;
             equipmentSlotsLayout.childForceExpandHeight = false;
             equipmentSlotsLayout.childForceExpandWidth = true;
+            var equipmentSlotsElement = equipmentSlotsRoot.AddComponent<LayoutElement>();
+            equipmentSlotsElement.flexibleHeight = 1f;
+            equipmentSlotsElement.flexibleWidth = 1f;
 
             var equipmentPanel = equipmentSlotsRoot.AddComponent<EquipmentPanelUI>();
             var equipmentSlotTemplate = CreateEquipmentSlotTemplate(equipmentSlotsRoot.transform, sprite, font);
@@ -2306,9 +2542,9 @@ namespace CombatSystem.Editor
             detailsImage.raycastTarget = true;
 
             var detailsLayout = detailsSection.AddComponent<VerticalLayoutGroup>();
-            detailsLayout.padding = new RectOffset(16, 16, 16, 16);
-            detailsLayout.spacing = 10f;
-            detailsLayout.childAlignment = TextAnchor.UpperCenter;
+            detailsLayout.padding = new RectOffset(14, 14, 14, 14);
+            detailsLayout.spacing = 8f;
+            detailsLayout.childAlignment = TextAnchor.UpperLeft;
             detailsLayout.childControlHeight = true;
             detailsLayout.childControlWidth = true;
             detailsLayout.childForceExpandHeight = false;
@@ -2318,23 +2554,26 @@ namespace CombatSystem.Editor
             detailsElement.flexibleHeight = 1f;
             detailsElement.flexibleWidth = 1f;
 
-            CreateTitle(detailsSection.transform, "DETAILS", font, 22);
+            var detailsTitleGo = CreateUIElement("DetailsTitle", detailsSection.transform);
+            var detailsTitle = CreateText(detailsTitleGo, "物品详情", font, 24, TextAnchor.MiddleLeft);
+            detailsTitle.color = Color.white;
+            AddLayoutElement(detailsTitleGo, 38f);
 
             var headerRow = CreateUIElement("Header", detailsSection.transform);
             var headerLayout = headerRow.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.spacing = 12f;
+            headerLayout.spacing = 10f;
             headerLayout.childAlignment = TextAnchor.MiddleLeft;
             headerLayout.childControlHeight = true;
             headerLayout.childControlWidth = true;
             headerLayout.childForceExpandHeight = false;
             headerLayout.childForceExpandWidth = false;
-            AddLayoutElement(headerRow, 96f);
+            AddLayoutElement(headerRow, 84f);
 
             var iconGo = CreateUIElement("Icon", headerRow.transform);
             var iconImage = iconGo.AddComponent<Image>();
             iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
-            SetLayoutSize(iconGo, 88f, 88f);
+            SetLayoutSize(iconGo, 74f, 74f);
 
             var infoRoot = CreateUIElement("Info", headerRow.transform);
             var infoLayout = infoRoot.AddComponent<VerticalLayoutGroup>();
@@ -2344,38 +2583,41 @@ namespace CombatSystem.Editor
             infoLayout.childControlWidth = true;
             infoLayout.childForceExpandHeight = false;
             infoLayout.childForceExpandWidth = true;
-            AddLayoutElement(infoRoot, 88f, 0f);
+            AddLayoutElement(infoRoot, 74f, 0f);
 
             var nameGo = CreateUIElement("Name", infoRoot.transform);
-            var nameText = CreateText(nameGo, "Item Name", font, 20, TextAnchor.MiddleLeft);
+            var nameText = CreateText(nameGo, "物品名称", font, 22, TextAnchor.MiddleLeft);
             nameText.color = Color.white;
-            AddLayoutElement(nameGo, 28f);
+            AddLayoutElement(nameGo, 30f);
 
             var slotGo = CreateUIElement("Slot", infoRoot.transform);
-            var slotText = CreateText(slotGo, "Slot", font, 14, TextAnchor.MiddleLeft);
+            var slotText = CreateText(slotGo, "类型", font, 15, TextAnchor.MiddleLeft);
             slotText.color = new Color(0.75f, 0.75f, 0.75f, 1f);
-            AddLayoutElement(slotGo, 20f);
+            AddLayoutElement(slotGo, 22f);
 
             var descriptionGo = CreateUIElement("Description", detailsSection.transform);
-            var descriptionText = CreateText(descriptionGo, string.Empty, font, 14, TextAnchor.UpperLeft);
+            var descriptionText = CreateText(descriptionGo, string.Empty, font, 15, TextAnchor.UpperLeft);
             descriptionText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
             descriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
             descriptionText.verticalOverflow = VerticalWrapMode.Overflow;
-            AddLayoutElement(descriptionGo, 84f);
+            AddLayoutElement(descriptionGo, 78f);
 
             var statsRoot = CreateUIElement("Stats", detailsSection.transform);
             var statsLayout = statsRoot.AddComponent<VerticalLayoutGroup>();
-            statsLayout.spacing = 4f;
+            statsLayout.spacing = 5f;
             statsLayout.childAlignment = TextAnchor.UpperLeft;
             statsLayout.childControlHeight = true;
             statsLayout.childControlWidth = true;
             statsLayout.childForceExpandHeight = false;
             statsLayout.childForceExpandWidth = true;
+            var statsElement = statsRoot.AddComponent<LayoutElement>();
+            statsElement.flexibleHeight = 1f;
+            statsElement.flexibleWidth = 1f;
 
             var statTemplateGo = CreateUIElement("StatLine", statsRoot.transform);
-            var statTemplate = CreateText(statTemplateGo, "Stat +0", font, 14, TextAnchor.MiddleLeft);
+            var statTemplate = CreateText(statTemplateGo, "属性 +0", font, 15, TextAnchor.MiddleLeft);
             statTemplate.color = Color.white;
-            AddLayoutElement(statTemplateGo, 20f);
+            AddLayoutElement(statTemplateGo, 22f);
             statTemplateGo.SetActive(false);
 
             var buttonsRow = CreateUIElement("Buttons", detailsSection.transform);
@@ -2388,10 +2630,15 @@ namespace CombatSystem.Editor
             buttonsLayout.childForceExpandWidth = true;
             AddLayoutElement(buttonsRow, 52f);
 
-            var equipButton = CreateButton(buttonsRow.transform, "Equip", sprite, font);
-            var unequipButton = CreateButton(buttonsRow.transform, "Unequip", sprite, font);
-            SetLayoutSize(equipButton.gameObject, 40f, 160f);
-            SetLayoutSize(unequipButton.gameObject, 40f, 160f);
+            var equipButton = CreateButton(buttonsRow.transform, "装备", sprite, font);
+            var unequipButton = CreateButton(buttonsRow.transform, "卸下", sprite, font);
+            SetLayoutSize(equipButton.gameObject, 42f, 180f);
+            SetLayoutSize(unequipButton.gameObject, 42f, 180f);
+
+            var actionHintGo = CreateUIElement("ActionHint", detailsSection.transform);
+            var actionHintText = CreateText(actionHintGo, "选择背包或装备中的物品", font, 14, TextAnchor.MiddleLeft);
+            actionHintText.color = new Color(0.75f, 0.8f, 0.9f, 1f);
+            AddLayoutElement(actionHintGo, 26f);
 
             var comparePanel = detailsSection.AddComponent<ItemComparePanelUI>();
             SetSerialized(comparePanel, "icon", iconImage);
@@ -2408,8 +2655,10 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "equipmentFilterButton", filterEquipmentButton);
             SetSerialized(screen, "consumableFilterButton", filterConsumableButton);
             SetSerialized(screen, "questFilterButton", filterQuestButton);
+            SetSerialized(screen, "capacityText", capacityText);
             SetSerialized(screen, "equipButton", equipButton);
             SetSerialized(screen, "unequipButton", unequipButton);
+            SetSerialized(screen, "actionHintText", actionHintText);
             SetSerializedColor(screen, "filterActiveColor", GameplayMenuTabActiveColor);
             SetSerializedColor(screen, "filterInactiveColor", GameplayMenuTabInactiveColor);
             SetSerializedColor(screen, "filterActiveTextColor", GameplayMenuTabActiveTextColor);
@@ -2582,7 +2831,7 @@ namespace CombatSystem.Editor
                 layout = button.gameObject.AddComponent<LayoutElement>();
             }
 
-            layout.preferredHeight = 38f;
+            layout.preferredHeight = 40f;
             layout.preferredWidth = -1f;
             layout.minWidth = 0f;
             layout.flexibleWidth = 1f;
@@ -2602,7 +2851,7 @@ namespace CombatSystem.Editor
                     continue;
                 }
 
-                label.fontSize = 16;
+                label.fontSize = 17;
                 label.color = GameplayMenuTabInactiveTextColor;
             }
         }
@@ -3368,11 +3617,19 @@ namespace CombatSystem.Editor
             var background = root.GetComponent<Image>();
             background.sprite = sprite;
             background.type = Image.Type.Sliced;
-            background.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            background.color = new Color(0.15f, 0.17f, 0.22f, 1f);
             background.raycastTarget = true;
 
             var button = root.GetComponent<Button>();
             button.targetGraphic = background;
+
+            var frameGo = CreateUIElement("Frame", root.transform);
+            var frame = frameGo.AddComponent<Image>();
+            frame.sprite = sprite;
+            frame.type = Image.Type.Sliced;
+            frame.color = new Color(0.72f, 0.8f, 0.95f, 0.08f);
+            frame.raycastTarget = false;
+            StretchRect(frameGo.GetComponent<RectTransform>());
 
             var iconGo = CreateUIElement("Icon", root.transform);
             var icon = iconGo.AddComponent<Image>();
@@ -3380,21 +3637,21 @@ namespace CombatSystem.Editor
             var iconRect = iconGo.GetComponent<RectTransform>();
             iconRect.anchorMin = Vector2.zero;
             iconRect.anchorMax = Vector2.one;
-            iconRect.offsetMin = new Vector2(6f, 6f);
-            iconRect.offsetMax = new Vector2(-6f, -6f);
+            iconRect.offsetMin = new Vector2(8f, 8f);
+            iconRect.offsetMax = new Vector2(-8f, -8f);
 
             var stackGo = CreateUIElement("StackText", root.transform);
-            var stackText = CreateText(stackGo, string.Empty, font, 14, TextAnchor.LowerRight);
+            var stackText = CreateText(stackGo, string.Empty, font, 15, TextAnchor.LowerRight);
             stackText.color = Color.white;
             var stackRect = stackGo.GetComponent<RectTransform>();
             stackRect.anchorMin = Vector2.zero;
             stackRect.anchorMax = Vector2.one;
-            stackRect.offsetMin = new Vector2(6f, 6f);
-            stackRect.offsetMax = new Vector2(-6f, -6f);
+            stackRect.offsetMin = new Vector2(8f, 8f);
+            stackRect.offsetMax = new Vector2(-8f, -8f);
 
             var selectionGo = CreateUIElement("Selection", root.transform);
             var selection = selectionGo.AddComponent<Image>();
-            selection.color = new Color(1f, 1f, 1f, 0.15f);
+            selection.color = new Color(0.38f, 0.56f, 0.9f, 0.28f);
             selection.raycastTarget = false;
             StretchRect(selectionGo.GetComponent<RectTransform>());
             selection.enabled = false;
@@ -3418,26 +3675,27 @@ namespace CombatSystem.Editor
             var background = root.GetComponent<Image>();
             background.sprite = sprite;
             background.type = Image.Type.Sliced;
-            background.color = new Color(0.18f, 0.18f, 0.18f, 1f);
+            background.color = new Color(0.14f, 0.16f, 0.2f, 1f);
             background.raycastTarget = true;
 
             var button = root.GetComponent<Button>();
             button.targetGraphic = background;
 
             var layout = root.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 10f;
+            layout.padding = new RectOffset(8, 8, 6, 6);
+            layout.spacing = 12f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
-            AddLayoutElement(root, 64f);
+            AddLayoutElement(root, 72f);
 
             var iconGo = CreateUIElement("Icon", root.transform);
             var icon = iconGo.AddComponent<Image>();
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            SetLayoutSize(iconGo, 48f, 48f);
+            SetLayoutSize(iconGo, 52f, 52f);
 
             var labelsRoot = CreateUIElement("Labels", root.transform);
             var labelsLayout = labelsRoot.AddComponent<VerticalLayoutGroup>();
@@ -3447,21 +3705,25 @@ namespace CombatSystem.Editor
             labelsLayout.childControlWidth = true;
             labelsLayout.childForceExpandHeight = false;
             labelsLayout.childForceExpandWidth = true;
-            AddLayoutElement(labelsRoot, 48f, 0f);
+            AddLayoutElement(labelsRoot, 52f, 0f);
 
             var slotLabelGo = CreateUIElement("SlotLabel", labelsRoot.transform);
-            var slotLabel = CreateText(slotLabelGo, "Slot", font, 14, TextAnchor.MiddleLeft);
+            var slotLabel = CreateText(slotLabelGo, "Slot", font, 15, TextAnchor.MiddleLeft);
             slotLabel.color = new Color(0.9f, 0.9f, 0.9f, 1f);
-            AddLayoutElement(slotLabelGo, 20f);
+            slotLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            slotLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            AddLayoutElement(slotLabelGo, 24f);
 
             var itemLabelGo = CreateUIElement("ItemLabel", labelsRoot.transform);
-            var itemLabel = CreateText(itemLabelGo, "Empty", font, 12, TextAnchor.MiddleLeft);
+            var itemLabel = CreateText(itemLabelGo, "Empty", font, 14, TextAnchor.MiddleLeft);
             itemLabel.color = new Color(0.75f, 0.75f, 0.75f, 1f);
-            AddLayoutElement(itemLabelGo, 18f);
+            itemLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            itemLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            AddLayoutElement(itemLabelGo, 22f);
 
             var selectionGo = CreateUIElement("Selection", root.transform);
             var selection = selectionGo.AddComponent<Image>();
-            selection.color = new Color(1f, 1f, 1f, 0.12f);
+            selection.color = new Color(0.35f, 0.52f, 0.86f, 0.24f);
             selection.raycastTarget = false;
             StretchRect(selectionGo.GetComponent<RectTransform>());
             selection.enabled = false;

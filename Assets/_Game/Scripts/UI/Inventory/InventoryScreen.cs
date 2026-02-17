@@ -35,8 +35,10 @@ namespace CombatSystem.UI
         [SerializeField] private Button equipmentFilterButton;
         [SerializeField] private Button consumableFilterButton;
         [SerializeField] private Button questFilterButton;
+        [SerializeField] private Text capacityText;
         [SerializeField] private Button equipButton;
         [SerializeField] private Button unequipButton;
+        [SerializeField] private Text actionHintText;
         [SerializeField] private Color filterActiveColor = new Color(0.26f, 0.38f, 0.56f, 1f);
         [SerializeField] private Color filterInactiveColor = new Color(0.2f, 0.22f, 0.26f, 1f);
         [SerializeField] private Color filterActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
@@ -220,12 +222,12 @@ namespace CombatSystem.UI
 
             if (equipButton != null)
             {
-                equipButton.onClick.AddListener(EquipSelected);
+                equipButton.onClick.AddListener(HandlePrimaryAction);
             }
 
             if (unequipButton != null)
             {
-                unequipButton.onClick.AddListener(UnequipSelected);
+                unequipButton.onClick.AddListener(HandleSecondaryAction);
             }
 
             if (allFilterButton != null)
@@ -288,12 +290,12 @@ namespace CombatSystem.UI
 
             if (equipButton != null)
             {
-                equipButton.onClick.RemoveListener(EquipSelected);
+                equipButton.onClick.RemoveListener(HandlePrimaryAction);
             }
 
             if (unequipButton != null)
             {
-                unequipButton.onClick.RemoveListener(UnequipSelected);
+                unequipButton.onClick.RemoveListener(HandleSecondaryAction);
             }
 
             if (allFilterButton != null)
@@ -345,6 +347,8 @@ namespace CombatSystem.UI
 
         private void RefreshInventoryGrid()
         {
+            RefreshCapacityText();
+
             if (inventoryGrid == null)
             {
                 return;
@@ -352,6 +356,36 @@ namespace CombatSystem.UI
 
             BuildFilteredDisplayIndices(filteredDisplayIndices);
             inventoryGrid.Bind(inventory, filteredDisplayIndices);
+        }
+
+        private void RefreshCapacityText()
+        {
+            if (capacityText == null)
+            {
+                return;
+            }
+
+            if (inventory == null)
+            {
+                capacityText.text = "容量 --/--";
+                capacityText.color = new Color(0.8f, 0.82f, 0.86f, 1f);
+                return;
+            }
+
+            var used = 0;
+            var items = inventory.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] != null)
+                {
+                    used++;
+                }
+            }
+
+            capacityText.text = $"容量 {used}/{inventory.Capacity}";
+            capacityText.color = used >= inventory.Capacity
+                ? new Color(0.95f, 0.58f, 0.52f, 1f)
+                : new Color(0.8f, 0.88f, 0.98f, 1f);
         }
 
         private void HandleInventorySlotSelected(int index)
@@ -535,15 +569,227 @@ namespace CombatSystem.UI
 
         private void UpdateButtons(ItemInstance inventoryItem, ItemInstance equipmentItem)
         {
-            if (equipButton != null)
+            if (inventoryItem != null && inventoryItem.Definition != null)
             {
-                equipButton.interactable = inventoryItem != null && inventoryItem.Definition != null && inventoryItem.Definition.IsEquippable;
+                if (inventoryItem.Definition.IsEquippable)
+                {
+                    ApplyActionState(equipButton, "装备", true);
+                    ApplyActionState(unequipButton, "丢弃", true);
+                    SetActionHint("主操作: 装备该物品    次操作: 丢弃该物品");
+                    return;
+                }
+
+                if (CanSplit(inventoryItem) && HasEmptyInventorySlot())
+                {
+                    ApplyActionState(equipButton, "拆分", true);
+                    ApplyActionState(unequipButton, "丢弃", true);
+                    SetActionHint("主操作: 平分堆叠    次操作: 丢弃 1 个");
+                    return;
+                }
+
+                if (inventoryItem.IsStackable)
+                {
+                    ApplyActionState(equipButton, "丢弃", true);
+                    ApplyActionState(unequipButton, "拆分", false);
+                    SetActionHint("主操作: 丢弃 1 个");
+                    return;
+                }
+
+                ApplyActionState(equipButton, "丢弃", true);
+                ApplyActionState(unequipButton, "拆分", false);
+                SetActionHint("主操作: 丢弃该物品");
+                return;
             }
 
-            if (unequipButton != null)
+            if (equipmentItem != null)
             {
-                unequipButton.interactable = equipmentItem != null;
+                ApplyActionState(equipButton, "卸下", true);
+                ApplyActionState(unequipButton, "丢弃", true);
+                SetActionHint("主操作: 卸下到背包    次操作: 直接丢弃装备");
+                return;
             }
+
+            ApplyActionState(equipButton, "装备", false);
+            ApplyActionState(unequipButton, "卸下", false);
+            SetActionHint("选择背包或装备中的物品");
+        }
+
+        private void HandlePrimaryAction()
+        {
+            var inventoryItem = ResolveInventorySelection();
+            if (inventoryItem != null && inventoryItem.Definition != null)
+            {
+                if (inventoryItem.Definition.IsEquippable)
+                {
+                    EquipSelected();
+                    return;
+                }
+
+                if (CanSplit(inventoryItem) && HasEmptyInventorySlot())
+                {
+                    SplitSelected();
+                    return;
+                }
+
+                DropSelectedInventory(1);
+                return;
+            }
+
+            var equipmentItem = ResolveEquipmentSelection();
+            if (equipmentItem != null)
+            {
+                UnequipSelected();
+            }
+        }
+
+        private void HandleSecondaryAction()
+        {
+            var inventoryItem = ResolveInventorySelection();
+            if (inventoryItem != null && inventoryItem.Definition != null)
+            {
+                DropSelectedInventory(1);
+                return;
+            }
+
+            var equipmentItem = ResolveEquipmentSelection();
+            if (equipmentItem != null)
+            {
+                DropSelectedEquipment();
+            }
+        }
+
+        private bool SplitSelected()
+        {
+            if (inventory == null || selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
+            {
+                return false;
+            }
+
+            var selected = inventory.Items[selectedInventoryIndex];
+            if (!CanSplit(selected))
+            {
+                return false;
+            }
+
+            var targetIndex = FindFirstEmptyInventorySlot();
+            if (targetIndex < 0)
+            {
+                return false;
+            }
+
+            var splitAmount = selected.Stack / 2;
+            if (splitAmount <= 0)
+            {
+                return false;
+            }
+
+            selected.SetStack(selected.Stack - splitAmount);
+            var splitItem = selected.CloneWithStack(splitAmount);
+            if (!inventory.TrySetItemAt(targetIndex, splitItem, out var replaced) || replaced != null)
+            {
+                selected.SetStack(selected.Stack + splitAmount);
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool DropSelectedInventory(int amount)
+        {
+            if (inventory == null || selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
+            {
+                return false;
+            }
+
+            var selected = inventory.Items[selectedInventoryIndex];
+            if (selected == null)
+            {
+                return false;
+            }
+
+            var removeAmount = selected.IsStackable
+                ? Mathf.Clamp(amount, 1, selected.Stack)
+                : selected.Stack;
+            return inventory.TryRemoveAt(selectedInventoryIndex, removeAmount);
+        }
+
+        private bool DropSelectedEquipment()
+        {
+            if (equipment == null || selectedEquipmentIndex < 0 || selectedEquipmentIndex >= equipment.Slots.Count)
+            {
+                return false;
+            }
+
+            return equipment.TryReplaceSlotItem(selectedEquipmentIndex, null);
+        }
+
+        private bool HasEmptyInventorySlot()
+        {
+            return FindFirstEmptyInventorySlot() >= 0;
+        }
+
+        private int FindFirstEmptyInventorySlot()
+        {
+            if (inventory == null)
+            {
+                return -1;
+            }
+
+            var items = inventory.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] == null)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool CanSplit(ItemInstance item)
+        {
+            return item != null && item.IsStackable && item.Stack > 1;
+        }
+
+        private void ApplyActionState(Button button, string label, bool interactable)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.interactable = interactable;
+            SetButtonLabel(button, label);
+        }
+
+        private static void SetButtonLabel(Button button, string label)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                if (labels[i] == null)
+                {
+                    continue;
+                }
+
+                labels[i].text = label;
+            }
+        }
+
+        private void SetActionHint(string hint)
+        {
+            if (actionHintText == null)
+            {
+                return;
+            }
+
+            actionHintText.text = string.IsNullOrEmpty(hint) ? string.Empty : hint;
         }
 
         private void SetFilter(InventoryFilter filter)

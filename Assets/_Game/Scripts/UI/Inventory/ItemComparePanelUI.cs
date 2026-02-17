@@ -49,7 +49,7 @@ namespace CombatSystem.UI
 
                 if (nameText != null)
                 {
-                    nameText.text = "Select an item";
+                    nameText.text = "请选择物品";
                     nameText.color = new Color(0.85f, 0.85f, 0.85f, 1f);
                 }
 
@@ -76,7 +76,16 @@ namespace CombatSystem.UI
 
             if (slotText != null)
             {
-                slotText.text = definition.IsEquippable ? definition.Slot.ToString() : "Not Equippable";
+                var rarity = ResolveRarityName(currentItem.Rarity);
+                var category = ResolveCategoryName(definition.Category);
+                if (definition.IsEquippable)
+                {
+                    slotText.text = $"{category} | {definition.Slot} | {rarity}";
+                }
+                else
+                {
+                    slotText.text = $"{category} | {rarity}";
+                }
             }
 
             if (icon != null)
@@ -91,8 +100,29 @@ namespace CombatSystem.UI
                 if (currentItem.IsStackable && currentItem.Stack > 1)
                 {
                     description = string.IsNullOrEmpty(description)
-                        ? $"Stack: {currentItem.Stack}"
-                        : $"{description}\nStack: {currentItem.Stack}";
+                        ? $"堆叠: {currentItem.Stack}"
+                        : $"{description}\n堆叠: {currentItem.Stack}";
+                }
+
+                if (definition.CanSell)
+                {
+                    var baseSellPrice = definition.SellPriceOverride >= 0 ? definition.SellPriceOverride : definition.BasePrice;
+                    if (baseSellPrice > 0)
+                    {
+                        description = string.IsNullOrEmpty(description)
+                            ? $"基础售价: {baseSellPrice}"
+                            : $"{description}\n基础售价: {baseSellPrice}";
+                    }
+                }
+
+                if (compareItem != null && compareItem.Definition != null)
+                {
+                    var compareName = string.IsNullOrWhiteSpace(compareItem.Definition.DisplayName)
+                        ? compareItem.Definition.name
+                        : compareItem.Definition.DisplayName;
+                    description = string.IsNullOrEmpty(description)
+                        ? $"对比对象: {compareName}"
+                        : $"{description}\n对比对象: {compareName}";
                 }
 
                 descriptionText.text = description;
@@ -379,6 +409,46 @@ namespace CombatSystem.UI
                 case ItemRarity.Common:
                 default:
                     return new Color(0.85f, 0.85f, 0.85f, 1f);
+            }
+        }
+
+        private static string ResolveCategoryName(ItemCategory category)
+        {
+            switch (category)
+            {
+                case ItemCategory.Weapon:
+                    return "武器";
+                case ItemCategory.Armor:
+                    return "防具";
+                case ItemCategory.Accessory:
+                    return "饰品";
+                case ItemCategory.Consumable:
+                    return "消耗品";
+                case ItemCategory.Material:
+                    return "材料";
+                case ItemCategory.Quest:
+                    return "任务";
+                case ItemCategory.General:
+                default:
+                    return "通用";
+            }
+        }
+
+        private static string ResolveRarityName(ItemRarity rarity)
+        {
+            switch (rarity)
+            {
+                case ItemRarity.Magic:
+                    return "魔法";
+                case ItemRarity.Rare:
+                    return "稀有";
+                case ItemRarity.Epic:
+                    return "史诗";
+                case ItemRarity.Legendary:
+                    return "传说";
+                case ItemRarity.Common:
+                default:
+                    return "普通";
             }
         }
 

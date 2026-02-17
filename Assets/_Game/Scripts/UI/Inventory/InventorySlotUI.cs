@@ -88,7 +88,9 @@ namespace CombatSystem.UI
 
             if (background != null)
             {
-                background.color = selected ? new Color(0.35f, 0.35f, 0.35f, 1f) : new Color(0.2f, 0.2f, 0.2f, 1f);
+                background.color = selected
+                    ? new Color(0.24f, 0.34f, 0.5f, 1f)
+                    : new Color(0.15f, 0.17f, 0.22f, 1f);
             }
         }
 
