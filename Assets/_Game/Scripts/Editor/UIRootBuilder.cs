@@ -1451,52 +1451,203 @@ namespace CombatSystem.Editor
 
         private static void BuildSettingsUI(SettingsScreen screen, Sprite sprite, Font font)
         {
-            if (screen.transform.childCount > 0)
+            if (screen == null)
             {
-                EnsureSettingsMoveMode(screen, sprite, font);
                 return;
             }
 
-            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.65f));
-            var panel = CreatePanel(screen.transform, sprite, new Color(0.08f, 0.08f, 0.08f, 0.9f), new Vector2(640f, 560f));
-            ConfigureVerticalLayout(panel, 20, 12, TextAnchor.UpperCenter);
+            ClearTransformChildren(screen.transform);
+            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
 
-            CreateTitle(panel, "SETTINGS", font, 32);
-            CreateLabel(panel, "Audio / Video / Performance", font, 18);
+            var root = CreateUIElement("SettingsLayout", screen.transform);
+            var rootRect = root.GetComponent<RectTransform>();
+            StretchRect(rootRect);
+
+            var rootLayout = root.AddComponent<VerticalLayoutGroup>();
+            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.spacing = 0f;
+            rootLayout.childAlignment = TextAnchor.UpperCenter;
+            rootLayout.childControlHeight = true;
+            rootLayout.childControlWidth = true;
+            rootLayout.childForceExpandHeight = true;
+            rootLayout.childForceExpandWidth = true;
+
+            var frame = CreateUIElement("Frame", root.transform);
+            var frameImage = frame.AddComponent<Image>();
+            frameImage.sprite = sprite;
+            frameImage.type = Image.Type.Sliced;
+            frameImage.color = GameplayMenuPanelAltColor;
+            frameImage.raycastTarget = true;
+
+            var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
+            frameLayout.padding = new RectOffset(14, 14, 12, 12);
+            frameLayout.spacing = 10f;
+            frameLayout.childAlignment = TextAnchor.UpperCenter;
+            frameLayout.childControlHeight = true;
+            frameLayout.childControlWidth = true;
+            frameLayout.childForceExpandHeight = false;
+            frameLayout.childForceExpandWidth = true;
+
+            var frameElement = frame.AddComponent<LayoutElement>();
+            frameElement.flexibleHeight = 1f;
+            frameElement.flexibleWidth = 1f;
+
+            var titleBar = CreateUIElement("TitleBar", frame.transform);
+            var titleBarImage = titleBar.AddComponent<Image>();
+            titleBarImage.sprite = sprite;
+            titleBarImage.type = Image.Type.Sliced;
+            titleBarImage.color = GameplayMenuHeaderColor;
+            titleBarImage.raycastTarget = true;
+            var titleBarLayout = titleBar.AddComponent<HorizontalLayoutGroup>();
+            titleBarLayout.padding = new RectOffset(16, 16, 8, 8);
+            titleBarLayout.spacing = 18f;
+            titleBarLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleBarLayout.childControlHeight = true;
+            titleBarLayout.childControlWidth = true;
+            titleBarLayout.childForceExpandHeight = false;
+            titleBarLayout.childForceExpandWidth = false;
+            AddLayoutElement(titleBar, 78f);
+
+            var titleText = CreateText(CreateUIElement("Title", titleBar.transform), "设置", font, 32, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleText.gameObject, 54f, 160f);
+
+            var categoryTabsRow = CreateUIElement("CategoryTabsRow", titleBar.transform);
+            var categoryTabsLayout = categoryTabsRow.AddComponent<HorizontalLayoutGroup>();
+            categoryTabsLayout.spacing = 14f;
+            categoryTabsLayout.childAlignment = TextAnchor.MiddleCenter;
+            categoryTabsLayout.childControlHeight = true;
+            categoryTabsLayout.childControlWidth = true;
+            categoryTabsLayout.childForceExpandHeight = false;
+            categoryTabsLayout.childForceExpandWidth = true;
+            var categoryTabsElement = categoryTabsRow.AddComponent<LayoutElement>();
+            categoryTabsElement.preferredHeight = 54f;
+            categoryTabsElement.flexibleWidth = 1f;
+
+            var gameplayCategoryButton = CreateButton(categoryTabsRow.transform, "游戏性", sprite, font);
+            var controlCategoryButton = CreateButton(categoryTabsRow.transform, "控制", sprite, font);
+            var audioCategoryButton = CreateButton(categoryTabsRow.transform, "声音", sprite, font);
+            var videoCategoryButton = CreateButton(categoryTabsRow.transform, "视频", sprite, font);
+            var graphicsCategoryButton = CreateButton(categoryTabsRow.transform, "画面", sprite, font);
+
+            ConfigureSettingsCategoryButtonLayout(gameplayCategoryButton);
+            ConfigureSettingsCategoryButtonLayout(controlCategoryButton);
+            ConfigureSettingsCategoryButtonLayout(audioCategoryButton);
+            ConfigureSettingsCategoryButtonLayout(videoCategoryButton);
+            ConfigureSettingsCategoryButtonLayout(graphicsCategoryButton);
+
+            var body = CreateUIElement("Body", frame.transform);
+            var bodyLayout = body.AddComponent<VerticalLayoutGroup>();
+            bodyLayout.spacing = 0f;
+            bodyLayout.childAlignment = TextAnchor.UpperCenter;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childForceExpandHeight = true;
+            bodyLayout.childForceExpandWidth = true;
+            var bodyElement = body.AddComponent<LayoutElement>();
+            bodyElement.flexibleHeight = 1f;
+            bodyElement.flexibleWidth = 1f;
+
+            var contentPanel = CreateUIElement("ContentPanel", body.transform);
+            var contentImage = contentPanel.AddComponent<Image>();
+            contentImage.sprite = sprite;
+            contentImage.type = Image.Type.Sliced;
+            contentImage.color = GameplayMenuPanelColor;
+            contentImage.raycastTarget = true;
+            var contentLayout = contentPanel.AddComponent<VerticalLayoutGroup>();
+            contentLayout.padding = new RectOffset(14, 14, 14, 14);
+            contentLayout.spacing = 10f;
+            contentLayout.childAlignment = TextAnchor.UpperCenter;
+            contentLayout.childControlHeight = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = true;
+            contentLayout.childForceExpandWidth = true;
+            var contentElement = contentPanel.AddComponent<LayoutElement>();
+            contentElement.flexibleHeight = 1f;
+            contentElement.flexibleWidth = 1f;
+
+            var sectionsHost = CreateUIElement("SectionsHost", contentPanel.transform);
+            var sectionsElement = sectionsHost.AddComponent<LayoutElement>();
+            sectionsElement.flexibleWidth = 1f;
+            sectionsElement.flexibleHeight = 1f;
+
+            var gameplayPanel = CreateSettingsCategoryPanel(sectionsHost.transform, sprite, font, "GameplayPanel", "游戏性");
+            var controlPanel = CreateSettingsCategoryPanel(sectionsHost.transform, sprite, font, "ControlPanel", "控制");
+            var audioPanel = CreateSettingsCategoryPanel(sectionsHost.transform, sprite, font, "AudioPanel", "声音");
+            var videoPanel = CreateSettingsCategoryPanel(sectionsHost.transform, sprite, font, "VideoPanel", "视频");
+            var graphicsPanel = CreateSettingsCategoryPanel(sectionsHost.transform, sprite, font, "GraphicsPanel", "画面");
+            controlPanel.gameObject.SetActive(false);
+            audioPanel.gameObject.SetActive(false);
+            videoPanel.gameObject.SetActive(false);
+            graphicsPanel.gameObject.SetActive(false);
 
             var resources = GetDefaultResources(sprite);
 
-            var masterRow = CreateSettingRow(panel, "Master Volume", font, 44f);
-            var masterSlider = CreateSlider(masterRow, resources, 0f, 1f);
+            var gameplayHint = CreateText(
+                CreateUIElement("GameplayHint", gameplayPanel.transform),
+                "游戏体验相关参数。",
+                font,
+                16,
+                TextAnchor.MiddleLeft);
+            gameplayHint.color = new Color(0.8f, 0.84f, 0.92f, 1f);
+            AddLayoutElement(gameplayHint.gameObject, 28f);
 
-            var fullscreenRow = CreateSettingRow(panel, "Fullscreen", font, 36f);
-            var fullscreenToggle = CreateToggle(fullscreenRow, resources);
+            var cameraZoomRow = CreateSettingRow(gameplayPanel.transform, "镜头距离", font, 44f);
+            var cameraZoomSlider = CreateSlider(cameraZoomRow, resources, 10f, 40f);
+            ConfigureSettingsValueControl(cameraZoomSlider.gameObject, 460f, 28f);
 
-            var vSyncRow = CreateSettingRow(panel, "VSync", font, 36f);
-            var vSyncToggle = CreateToggle(vSyncRow, resources);
-
-            var qualityRow = CreateSettingRow(panel, "Quality", font, 40f);
-            var qualityDropdown = CreateDropdown(qualityRow, resources);
-
-            var fpsRow = CreateSettingRow(panel, "Target FPS", font, 40f);
-            var fpsDropdown = CreateDropdown(fpsRow, resources);
-
-            var moveModeRow = CreateSettingRow(panel, "Move Mode", font, 40f);
+            var moveModeRow = CreateSettingRow(controlPanel.transform, "移动方式", font, 44f);
             var moveModeDropdown = CreateDropdown(moveModeRow, resources);
+            ConfigureSettingsValueControl(moveModeDropdown.gameObject, 460f, 34f);
 
-            var cameraModeRow = CreateSettingRow(panel, "Camera Mode", font, 40f);
+            var cameraModeRow = CreateSettingRow(controlPanel.transform, "镜头模式", font, 44f);
             var cameraModeDropdown = CreateDropdown(cameraModeRow, resources);
+            ConfigureSettingsValueControl(cameraModeDropdown.gameObject, 460f, 34f);
 
-            var edgePanRow = CreateSettingRow(panel, "Edge Pan", font, 36f);
+            var edgePanRow = CreateSettingRow(controlPanel.transform, "边缘滚屏", font, 40f);
             var edgePanToggle = CreateToggle(edgePanRow, resources);
+            ConfigureSettingsToggleControl(edgePanToggle);
 
-            var applyButton = CreateButton(panel, "Apply", sprite, font);
+            var masterRow = CreateSettingRow(audioPanel.transform, "主音量", font, 44f);
+            var masterSlider = CreateSlider(masterRow, resources, 0f, 1f);
+            ConfigureSettingsValueControl(masterSlider.gameObject, 460f, 28f);
+
+            var fullscreenRow = CreateSettingRow(videoPanel.transform, "全屏", font, 40f);
+            var fullscreenToggle = CreateToggle(fullscreenRow, resources);
+            ConfigureSettingsToggleControl(fullscreenToggle);
+
+            var vSyncRow = CreateSettingRow(videoPanel.transform, "垂直同步", font, 40f);
+            var vSyncToggle = CreateToggle(vSyncRow, resources);
+            ConfigureSettingsToggleControl(vSyncToggle);
+
+            var fpsRow = CreateSettingRow(videoPanel.transform, "目标帧率", font, 44f);
+            var fpsDropdown = CreateDropdown(fpsRow, resources);
+            ConfigureSettingsValueControl(fpsDropdown.gameObject, 460f, 34f);
+
+            var qualityRow = CreateSettingRow(graphicsPanel.transform, "画质等级", font, 44f);
+            var qualityDropdown = CreateDropdown(qualityRow, resources);
+            ConfigureSettingsValueControl(qualityDropdown.gameObject, 460f, 34f);
+
+            var actionRow = CreateUIElement("ActionRow", contentPanel.transform);
+            var actionLayout = actionRow.AddComponent<HorizontalLayoutGroup>();
+            actionLayout.spacing = 12f;
+            actionLayout.childAlignment = TextAnchor.MiddleRight;
+            actionLayout.childControlHeight = true;
+            actionLayout.childControlWidth = false;
+            actionLayout.childForceExpandHeight = false;
+            actionLayout.childForceExpandWidth = false;
+            AddLayoutElement(actionRow, 56f);
+
+            var applyButton = CreateButton(actionRow.transform, "应用", sprite, font);
+            SetLayoutSize(applyButton.gameObject, 48f, 220f);
             UnityEventTools.AddPersistentListener(applyButton.onClick, screen.Apply);
 
-            var backButton = CreateButton(panel, "Back", sprite, font);
+            var backButton = CreateButton(actionRow.transform, "返回", sprite, font);
+            SetLayoutSize(backButton.gameObject, 48f, 220f);
             UnityEventTools.AddPersistentListener(backButton.onClick, screen.Back);
 
             SetSerialized(screen, "masterVolume", masterSlider);
+            SetSerialized(screen, "cameraZoomSlider", cameraZoomSlider);
             SetSerialized(screen, "fullscreenToggle", fullscreenToggle);
             SetSerialized(screen, "vSyncToggle", vSyncToggle);
             SetSerialized(screen, "qualityDropdown", qualityDropdown);
@@ -1505,6 +1656,20 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "cameraModeDropdown", cameraModeDropdown);
             SetSerialized(screen, "edgePanToggle", edgePanToggle);
             SetSerialized(screen, "applyButton", applyButton);
+            SetSerialized(screen, "gameplayCategoryButton", gameplayCategoryButton);
+            SetSerialized(screen, "controlCategoryButton", controlCategoryButton);
+            SetSerialized(screen, "audioCategoryButton", audioCategoryButton);
+            SetSerialized(screen, "videoCategoryButton", videoCategoryButton);
+            SetSerialized(screen, "graphicsCategoryButton", graphicsCategoryButton);
+            SetSerialized(screen, "gameplayCategoryPanel", gameplayPanel.gameObject);
+            SetSerialized(screen, "controlCategoryPanel", controlPanel.gameObject);
+            SetSerialized(screen, "audioCategoryPanel", audioPanel.gameObject);
+            SetSerialized(screen, "videoCategoryPanel", videoPanel.gameObject);
+            SetSerialized(screen, "graphicsCategoryPanel", graphicsPanel.gameObject);
+            SetSerializedColor(screen, "activeCategoryColor", GameplayMenuTabActiveColor);
+            SetSerializedColor(screen, "inactiveCategoryColor", GameplayMenuTabInactiveColor);
+            SetSerializedColor(screen, "activeCategoryTextColor", GameplayMenuTabActiveTextColor);
+            SetSerializedColor(screen, "inactiveCategoryTextColor", GameplayMenuTabInactiveTextColor);
         }
 
         private static void EnsureSettingsMoveMode(SettingsScreen screen, Sprite sprite, Font font)
@@ -2482,6 +2647,112 @@ namespace CombatSystem.Editor
                 var labelRect = label.rectTransform;
                 labelRect.offsetMin = new Vector2(22f, labelRect.offsetMin.y);
                 labelRect.offsetMax = new Vector2(-18f, labelRect.offsetMax.y);
+            }
+        }
+
+        private static RectTransform CreateSettingsCategoryPanel(Transform parent, Sprite sprite, Font font, string name, string title)
+        {
+            var panel = CreateUIElement(name, parent);
+            var panelRect = panel.GetComponent<RectTransform>();
+            StretchRect(panelRect);
+
+            var image = panel.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = GameplayMenuHeaderColor;
+            image.raycastTarget = true;
+
+            var layout = panel.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(16, 16, 16, 16);
+            layout.spacing = 10f;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+
+            var titleText = CreateText(CreateUIElement("SectionTitle", panel.transform), title, font, 28, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleText.gameObject, 42f);
+
+            return panelRect;
+        }
+
+        private static void ConfigureSettingsCategoryButtonLayout(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 52f;
+            layout.preferredWidth = -1f;
+            layout.minWidth = 0f;
+            layout.flexibleWidth = 1f;
+
+            var image = button.targetGraphic as Image;
+            if (image != null)
+            {
+                image.color = GameplayMenuTabInactiveColor;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.alignment = TextAnchor.MiddleCenter;
+                label.fontSize = 24;
+                label.color = GameplayMenuTabInactiveTextColor;
+                var labelRect = label.rectTransform;
+                labelRect.offsetMin = new Vector2(8f, labelRect.offsetMin.y);
+                labelRect.offsetMax = new Vector2(-8f, labelRect.offsetMax.y);
+            }
+        }
+
+        private static void ConfigureSettingsToggleControl(Toggle toggle)
+        {
+            if (toggle == null)
+            {
+                return;
+            }
+
+            SetLayoutSize(toggle.gameObject, 30f, 72f);
+            var labels = toggle.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.text = string.Empty;
+            }
+        }
+
+        private static void ConfigureSettingsValueControl(GameObject go, float width, float height)
+        {
+            if (go == null)
+            {
+                return;
+            }
+
+            SetLayoutSize(go, height, width);
+            var layout = go.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.flexibleWidth = 0f;
             }
         }
 

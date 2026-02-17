@@ -13,6 +13,7 @@ namespace CombatSystem.UI
 
         [Header("Controls")]
         [SerializeField] private Slider masterVolume;
+        [SerializeField] private Slider cameraZoomSlider;
         [SerializeField] private Toggle fullscreenToggle;
         [SerializeField] private Toggle vSyncToggle;
         [SerializeField] private Dropdown qualityDropdown;
@@ -21,17 +22,43 @@ namespace CombatSystem.UI
         [SerializeField] private Dropdown cameraModeDropdown;
         [SerializeField] private Toggle edgePanToggle;
         [SerializeField] private Button applyButton;
+        [SerializeField] private Button gameplayCategoryButton;
+        [SerializeField] private Button controlCategoryButton;
+        [SerializeField] private Button audioCategoryButton;
+        [SerializeField] private Button videoCategoryButton;
+        [SerializeField] private Button graphicsCategoryButton;
+        [SerializeField] private GameObject gameplayCategoryPanel;
+        [SerializeField] private GameObject controlCategoryPanel;
+        [SerializeField] private GameObject audioCategoryPanel;
+        [SerializeField] private GameObject videoCategoryPanel;
+        [SerializeField] private GameObject graphicsCategoryPanel;
+        [SerializeField] private Color activeCategoryColor = new Color(0.26f, 0.38f, 0.56f, 1f);
+        [SerializeField] private Color inactiveCategoryColor = new Color(0.2f, 0.22f, 0.26f, 1f);
+        [SerializeField] private Color activeCategoryTextColor = new Color(0.97f, 0.98f, 1f, 1f);
+        [SerializeField] private Color inactiveCategoryTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
         [SerializeField] private bool pauseGameplay = false;
 
         private static readonly int[] FpsOptions = { -1, 30, 60, 120 };
-        private static readonly string[] FpsLabels = { "Unlimited", "30", "60", "120" };
-        private static readonly string[] MovementModeLabels = { "WASD", "Right Click Move" };
-        private static readonly string[] CameraModeLabels = { "Locked Follow", "Free Pan (Edge Scroll)" };
+        private static readonly string[] FpsLabels = { "不限帧率", "30", "60", "120" };
+        private static readonly string[] MovementModeLabels = { "键盘 WASD", "鼠标右键移动" };
+        private static readonly string[] CameraModeLabels = { "锁定跟随", "自由平移（边缘滚屏）" };
+        private const float CameraZoomMin = 10f;
+        private const float CameraZoomMax = 40f;
         private bool initialized;
         private bool pauseRequested;
         private bool pausedByScreen;
         private float cachedTimeScale;
         private bool useStackBack;
+        private SettingsCategory activeCategory = SettingsCategory.Gameplay;
+
+        private enum SettingsCategory
+        {
+            Gameplay = 0,
+            Control = 1,
+            Audio = 2,
+            Video = 3,
+            Graphics = 4
+        }
 
         private void Reset()
         {
@@ -52,6 +79,7 @@ namespace CombatSystem.UI
             EnsureInitialized();
             var data = SettingsService.LoadOrCreate();
             ApplyToUI(data);
+            ApplyCategory(activeCategory);
             ApplyPauseState();
         }
 
@@ -103,6 +131,31 @@ namespace CombatSystem.UI
             useStackBack = true;
         }
 
+        public void ShowGameplayCategory()
+        {
+            ApplyCategory(SettingsCategory.Gameplay);
+        }
+
+        public void ShowControlCategory()
+        {
+            ApplyCategory(SettingsCategory.Control);
+        }
+
+        public void ShowAudioCategory()
+        {
+            ApplyCategory(SettingsCategory.Audio);
+        }
+
+        public void ShowVideoCategory()
+        {
+            ApplyCategory(SettingsCategory.Video);
+        }
+
+        public void ShowGraphicsCategory()
+        {
+            ApplyCategory(SettingsCategory.Graphics);
+        }
+
         private void EnsureInitialized()
         {
             if (initialized)
@@ -114,6 +167,7 @@ namespace CombatSystem.UI
             BuildFpsOptions();
             BuildMovementModeOptions();
             BuildCameraModeOptions();
+            BindCategoryButtons();
 
             if (applyButton != null)
             {
@@ -177,6 +231,11 @@ namespace CombatSystem.UI
             {
                 edgePanToggle.SetIsOnWithoutNotify(data.edgePanEnabled);
             }
+
+            if (cameraZoomSlider != null)
+            {
+                cameraZoomSlider.SetValueWithoutNotify(Mathf.Clamp(data.cameraZoomDistance, CameraZoomMin, CameraZoomMax));
+            }
         }
 
         private SettingsData ReadFromUI()
@@ -224,6 +283,11 @@ namespace CombatSystem.UI
             if (edgePanToggle != null)
             {
                 data.edgePanEnabled = edgePanToggle.isOn;
+            }
+
+            if (cameraZoomSlider != null)
+            {
+                data.cameraZoomDistance = Mathf.Clamp(cameraZoomSlider.value, CameraZoomMin, CameraZoomMax);
             }
 
             return data;
@@ -300,6 +364,79 @@ namespace CombatSystem.UI
             }
 
             return 0;
+        }
+
+        private void BindCategoryButtons()
+        {
+            BindCategoryButton(gameplayCategoryButton, ShowGameplayCategory);
+            BindCategoryButton(controlCategoryButton, ShowControlCategory);
+            BindCategoryButton(audioCategoryButton, ShowAudioCategory);
+            BindCategoryButton(videoCategoryButton, ShowVideoCategory);
+            BindCategoryButton(graphicsCategoryButton, ShowGraphicsCategory);
+        }
+
+        private static void BindCategoryButton(Button button, UnityEngine.Events.UnityAction handler)
+        {
+            if (button == null || handler == null)
+            {
+                return;
+            }
+
+            button.onClick.RemoveListener(handler);
+            button.onClick.AddListener(handler);
+        }
+
+        private void ApplyCategory(SettingsCategory category)
+        {
+            activeCategory = category;
+
+            SetPanelActive(gameplayCategoryPanel, category == SettingsCategory.Gameplay);
+            SetPanelActive(controlCategoryPanel, category == SettingsCategory.Control);
+            SetPanelActive(audioCategoryPanel, category == SettingsCategory.Audio);
+            SetPanelActive(videoCategoryPanel, category == SettingsCategory.Video);
+            SetPanelActive(graphicsCategoryPanel, category == SettingsCategory.Graphics);
+
+            ApplyCategoryButtonState(gameplayCategoryButton, category == SettingsCategory.Gameplay);
+            ApplyCategoryButtonState(controlCategoryButton, category == SettingsCategory.Control);
+            ApplyCategoryButtonState(audioCategoryButton, category == SettingsCategory.Audio);
+            ApplyCategoryButtonState(videoCategoryButton, category == SettingsCategory.Video);
+            ApplyCategoryButtonState(graphicsCategoryButton, category == SettingsCategory.Graphics);
+        }
+
+        private static void SetPanelActive(GameObject panel, bool active)
+        {
+            if (panel != null)
+            {
+                panel.SetActive(active);
+            }
+        }
+
+        private void ApplyCategoryButtonState(Button button, bool active)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.interactable = !active;
+
+            var image = button.targetGraphic as Image;
+            if (image != null)
+            {
+                image.color = active ? activeCategoryColor : inactiveCategoryColor;
+            }
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.color = active ? activeCategoryTextColor : inactiveCategoryTextColor;
+            }
         }
     }
 }
