@@ -1,3 +1,4 @@
+using System.Text;
 using CombatSystem.Data;
 using CombatSystem.UI;
 using UnityEngine;
@@ -31,10 +32,39 @@ namespace CombatSystem.Gameplay
         [SerializeField] private QuestObjectiveType objectiveType = QuestObjectiveType.TalkToNpc;
         [SerializeField] private string objectiveTargetId;
 
+        [Header("Presentation")]
+        [SerializeField] private bool showStateIndicator = true;
+        [SerializeField] private bool showInteractHintInIndicator = true;
+        [SerializeField] private bool billboardIndicatorToCamera = true;
+        [SerializeField] private Vector3 stateIndicatorOffset = new Vector3(0f, 2.2f, 0f);
+        [SerializeField] private Color notAcceptedColor = new Color(1f, 0.9f, 0.2f, 1f);
+        [SerializeField] private Color inProgressColor = new Color(0.65f, 0.85f, 1f, 1f);
+        [SerializeField] private Color readyToTurnInColor = new Color(0.45f, 1f, 0.45f, 1f);
+        [SerializeField] private Color completedColor = new Color(0.72f, 0.72f, 0.72f, 1f);
+        [SerializeField] private float indicatorRefreshInterval = 0.25f;
+
         [Header("Debug")]
         [SerializeField] private bool debugLogging;
 
         private bool playerInRange;
+        private TextMesh stateIndicator;
+        private QuestTracker observedTracker;
+        private Camera cachedCamera;
+        private float nextIndicatorRefreshTime;
+        private float nextCameraResolveTime;
+
+        private void OnEnable()
+        {
+            ResolveQuestTracker();
+            RebindTrackerEvents();
+            RefreshStatePresentation(true);
+        }
+
+        private void OnDisable()
+        {
+            UnbindTrackerEvents();
+            CloseDialogIfNeeded();
+        }
 
         private void Reset()
         {
@@ -56,7 +86,10 @@ namespace CombatSystem.Gameplay
             if (autoAcceptOnEnter)
             {
                 Interact();
+                return;
             }
+
+            RefreshStatePresentation(true);
         }
 
         private void OnTriggerExit(Collider other)
@@ -68,26 +101,38 @@ namespace CombatSystem.Gameplay
 
             playerInRange = false;
             CloseDialogIfNeeded();
+            RefreshStatePresentation(true);
         }
 
         private void Update()
         {
-            if (!allowInteractKey || !playerInRange)
+            if (allowInteractKey && playerInRange)
+            {
+                var keyboard = Keyboard.current;
+                if (keyboard != null)
+                {
+                    var key = keyboard[interactKey];
+                    if (key != null && key.wasPressedThisFrame)
+                    {
+                        Interact();
+                        return;
+                    }
+                }
+            }
+
+            if (!showStateIndicator || Time.unscaledTime < nextIndicatorRefreshTime)
             {
                 return;
             }
 
-            var keyboard = Keyboard.current;
-            if (keyboard == null)
-            {
-                return;
-            }
+            nextIndicatorRefreshTime = Time.unscaledTime + Mathf.Max(0.05f, indicatorRefreshInterval);
+            RebindTrackerEvents();
+            RefreshStatePresentation(false);
+        }
 
-            var key = keyboard[interactKey];
-            if (key != null && key.wasPressedThisFrame)
-            {
-                Interact();
-            }
+        private void LateUpdate()
+        {
+            UpdateIndicatorBillboard();
         }
 
         public void Interact()
@@ -99,10 +144,12 @@ namespace CombatSystem.Gameplay
 
             if (useDialogUi && TryOpenDialog())
             {
+                RefreshStatePresentation(true);
                 return;
             }
 
             ExecuteInteraction(false, out _);
+            RefreshStatePresentation(true);
         }
 
         public QuestDefinition QuestDefinition => quest;
@@ -130,7 +177,9 @@ namespace CombatSystem.Gameplay
 
         public bool ExecuteInteractionForDialog(out string feedback)
         {
-            return ExecuteInteraction(true, out feedback);
+            var changed = ExecuteInteraction(true, out feedback);
+            RefreshStatePresentation(true);
+            return changed;
         }
 
         private bool ExecuteInteraction(bool forceTurnIn, out string feedback)
@@ -157,7 +206,9 @@ namespace CombatSystem.Gameplay
                 if (tracker.AcceptQuest(questId, out var acceptReason))
                 {
                     var advanced = TryAdvanceTalkObjective(questId);
-                    feedback = advanced > 0 ? "任务已接取，已更新交谈进度。" : "任务已接取。";
+                    feedback = advanced > 0
+                        ? "任务已接取，已记录首次交谈进度。按 J 可查看任务详情。"
+                        : "任务已接取。按 J 可查看任务详情。";
                     return true;
                 }
 
@@ -176,7 +227,7 @@ namespace CombatSystem.Gameplay
                 {
                     if (tracker.TryTurnInQuest(questId, out var turnInReason))
                     {
-                        feedback = "任务已提交。";
+                        feedback = BuildTurnInFeedback(quest, tracker);
                         return true;
                     }
 
@@ -196,7 +247,7 @@ namespace CombatSystem.Gameplay
             if (state.Status == QuestStatus.InProgress)
             {
                 var advanced = TryAdvanceTalkObjective(questId);
-                feedback = advanced > 0 ? "任务进度已更新。" : "任务进行中。";
+                feedback = advanced > 0 ? "任务进度已更新。按 J 可查看目标详情。" : "任务进行中，按 J 可查看目标详情。";
                 return advanced > 0;
             }
 
@@ -213,6 +264,42 @@ namespace CombatSystem.Gameplay
 
             var targetId = string.IsNullOrWhiteSpace(objectiveTargetId) ? questId : objectiveTargetId;
             return questTracker.TryAdvanceObjectivesByTargetForQuest(questId, targetId, objectiveType, 1);
+        }
+
+        private void RebindTrackerEvents()
+        {
+            var tracker = ResolveQuestTracker();
+            if (tracker == observedTracker)
+            {
+                return;
+            }
+
+            if (observedTracker != null)
+            {
+                observedTracker.QuestListChanged -= HandleQuestListChanged;
+            }
+
+            observedTracker = tracker;
+            if (observedTracker != null)
+            {
+                observedTracker.QuestListChanged += HandleQuestListChanged;
+            }
+        }
+
+        private void UnbindTrackerEvents()
+        {
+            if (observedTracker == null)
+            {
+                return;
+            }
+
+            observedTracker.QuestListChanged -= HandleQuestListChanged;
+            observedTracker = null;
+        }
+
+        private void HandleQuestListChanged()
+        {
+            RefreshStatePresentation(true);
         }
 
         private bool TryOpenDialog()
@@ -288,6 +375,267 @@ namespace CombatSystem.Gameplay
             }
 
             return other.CompareTag(playerTag);
+        }
+
+        private void RefreshStatePresentation(bool force)
+        {
+            if (!showStateIndicator || quest == null)
+            {
+                if (stateIndicator != null)
+                {
+                    stateIndicator.gameObject.SetActive(false);
+                }
+
+                return;
+            }
+
+            EnsureStateIndicator();
+            if (stateIndicator == null)
+            {
+                return;
+            }
+
+            var state = GetQuestState();
+            var indicatorText = BuildIndicatorText(state);
+            if (force || !string.Equals(stateIndicator.text, indicatorText, System.StringComparison.Ordinal))
+            {
+                stateIndicator.text = indicatorText;
+            }
+
+            stateIndicator.color = ResolveIndicatorColor(state);
+            stateIndicator.transform.localPosition = stateIndicatorOffset;
+            if (!stateIndicator.gameObject.activeSelf)
+            {
+                stateIndicator.gameObject.SetActive(true);
+            }
+        }
+
+        private void EnsureStateIndicator()
+        {
+            if (stateIndicator != null)
+            {
+                return;
+            }
+
+            var existing = transform.Find("QuestStateIndicator");
+            if (existing != null)
+            {
+                stateIndicator = existing.GetComponent<TextMesh>();
+            }
+
+            if (stateIndicator == null)
+            {
+                var indicatorGo = new GameObject("QuestStateIndicator", typeof(TextMesh));
+                indicatorGo.transform.SetParent(transform, false);
+                stateIndicator = indicatorGo.GetComponent<TextMesh>();
+            }
+
+            if (stateIndicator == null)
+            {
+                return;
+            }
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font != null)
+            {
+                stateIndicator.font = font;
+                var renderer = stateIndicator.GetComponent<MeshRenderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = font.material;
+                }
+            }
+
+            stateIndicator.anchor = TextAnchor.LowerCenter;
+            stateIndicator.alignment = TextAlignment.Center;
+            stateIndicator.fontSize = 64;
+            stateIndicator.characterSize = 0.04f;
+            stateIndicator.text = string.Empty;
+        }
+
+        private void UpdateIndicatorBillboard()
+        {
+            if (!billboardIndicatorToCamera || stateIndicator == null || !stateIndicator.gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            var camera = ResolvePresentationCamera();
+            if (camera == null)
+            {
+                return;
+            }
+
+            var indicatorTransform = stateIndicator.transform;
+            // TextMesh 的正面方向与常规 Quad 相反，使用“相机->文本”的方向可避免看到镜像背面。
+            var forward = indicatorTransform.position - camera.transform.position;
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            indicatorTransform.rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private Camera ResolvePresentationCamera()
+        {
+            if (cachedCamera != null && cachedCamera.isActiveAndEnabled)
+            {
+                return cachedCamera;
+            }
+
+            if (Time.unscaledTime < nextCameraResolveTime)
+            {
+                return cachedCamera;
+            }
+
+            nextCameraResolveTime = Time.unscaledTime + 0.5f;
+            cachedCamera = Camera.main;
+            if (cachedCamera == null)
+            {
+                cachedCamera = FindFirstObjectByType<Camera>();
+            }
+
+            return cachedCamera;
+        }
+
+        private string BuildIndicatorText(QuestRuntimeState state)
+        {
+            var status = state != null ? state.Status : QuestStatus.NotAccepted;
+            var marker = ResolveStatusMarker(status);
+            if (!showInteractHintInIndicator || !playerInRange || !allowInteractKey)
+            {
+                return marker;
+            }
+
+            return marker + "\n[" + ResolveInteractKeyLabel() + "]";
+        }
+
+        private string ResolveInteractKeyLabel()
+        {
+            var raw = interactKey.ToString();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return "E";
+            }
+
+            return raw.ToUpperInvariant();
+        }
+
+        private Color ResolveIndicatorColor(QuestRuntimeState state)
+        {
+            if (state == null)
+            {
+                return notAcceptedColor;
+            }
+
+            switch (state.Status)
+            {
+                case QuestStatus.InProgress:
+                    return inProgressColor;
+                case QuestStatus.ReadyToTurnIn:
+                    return readyToTurnInColor;
+                case QuestStatus.Completed:
+                    return completedColor;
+                default:
+                    return notAcceptedColor;
+            }
+        }
+
+        private static string ResolveStatusMarker(QuestStatus status)
+        {
+            switch (status)
+            {
+                case QuestStatus.InProgress:
+                    return "...";
+                case QuestStatus.ReadyToTurnIn:
+                    return "?";
+                case QuestStatus.Completed:
+                    return "v";
+                default:
+                    return "!";
+            }
+        }
+
+        private static string BuildTurnInFeedback(QuestDefinition definition, QuestTracker tracker)
+        {
+            var builder = new StringBuilder(128);
+            builder.Append("任务已提交");
+
+            var rewardSummary = BuildRewardSummary(definition != null ? definition.Reward : null);
+            if (!string.IsNullOrWhiteSpace(rewardSummary))
+            {
+                builder.Append("，获得：");
+                builder.Append(rewardSummary);
+            }
+
+            builder.Append('。');
+
+            if (definition != null && !string.IsNullOrWhiteSpace(definition.NextQuestId) && tracker != null)
+            {
+                var next = tracker.GetDefinition(definition.NextQuestId);
+                var nextName = next != null && !string.IsNullOrWhiteSpace(next.DisplayName) ? next.DisplayName : definition.NextQuestId;
+                builder.Append(" 后续任务已解锁：");
+                builder.Append(nextName);
+                builder.Append('。');
+            }
+
+            return builder.ToString();
+        }
+
+        private static string BuildRewardSummary(QuestRewardDefinition reward)
+        {
+            if (reward == null)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(64);
+            var hasAny = false;
+
+            if (reward.Currency > 0)
+            {
+                builder.Append(reward.Currency);
+                builder.Append("G");
+                hasAny = true;
+            }
+
+            if (reward.Experience > 0)
+            {
+                if (hasAny)
+                {
+                    builder.Append(", ");
+                }
+
+                builder.Append("XP ");
+                builder.Append(reward.Experience);
+                hasAny = true;
+            }
+
+            if (reward.Items != null && reward.Items.Count > 0)
+            {
+                for (int i = 0; i < reward.Items.Count; i++)
+                {
+                    var item = reward.Items[i];
+                    if (item == null || item.Item == null)
+                    {
+                        continue;
+                    }
+
+                    if (hasAny)
+                    {
+                        builder.Append(", ");
+                    }
+
+                    var name = string.IsNullOrWhiteSpace(item.Item.DisplayName) ? item.Item.Id : item.Item.DisplayName;
+                    builder.Append(name);
+                    builder.Append(" x");
+                    builder.Append(Mathf.Max(1, item.Stack));
+                    hasAny = true;
+                }
+            }
+
+            return hasAny ? builder.ToString() : string.Empty;
         }
     }
 }

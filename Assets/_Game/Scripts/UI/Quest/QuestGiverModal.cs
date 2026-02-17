@@ -161,7 +161,7 @@ namespace CombatSystem.UI
                 tradeButton.interactable = CanOpenVendor();
             }
 
-            SetButtonLabel(closeButton, state == null || state.Status == QuestStatus.NotAccepted ? "暂不接取" : "关闭");
+            SetButtonLabel(closeButton, state == null || state.Status == QuestStatus.NotAccepted ? "稍后再说" : "关闭");
         }
 
         private void HandlePrimaryClicked()
@@ -782,19 +782,19 @@ namespace CombatSystem.UI
         {
             if (state == null)
             {
-                return "点击“接取任务”开始。";
+                return "可接取该任务，确认后会开始追踪。";
             }
 
             switch (state.Status)
             {
                 case QuestStatus.ReadyToTurnIn:
-                    return "目标已完成，点击“提交任务”。";
+                    return "目标已完成，点击“提交任务”领取奖励。";
                 case QuestStatus.InProgress:
-                    return "与 NPC 互动可推进当前任务。";
+                    return "任务进行中，可按 J 打开任务日志查看详情。";
                 case QuestStatus.Completed:
-                    return "任务已完成。";
+                    return "任务已完成，可继续交易或探索。";
                 default:
-                    return "点击按钮继续。";
+                    return "可接取该任务，确认后会开始追踪。";
             }
         }
 
