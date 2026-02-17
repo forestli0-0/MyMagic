@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CombatSystem.Gameplay;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
@@ -19,6 +20,10 @@ namespace CombatSystem.UI
     {
         [SerializeField] private RectTransform slotsRoot;
         [SerializeField] private InventorySlotUI slotTemplate;
+        [Header("Layout")]
+        [SerializeField] private bool autoFitCellSize = true;
+        [SerializeField] private float minCellSize = 88f;
+        [SerializeField] private float maxCellSize = 130f;
 
         private readonly List<InventorySlotUI> slots = new List<InventorySlotUI>();
         private readonly List<int> customDisplayIndices = new List<int>(32);
@@ -50,6 +55,7 @@ namespace CombatSystem.UI
             }
 
             ApplyDisplayIndices(displayIndices);
+            RefreshGridCellSize();
 
             EnsureSlots();
             Refresh();
@@ -73,8 +79,14 @@ namespace CombatSystem.UI
 
         private void HandleInventoryChanged()
         {
+            RefreshGridCellSize();
             EnsureSlots();
             Refresh();
+        }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            RefreshGridCellSize();
         }
 
         private void EnsureSlots()
@@ -246,6 +258,52 @@ namespace CombatSystem.UI
                 slots[i].DragEnded -= HandleSlotDragEnded;
                 slots[i].Dropped -= HandleSlotDropped;
             }
+        }
+
+        private void RefreshGridCellSize()
+        {
+            if (!autoFitCellSize || slotsRoot == null)
+            {
+                return;
+            }
+
+            var grid = slotsRoot.GetComponent<GridLayoutGroup>();
+            if (grid == null || grid.constraint != GridLayoutGroup.Constraint.FixedColumnCount || grid.constraintCount <= 0)
+            {
+                return;
+            }
+
+            var width = slotsRoot.rect.width;
+            if (width <= 1f)
+            {
+                return;
+            }
+
+            var columns = grid.constraintCount;
+            var totalSpacing = grid.spacing.x * Mathf.Max(0, columns - 1);
+            var totalPadding = grid.padding.left + grid.padding.right;
+            var availableWidth = width - totalSpacing - totalPadding;
+            if (availableWidth <= 1f)
+            {
+                return;
+            }
+
+            var target = availableWidth / columns;
+            var min = Mathf.Max(40f, minCellSize);
+            // Fixed-column layout should fill row width to avoid trailing right-side gaps.
+            var size = Mathf.Max(min, target);
+            // Keep maxCellSize as a soft cap: only apply when it does not reintroduce trailing gap.
+            if (maxCellSize > min && target <= maxCellSize)
+            {
+                size = Mathf.Clamp(target, min, maxCellSize);
+            }
+            var cell = grid.cellSize;
+            if (Mathf.Abs(cell.x - size) < 0.1f && Mathf.Abs(cell.y - size) < 0.1f)
+            {
+                return;
+            }
+
+            grid.cellSize = new Vector2(size, size);
         }
     }
 }

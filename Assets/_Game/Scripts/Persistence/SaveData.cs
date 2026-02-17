@@ -29,6 +29,10 @@ namespace CombatSystem.Persistence
         public int level;
         public int experience;
         public int attributePoints;
+        public int allocatedMaxHealthPoints;
+        public int allocatedAttackPowerPoints;
+        public int allocatedArmorPoints;
+        public int allocatedMoveSpeedPoints;
     }
 
     [Serializable]

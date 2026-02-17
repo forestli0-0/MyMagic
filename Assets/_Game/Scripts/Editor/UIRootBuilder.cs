@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Debugging;
@@ -2324,6 +2325,14 @@ namespace CombatSystem.Editor
             var filterEquipmentButton = (Button)null;
             var filterConsumableButton = (Button)null;
             var filterQuestButton = (Button)null;
+            var searchInputField = (InputField)null;
+            var sortDropdown = (Dropdown)null;
+            var rarityAllButton = (Button)null;
+            var rarityCommonButton = (Button)null;
+            var rarityMagicButton = (Button)null;
+            var rarityRareButton = (Button)null;
+            var rarityEpicButton = (Button)null;
+            var rarityLegendaryButton = (Button)null;
             var capacityText = (Text)null;
 
             var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -2428,6 +2437,70 @@ namespace CombatSystem.Editor
             ConfigureSecondaryFilterButtonLayout(filterEquipmentButton);
             ConfigureSecondaryFilterButtonLayout(filterConsumableButton);
             ConfigureSecondaryFilterButtonLayout(filterQuestButton);
+
+            var inventoryToolsRow = CreateUIElement("InventoryToolsRow", inventoryPanel.transform);
+            var inventoryToolsImage = inventoryToolsRow.AddComponent<Image>();
+            inventoryToolsImage.sprite = sprite;
+            inventoryToolsImage.type = Image.Type.Sliced;
+            inventoryToolsImage.color = GameplayMenuPanelAltColor;
+            inventoryToolsImage.raycastTarget = true;
+
+            var inventoryToolsLayout = inventoryToolsRow.AddComponent<HorizontalLayoutGroup>();
+            inventoryToolsLayout.padding = new RectOffset(8, 8, 6, 6);
+            inventoryToolsLayout.spacing = 8f;
+            inventoryToolsLayout.childAlignment = TextAnchor.MiddleLeft;
+            inventoryToolsLayout.childControlHeight = true;
+            inventoryToolsLayout.childControlWidth = true;
+            inventoryToolsLayout.childForceExpandHeight = false;
+            inventoryToolsLayout.childForceExpandWidth = false;
+            AddLayoutElement(inventoryToolsRow, 50f);
+            var inventoryToolsElement = inventoryToolsRow.GetComponent<LayoutElement>();
+            inventoryToolsElement.flexibleWidth = 1f;
+
+            searchInputField = CreateInputField(inventoryToolsRow.transform, sprite, font, "搜索物品...", 300f);
+            searchInputField.name = "InventorySearchInput";
+            ConfigureInventorySearchInput(searchInputField, sprite, font);
+
+            sortDropdown = CreateDropdown(inventoryToolsRow.transform, GetDefaultResources(sprite));
+            sortDropdown.name = "InventorySortDropdown";
+            sortDropdown.ClearOptions();
+            sortDropdown.AddOptions(new List<string>
+            {
+                "默认顺序",
+                "名称 A-Z",
+                "稀有度 ↓",
+                "价格 ↓",
+                "分类"
+            });
+            sortDropdown.SetValueWithoutNotify(0);
+            ConfigureInventorySortDropdown(sortDropdown, sprite, font);
+
+            var rarityFiltersRoot = CreateUIElement("RarityFilters", inventoryToolsRow.transform);
+            var rarityFiltersLayout = rarityFiltersRoot.AddComponent<HorizontalLayoutGroup>();
+            rarityFiltersLayout.spacing = 6f;
+            rarityFiltersLayout.childAlignment = TextAnchor.MiddleCenter;
+            rarityFiltersLayout.childControlHeight = true;
+            rarityFiltersLayout.childControlWidth = true;
+            rarityFiltersLayout.childForceExpandHeight = false;
+            rarityFiltersLayout.childForceExpandWidth = true;
+            var rarityFiltersElement = rarityFiltersRoot.AddComponent<LayoutElement>();
+            rarityFiltersElement.preferredHeight = 38f;
+            rarityFiltersElement.flexibleWidth = 1f;
+            rarityFiltersElement.minWidth = 0f;
+
+            rarityAllButton = CreateButton(rarityFiltersRoot.transform, "全稀有度", sprite, font);
+            rarityCommonButton = CreateButton(rarityFiltersRoot.transform, "普通", sprite, font);
+            rarityMagicButton = CreateButton(rarityFiltersRoot.transform, "魔法", sprite, font);
+            rarityRareButton = CreateButton(rarityFiltersRoot.transform, "稀有", sprite, font);
+            rarityEpicButton = CreateButton(rarityFiltersRoot.transform, "史诗", sprite, font);
+            rarityLegendaryButton = CreateButton(rarityFiltersRoot.transform, "传说", sprite, font);
+
+            ConfigureSecondaryFilterButtonLayout(rarityAllButton);
+            ConfigureSecondaryFilterButtonLayout(rarityCommonButton);
+            ConfigureSecondaryFilterButtonLayout(rarityMagicButton);
+            ConfigureSecondaryFilterButtonLayout(rarityRareButton);
+            ConfigureSecondaryFilterButtonLayout(rarityEpicButton);
+            ConfigureSecondaryFilterButtonLayout(rarityLegendaryButton);
 
             var gridFrame = CreateUIElement("InventoryGridFrame", inventoryPanel.transform);
             var gridFrameImage = gridFrame.AddComponent<Image>();
@@ -2655,6 +2728,14 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "equipmentFilterButton", filterEquipmentButton);
             SetSerialized(screen, "consumableFilterButton", filterConsumableButton);
             SetSerialized(screen, "questFilterButton", filterQuestButton);
+            SetSerialized(screen, "searchInputField", searchInputField);
+            SetSerialized(screen, "sortDropdown", sortDropdown);
+            SetSerialized(screen, "rarityAllButton", rarityAllButton);
+            SetSerialized(screen, "rarityCommonButton", rarityCommonButton);
+            SetSerialized(screen, "rarityMagicButton", rarityMagicButton);
+            SetSerialized(screen, "rarityRareButton", rarityRareButton);
+            SetSerialized(screen, "rarityEpicButton", rarityEpicButton);
+            SetSerialized(screen, "rarityLegendaryButton", rarityLegendaryButton);
             SetSerialized(screen, "capacityText", capacityText);
             SetSerialized(screen, "equipButton", equipButton);
             SetSerialized(screen, "unequipButton", unequipButton);
@@ -2854,6 +2935,251 @@ namespace CombatSystem.Editor
                 label.fontSize = 17;
                 label.color = GameplayMenuTabInactiveTextColor;
             }
+        }
+
+        private static void ConfigureInventorySearchInput(InputField input, Sprite sprite, Font font)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            var layout = input.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = input.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 38f;
+            layout.preferredWidth = 300f;
+            layout.flexibleWidth = 0f;
+            layout.minWidth = 0f;
+
+            var image = input.GetComponent<Image>();
+            if (image != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.color = GameplayMenuTabInactiveColor;
+                image.raycastTarget = true;
+            }
+
+            if (input.textComponent != null)
+            {
+                input.textComponent.font = font;
+                input.textComponent.fontSize = 16;
+                input.textComponent.color = GameplayMenuTabActiveTextColor;
+            }
+
+            var placeholder = input.placeholder as Text;
+            if (placeholder != null)
+            {
+                placeholder.font = font;
+                placeholder.fontSize = 15;
+                placeholder.color = GameplayMenuTabInactiveTextColor;
+            }
+        }
+
+        private static void ConfigureInventorySortDropdown(Dropdown dropdown, Sprite sprite, Font font)
+        {
+            if (dropdown == null)
+            {
+                return;
+            }
+
+            if (dropdown.template == null)
+            {
+                var templateTransform = dropdown.transform.Find("Template");
+                if (templateTransform != null)
+                {
+                    dropdown.template = templateTransform as RectTransform;
+                }
+            }
+
+            var layout = dropdown.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = dropdown.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 38f;
+            layout.preferredWidth = 220f;
+            layout.flexibleWidth = 0f;
+            layout.minWidth = 0f;
+
+            var image = dropdown.GetComponent<Image>();
+            if (image != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Sliced;
+                image.color = GameplayMenuTabInactiveColor;
+                image.raycastTarget = true;
+            }
+
+            var caption = dropdown.captionText;
+            if (caption == null)
+            {
+                var captionTransform = dropdown.transform.Find("Label");
+                if (captionTransform != null)
+                {
+                    caption = captionTransform.GetComponent<Text>();
+                    dropdown.captionText = caption;
+                }
+            }
+
+            if (caption != null)
+            {
+                caption.font = font;
+                caption.fontSize = 16;
+                caption.color = GameplayMenuTabActiveTextColor;
+                caption.alignment = TextAnchor.MiddleLeft;
+            }
+
+            var itemText = dropdown.itemText;
+            if (itemText == null && dropdown.template != null)
+            {
+                var itemLabelTransform = dropdown.template.Find("Viewport/Content/Item/Item Label");
+                if (itemLabelTransform != null)
+                {
+                    itemText = itemLabelTransform.GetComponent<Text>();
+                    dropdown.itemText = itemText;
+                }
+
+                if (itemText == null)
+                {
+                    var candidateTexts = dropdown.template.GetComponentsInChildren<Text>(true);
+                    for (int i = 0; i < candidateTexts.Length; i++)
+                    {
+                        var candidate = candidateTexts[i];
+                        if (candidate == null)
+                        {
+                            continue;
+                        }
+
+                        var candidateName = candidate.name.ToLowerInvariant();
+                        var parentName = candidate.transform.parent != null
+                            ? candidate.transform.parent.name.ToLowerInvariant()
+                            : string.Empty;
+                        if (candidateName.Contains("label") && parentName.Contains("item"))
+                        {
+                            itemText = candidate;
+                            dropdown.itemText = itemText;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (itemText != null)
+            {
+                itemText.font = font;
+                itemText.fontSize = 15;
+                itemText.color = GameplayMenuTabActiveTextColor;
+            }
+
+            if (dropdown.itemImage == null && dropdown.template != null)
+            {
+                var itemBgTransform = dropdown.template.Find("Viewport/Content/Item/Item Background");
+                if (itemBgTransform != null)
+                {
+                    dropdown.itemImage = itemBgTransform.GetComponent<Image>();
+                }
+
+                if (dropdown.itemImage == null)
+                {
+                    var itemTransform = dropdown.template.Find("Viewport/Content/Item");
+                    if (itemTransform != null)
+                    {
+                        dropdown.itemImage = itemTransform.GetComponent<Image>();
+                    }
+                }
+            }
+
+            var arrow = dropdown.transform.Find("Arrow");
+            if (arrow != null)
+            {
+                var arrowImage = arrow.GetComponent<Image>();
+                if (arrowImage != null)
+                {
+                    arrowImage.color = GameplayMenuTabActiveTextColor;
+                }
+            }
+
+            if (dropdown.template != null)
+            {
+                var templateCanvas = dropdown.template.GetComponent<Canvas>();
+                if (templateCanvas == null)
+                {
+                    templateCanvas = dropdown.template.gameObject.AddComponent<Canvas>();
+                }
+
+                templateCanvas.overrideSorting = true;
+                templateCanvas.sortingOrder = 800;
+
+                if (dropdown.template.GetComponent<GraphicRaycaster>() == null)
+                {
+                    dropdown.template.gameObject.AddComponent<GraphicRaycaster>();
+                }
+
+                var templateImage = dropdown.template.GetComponent<Image>();
+                if (templateImage != null)
+                {
+                    templateImage.sprite = sprite;
+                    templateImage.type = Image.Type.Sliced;
+                    templateImage.color = GameplayMenuPanelColor;
+                }
+
+                var viewport = dropdown.template.Find("Viewport");
+                if (viewport != null)
+                {
+                    var viewportImage = viewport.GetComponent<Image>();
+                    if (viewportImage != null)
+                    {
+                        viewportImage.color = new Color(0f, 0f, 0f, 0f);
+                    }
+                }
+
+                var itemLabel = dropdown.template.Find("Viewport/Content/Item/Item Label");
+                if (itemLabel != null)
+                {
+                    var itemLabelText = itemLabel.GetComponent<Text>();
+                    if (itemLabelText != null)
+                    {
+                        itemLabelText.font = font;
+                        itemLabelText.fontSize = 15;
+                        itemLabelText.color = GameplayMenuTabActiveTextColor;
+                    }
+                }
+
+                var itemBg = dropdown.template.Find("Viewport/Content/Item");
+                if (itemBg != null)
+                {
+                    var itemBgImage = itemBg.GetComponent<Image>();
+                    if (itemBgImage != null)
+                    {
+                        itemBgImage.sprite = sprite;
+                        itemBgImage.type = Image.Type.Sliced;
+                        itemBgImage.color = GameplayMenuTabInactiveColor;
+                    }
+                }
+
+                // 兜底：模板内所有选项文本统一设为可见，避免不同 Unity 版本层级差异导致空白项。
+                var templateTexts = dropdown.template.GetComponentsInChildren<Text>(true);
+                for (int i = 0; i < templateTexts.Length; i++)
+                {
+                    var templateText = templateTexts[i];
+                    if (templateText == null)
+                    {
+                        continue;
+                    }
+
+                    templateText.font = font;
+                    templateText.color = GameplayMenuTabActiveTextColor;
+                    templateText.fontSize = templateText.fontSize <= 0 ? 15 : templateText.fontSize;
+                }
+            }
+
+            dropdown.RefreshShownValue();
         }
 
         private static void ConfigureMainMenuActionButton(Button button, bool primary)

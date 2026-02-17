@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
+using CombatSystem.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -180,6 +181,16 @@ namespace CombatSystem.Persistence
                         data.player.experience = progression.CurrentExperience;
                         data.player.attributePoints = progression.UnspentAttributePoints;
                     }
+
+                    var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+                    if (characterScreen != null)
+                    {
+                        characterScreen.GetAllocationPoints(
+                            out data.player.allocatedMaxHealthPoints,
+                            out data.player.allocatedAttackPowerPoints,
+                            out data.player.allocatedArmorPoints,
+                            out data.player.allocatedMoveSpeedPoints);
+                    }
                 }
 
                 if (saveInventory)
@@ -294,6 +305,16 @@ namespace CombatSystem.Persistence
                 {
                     // 先恢复成长系统，后续装备能拿到正确的基础数值
                     progression.ApplyState(data.player.level, data.player.experience, data.player.attributePoints, true);
+                }
+
+                var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+                if (characterScreen != null)
+                {
+                    characterScreen.SetAllocationPoints(
+                        data.player.allocatedMaxHealthPoints,
+                        data.player.allocatedAttackPowerPoints,
+                        data.player.allocatedArmorPoints,
+                        data.player.allocatedMoveSpeedPoints);
                 }
             }
 

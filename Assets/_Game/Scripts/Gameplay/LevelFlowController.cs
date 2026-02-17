@@ -467,6 +467,16 @@ namespace CombatSystem.Gameplay
                 cachedPlayerState.attributePoints = progression.UnspentAttributePoints;
             }
 
+            var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+            if (characterScreen != null)
+            {
+                characterScreen.GetAllocationPoints(
+                    out cachedPlayerState.allocatedMaxHealthPoints,
+                    out cachedPlayerState.allocatedAttackPowerPoints,
+                    out cachedPlayerState.allocatedArmorPoints,
+                    out cachedPlayerState.allocatedMoveSpeedPoints);
+            }
+
             // 缓存背包物品（深拷贝）
             var inventory = player.GetComponent<InventoryComponent>();
             if (inventory != null)
@@ -502,6 +512,16 @@ namespace CombatSystem.Gameplay
             if (cachedPlayerState.hasProgression && progression != null)
             {
                 progression.ApplyState(cachedPlayerState.level, cachedPlayerState.experience, cachedPlayerState.attributePoints, true);
+            }
+
+            var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+            if (characterScreen != null)
+            {
+                characterScreen.SetAllocationPoints(
+                    cachedPlayerState.allocatedMaxHealthPoints,
+                    cachedPlayerState.allocatedAttackPowerPoints,
+                    cachedPlayerState.allocatedArmorPoints,
+                    cachedPlayerState.allocatedMoveSpeedPoints);
             }
 
             // 2. 恢复背包物品
@@ -619,6 +639,10 @@ namespace CombatSystem.Gameplay
             public int level;
             public int experience;
             public int attributePoints;
+            public int allocatedMaxHealthPoints;
+            public int allocatedAttackPowerPoints;
+            public int allocatedArmorPoints;
+            public int allocatedMoveSpeedPoints;
 
             // -------- 物品 --------
             /// <summary>背包物品深拷贝</summary>
