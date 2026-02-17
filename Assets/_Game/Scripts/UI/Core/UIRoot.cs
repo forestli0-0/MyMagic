@@ -65,6 +65,7 @@ namespace CombatSystem.UI
 
             uiManager.Initialize(this);
             EnsureQuestJournalHotkey();
+            EnsureGameplayMenuHotkey();
         }
 
         private void MergeUniqueUiFrom(UIRoot incoming)
@@ -79,6 +80,7 @@ namespace CombatSystem.UI
             MoveUniqueChildrenByComponentType<UIOverlayBase>(incoming.overlayCanvas, overlayCanvas);
             MoveMissingDirectChildrenByName(incoming.hudCanvas, hudCanvas);
             EnsureQuestJournalHotkey();
+            EnsureGameplayMenuHotkey();
             EnsureCanvasTransforms();
         }
 
@@ -172,6 +174,16 @@ namespace CombatSystem.UI
             }
 
             gameObject.AddComponent<QuestJournalHotkey>();
+        }
+
+        private void EnsureGameplayMenuHotkey()
+        {
+            if (GetComponent<GameplayMenuHotkey>() != null)
+            {
+                return;
+            }
+
+            gameObject.AddComponent<GameplayMenuHotkey>();
         }
 
         private void EnsureCanvasTransforms()

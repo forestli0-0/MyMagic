@@ -7,16 +7,22 @@ namespace CombatSystem.UI
 {
     public class PauseMenuModal : UIModalBase
     {
+        private const string LegacyQuestButtonPath = "Panel/Button_Quests";
+
         [Header("Navigation")]
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIScreenBase mainMenuScreen;
         [SerializeField] private UIModalBase settingsModal;
         [SerializeField] private UIScreenBase settingsScreen;
-        [SerializeField] private UIScreenBase questJournalScreen;
         [SerializeField] private string mainMenuSceneName = "MainMenu";
 
         [Header("Save")]
         [SerializeField] private SaveGameManager saveManager;
+
+        private void OnEnable()
+        {
+            RemoveLegacyQuestButtonIfPresent();
+        }
 
         private void Reset()
         {
@@ -76,15 +82,10 @@ namespace CombatSystem.UI
             }
         }
 
+        // Legacy compatibility hook: quest journal moved out of pause menu.
         public void OpenQuestJournal()
         {
-            if (uiManager == null || questJournalScreen == null)
-            {
-                return;
-            }
-
-            uiManager.CloseAllModals();
-            uiManager.PushScreen(questJournalScreen);
+            RequestClose();
         }
 
         public void BackToMenu()
@@ -147,6 +148,26 @@ namespace CombatSystem.UI
 
                 uiManager.SetHudVisible(false);
             }
+        }
+
+        private void RemoveLegacyQuestButtonIfPresent()
+        {
+            var legacyQuestButton = transform.Find(LegacyQuestButtonPath);
+            if (legacyQuestButton == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(legacyQuestButton.gameObject);
+            }
+#if UNITY_EDITOR
+            else
+            {
+                DestroyImmediate(legacyQuestButton.gameObject);
+            }
+#endif
         }
     }
 }

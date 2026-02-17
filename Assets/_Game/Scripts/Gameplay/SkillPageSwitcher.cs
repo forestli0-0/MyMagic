@@ -39,6 +39,8 @@ namespace CombatSystem.Gameplay
         [Header("Input")]
         [SerializeField] private InputReader inputReader;
         [SerializeField] private bool autoFindInputReader = true;
+        [Tooltip("是否允许通过 Tab 热键切换技能页。默认关闭，避免与 Tab 功能菜单冲突。")]
+        [SerializeField] private bool allowSwitchOnTab = false;
         [Tooltip("切换冷却时间，防止连按")]
         [SerializeField] private float switchCooldown = 0.2f;
 
@@ -97,6 +99,11 @@ namespace CombatSystem.Gameplay
 
         private void HandleSwitchPage(int delta)
         {
+            if (!allowSwitchOnTab)
+            {
+                return;
+            }
+
             if (!UIRoot.IsGameplayInputAllowed())
             {
                 return;

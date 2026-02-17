@@ -23,6 +23,16 @@ namespace CombatSystem.Editor
         private const float CanvasReferenceWidth = 1920f;
         private const float CanvasReferenceHeight = 1080f;
 
+        // Gameplay menu style tokens
+        private static readonly Color GameplayMenuOverlayColor = new Color(0.03f, 0.04f, 0.06f, 0.68f);
+        private static readonly Color GameplayMenuHeaderColor = new Color(0.05f, 0.08f, 0.12f, 0.92f);
+        private static readonly Color GameplayMenuPanelColor = new Color(0.09f, 0.12f, 0.18f, 0.94f);
+        private static readonly Color GameplayMenuPanelAltColor = new Color(0.12f, 0.15f, 0.2f, 0.94f);
+        private static readonly Color GameplayMenuTabActiveColor = new Color(0.26f, 0.38f, 0.56f, 1f);
+        private static readonly Color GameplayMenuTabInactiveColor = new Color(0.2f, 0.22f, 0.26f, 1f);
+        private static readonly Color GameplayMenuTabActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
+        private static readonly Color GameplayMenuTabInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
+
         [MenuItem("Combat/UI/Create UIRoot")]
         public static void CreateUIRoot()
         {
@@ -39,6 +49,7 @@ namespace CombatSystem.Editor
             var uiManager = root.AddComponent<UIManager>();
             var pauseHotkey = root.AddComponent<PauseMenuHotkey>();
             var inventoryHotkey = root.AddComponent<InventoryHotkey>();
+            var gameplayMenuHotkey = root.AddComponent<GameplayMenuHotkey>();
             var eventSystemBootstrapper = root.AddComponent<UIEventSystemBootstrapper>();
             var saveManager = root.AddComponent<SaveGameManager>();
             root.AddComponent<SettingsBootstrapper>();
@@ -52,6 +63,7 @@ namespace CombatSystem.Editor
             var saveSelect = CreateScreen<SaveSelectScreen>("SaveSelectScreen", screensCanvas.transform);
             var settings = CreateScreen<SettingsScreen>("SettingsScreen", screensCanvas.transform);
             var inGame = CreateScreen<InGameScreen>("InGameScreen", screensCanvas.transform);
+            var characterScreen = CreateScreen<CharacterScreen>("CharacterScreen", screensCanvas.transform);
             var inventoryScreen = CreateScreen<InventoryScreen>("InventoryScreen", screensCanvas.transform);
             var questJournalScreen = CreateScreen<QuestJournalScreen>("QuestJournalScreen", screensCanvas.transform);
             var pauseModal = CreateModal<PauseMenuModal>("PauseMenuModal", modalCanvas.transform);
@@ -61,6 +73,7 @@ namespace CombatSystem.Editor
             saveSelect.gameObject.SetActive(false);
             settings.gameObject.SetActive(false);
             inGame.gameObject.SetActive(false);
+            characterScreen.gameObject.SetActive(false);
             inventoryScreen.gameObject.SetActive(false);
             questJournalScreen.gameObject.SetActive(false);
             pauseModal.gameObject.SetActive(false);
@@ -96,6 +109,9 @@ namespace CombatSystem.Editor
             SetSerialized(inGame, "uiManager", uiManager);
             SetSerializedEnum(inGame, "inputMode", (int)UIInputMode.Gameplay);
 
+            SetSerialized(characterScreen, "uiManager", uiManager);
+            SetSerializedEnum(characterScreen, "inputMode", (int)UIInputMode.UI);
+
             SetSerialized(inventoryScreen, "uiManager", uiManager);
             SetSerializedEnum(inventoryScreen, "inputMode", (int)UIInputMode.UI);
 
@@ -105,7 +121,6 @@ namespace CombatSystem.Editor
             SetSerialized(pauseModal, "uiManager", uiManager);
             SetSerialized(pauseModal, "mainMenuScreen", mainMenu);
             SetSerialized(pauseModal, "settingsScreen", settings);
-            SetSerialized(pauseModal, "questJournalScreen", questJournalScreen);
             SetSerialized(pauseModal, "saveManager", saveManager);
 
             SetSerialized(questGiverModal, "uiManager", uiManager);
@@ -115,6 +130,9 @@ namespace CombatSystem.Editor
 
             SetSerialized(inventoryHotkey, "uiManager", uiManager);
             SetSerialized(inventoryHotkey, "inventoryScreen", inventoryScreen);
+
+            SetSerialized(gameplayMenuHotkey, "uiManager", uiManager);
+            SetSerialized(gameplayMenuHotkey, "defaultMenuScreen", inventoryScreen);
 
             SetSerialized(eventSystemBootstrapper, "actionsAsset",
                 AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/_Game/Input/CombatInputActions.inputactions"));
@@ -148,12 +166,14 @@ namespace CombatSystem.Editor
             var saveSelect = root.GetComponentInChildren<SaveSelectScreen>(true);
             var settings = root.GetComponentInChildren<SettingsScreen>(true);
             var inGame = root.GetComponentInChildren<InGameScreen>(true);
+            var characterScreen = root.GetComponentInChildren<CharacterScreen>(true);
             var inventoryScreen = root.GetComponentInChildren<InventoryScreen>(true);
             var questJournalScreen = root.GetComponentInChildren<QuestJournalScreen>(true);
             var pauseModal = root.GetComponentInChildren<PauseMenuModal>(true);
             var questGiverModal = root.GetComponentInChildren<QuestGiverModal>(true);
             var pauseHotkey = root.GetComponentInChildren<PauseMenuHotkey>(true);
             var inventoryHotkey = root.GetComponentInChildren<InventoryHotkey>(true);
+            var gameplayMenuHotkey = root.GetComponentInChildren<GameplayMenuHotkey>(true);
             var eventSystemBootstrapper = root.GetComponentInChildren<UIEventSystemBootstrapper>(true);
             var saveManager = root.GetComponentInChildren<SaveGameManager>(true);
             if (saveManager == null)
@@ -165,6 +185,12 @@ namespace CombatSystem.Editor
             if (settingsBootstrapper == null)
             {
                 settingsBootstrapper = root.gameObject.AddComponent<SettingsBootstrapper>();
+            }
+
+            if (characterScreen == null && root.ScreensCanvas != null)
+            {
+                characterScreen = CreateScreen<CharacterScreen>("CharacterScreen", root.ScreensCanvas.transform);
+                characterScreen.gameObject.SetActive(false);
             }
 
             if (inventoryScreen == null && root.ScreensCanvas != null)
@@ -188,6 +214,11 @@ namespace CombatSystem.Editor
             if (inventoryHotkey == null)
             {
                 inventoryHotkey = root.gameObject.AddComponent<InventoryHotkey>();
+            }
+
+            if (gameplayMenuHotkey == null)
+            {
+                gameplayMenuHotkey = root.gameObject.AddComponent<GameplayMenuHotkey>();
             }
 
             if (eventSystemBootstrapper == null)
@@ -230,10 +261,18 @@ namespace CombatSystem.Editor
                 SetSerializedEnum(inGame, "inputMode", (int)UIInputMode.Gameplay);
             }
 
+            if (characterScreen != null)
+            {
+                EnsureCanvasGroup(characterScreen);
+                BuildCharacterUI(characterScreen, sprite, font, inventoryScreen, questJournalScreen);
+                SetSerialized(characterScreen, "uiManager", uiManager);
+                SetSerializedEnum(characterScreen, "inputMode", (int)UIInputMode.UI);
+            }
+
             if (inventoryScreen != null)
             {
                 EnsureCanvasGroup(inventoryScreen);
-                BuildInventoryUI(inventoryScreen, sprite, font);
+                BuildInventoryUI(inventoryScreen, sprite, font, characterScreen, questJournalScreen);
                 SetSerialized(inventoryScreen, "uiManager", uiManager);
                 SetSerializedEnum(inventoryScreen, "inputMode", (int)UIInputMode.UI);
             }
@@ -241,7 +280,7 @@ namespace CombatSystem.Editor
             if (questJournalScreen != null)
             {
                 EnsureCanvasGroup(questJournalScreen);
-                BuildQuestJournalUI(questJournalScreen, sprite, font);
+                BuildQuestJournalUI(questJournalScreen, sprite, font, characterScreen, inventoryScreen);
                 SetSerialized(questJournalScreen, "uiManager", uiManager);
                 SetSerializedEnum(questJournalScreen, "inputMode", (int)UIInputMode.UI);
             }
@@ -252,7 +291,6 @@ namespace CombatSystem.Editor
                 BuildPauseModalUI(pauseModal, sprite, font);
                 SetSerialized(pauseModal, "uiManager", uiManager);
                 SetSerialized(pauseModal, "settingsScreen", settings);
-                SetSerialized(pauseModal, "questJournalScreen", questJournalScreen);
                 SetSerialized(pauseModal, "saveManager", saveManager);
             }
 
@@ -273,6 +311,12 @@ namespace CombatSystem.Editor
             {
                 SetSerialized(inventoryHotkey, "uiManager", uiManager);
                 SetSerialized(inventoryHotkey, "inventoryScreen", inventoryScreen);
+            }
+
+            if (gameplayMenuHotkey != null)
+            {
+                SetSerialized(gameplayMenuHotkey, "uiManager", uiManager);
+                SetSerialized(gameplayMenuHotkey, "defaultMenuScreen", inventoryScreen != null ? inventoryScreen : characterScreen);
             }
 
             if (eventSystemBootstrapper != null)
@@ -569,6 +613,34 @@ namespace CombatSystem.Editor
             }
 
             property.boolValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerialized(Object target, string propertyName, string value)
+        {
+            var serialized = new SerializedObject(target);
+            var property = serialized.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[UIRootBuilder] Missing property: {propertyName} on {target.name}");
+                return;
+            }
+
+            property.stringValue = value ?? string.Empty;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerializedColor(Object target, string propertyName, Color value)
+        {
+            var serialized = new SerializedObject(target);
+            var property = serialized.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[UIRootBuilder] Missing property: {propertyName} on {target.name}");
+                return;
+            }
+
+            property.colorValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -1400,7 +1472,7 @@ namespace CombatSystem.Editor
         {
             if (modal.transform.childCount > 0)
             {
-                EnsurePauseModalQuestButton(modal, sprite, font);
+                EnsurePauseModalSystemButtons(modal);
                 return;
             }
 
@@ -1409,7 +1481,7 @@ namespace CombatSystem.Editor
             backgroundButton.targetGraphic = background;
             UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
 
-            var panel = CreatePanel(modal.transform, sprite, new Color(0.1f, 0.1f, 0.1f, 0.95f), new Vector2(420f, 420f));
+            var panel = CreatePanel(modal.transform, sprite, new Color(0.1f, 0.1f, 0.1f, 0.95f), new Vector2(420f, 380f));
             ConfigureVerticalLayout(panel, 20, 10, TextAnchor.MiddleCenter);
 
             CreateTitle(panel, "PAUSED", font, 30);
@@ -1420,9 +1492,6 @@ namespace CombatSystem.Editor
             var saveButton = CreateButton(panel, "Save Game", sprite, font);
             UnityEventTools.AddPersistentListener(saveButton.onClick, modal.SaveGame);
 
-            var questButton = CreateButton(panel, "Quests", sprite, font);
-            UnityEventTools.AddPersistentListener(questButton.onClick, modal.OpenQuestJournal);
-
             var settingsButton = CreateButton(panel, "Settings", sprite, font);
             UnityEventTools.AddPersistentListener(settingsButton.onClick, modal.OpenSettings);
 
@@ -1430,7 +1499,7 @@ namespace CombatSystem.Editor
             UnityEventTools.AddPersistentListener(menuButton.onClick, modal.BackToMenu);
         }
 
-        private static void EnsurePauseModalQuestButton(PauseMenuModal modal, Sprite sprite, Font font)
+        private static void EnsurePauseModalSystemButtons(PauseMenuModal modal)
         {
             if (modal == null)
             {
@@ -1443,21 +1512,22 @@ namespace CombatSystem.Editor
                 return;
             }
 
-            if (panel.Find("Button_Quests") != null)
+            for (int i = panel.childCount - 1; i >= 0; i--)
             {
-                return;
+                var child = panel.GetChild(i);
+                if (!child.name.Contains("Quest"))
+                {
+                    continue;
+                }
+
+                Undo.DestroyObjectImmediate(child.gameObject);
             }
 
             var rect = panel as RectTransform;
-            if (rect != null && rect.sizeDelta.y < 420f)
+            if (rect != null && rect.sizeDelta.y > 380f)
             {
-                rect.sizeDelta = new Vector2(rect.sizeDelta.x, 420f);
+                rect.sizeDelta = new Vector2(rect.sizeDelta.x, 380f);
             }
-
-            var questButton = CreateButton(panel, "Quests", sprite, font);
-            SetLayoutSize(questButton.gameObject, 48f, 320f);
-            questButton.transform.SetSiblingIndex(3);
-            UnityEventTools.AddPersistentListener(questButton.onClick, modal.OpenQuestJournal);
         }
 
         private static void BuildQuestGiverModalUI(QuestGiverModal modal, Sprite sprite, Font font)
@@ -1570,64 +1640,106 @@ namespace CombatSystem.Editor
             }
         }
 
-        private static void BuildQuestJournalUI(QuestJournalScreen screen, Sprite sprite, Font font)
+        private struct GameplayMenuShell
         {
-            if (screen.transform.childCount > 0)
-            {
-                Debug.LogWarning("[UIRootBuilder] QuestJournalScreen already has children. Skipping.");
-                return;
-            }
+            public RectTransform Root;
+            public RectTransform Content;
+        }
 
-            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.78f));
+        private static void BuildCharacterUI(CharacterScreen screen, Sprite sprite, Font font, UIScreenBase inventoryScreen, UIScreenBase questJournalScreen)
+        {
+            var shell = BuildGameplayMenuShell(
+                screen,
+                sprite,
+                font,
+                "CharacterLayout",
+                "CHARACTER",
+                screen,
+                inventoryScreen,
+                questJournalScreen,
+                GameplayMenuTab.Character);
 
-            var root = CreateUIElement("JournalLayout", screen.transform);
-            var rootRect = root.GetComponent<RectTransform>();
-            StretchRect(rootRect);
+            var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
+            contentLayout.childAlignment = TextAnchor.UpperCenter;
+            contentLayout.childControlHeight = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = true;
+            contentLayout.childForceExpandWidth = true;
 
-            var rootLayout = root.AddComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(24, 24, 24, 24);
-            rootLayout.spacing = 12f;
-            rootLayout.childAlignment = TextAnchor.UpperCenter;
-            rootLayout.childControlHeight = true;
-            rootLayout.childControlWidth = true;
-            rootLayout.childForceExpandHeight = true;
-            rootLayout.childForceExpandWidth = true;
+            var panel = CreateUIElement("CharacterPanel", shell.Content);
+            var panelImage = panel.AddComponent<Image>();
+            panelImage.sprite = sprite;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = GameplayMenuPanelColor;
+            panelImage.raycastTarget = true;
+            var panelLayout = panel.AddComponent<VerticalLayoutGroup>();
+            panelLayout.padding = new RectOffset(20, 20, 20, 20);
+            panelLayout.spacing = 12f;
+            panelLayout.childAlignment = TextAnchor.UpperLeft;
+            panelLayout.childControlHeight = true;
+            panelLayout.childControlWidth = true;
+            panelLayout.childForceExpandHeight = false;
+            panelLayout.childForceExpandWidth = true;
+            var panelElement = panel.AddComponent<LayoutElement>();
+            panelElement.flexibleHeight = 1f;
+            panelElement.flexibleWidth = 1f;
 
-            var titleRow = CreateUIElement("TitleRow", root.transform);
-            var titleRowLayout = titleRow.AddComponent<HorizontalLayoutGroup>();
-            titleRowLayout.spacing = 12f;
-            titleRowLayout.childAlignment = TextAnchor.MiddleLeft;
-            titleRowLayout.childControlHeight = true;
-            titleRowLayout.childControlWidth = false;
-            titleRowLayout.childForceExpandHeight = false;
-            titleRowLayout.childForceExpandWidth = false;
-            AddLayoutElement(titleRow, 56f);
+            var nameText = CreateText(CreateUIElement("PlayerName", panel.transform), "Player", font, 28, TextAnchor.MiddleLeft);
+            nameText.color = Color.white;
+            AddLayoutElement(nameText.gameObject, 40f);
 
-            var titleGo = CreateUIElement("Title", titleRow.transform);
-            var titleText = CreateText(titleGo, "QUEST JOURNAL", font, 30, TextAnchor.MiddleLeft);
-            titleText.color = Color.white;
-            AddLayoutElement(titleGo, 56f, 480f);
+            var levelText = CreateText(CreateUIElement("LevelText", panel.transform), "等级: -", font, 20, TextAnchor.MiddleLeft);
+            levelText.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            AddLayoutElement(levelText.gameObject, 32f);
 
-            var backButton = CreateButton(titleRow.transform, "Back", sprite, font);
-            SetLayoutSize(backButton.gameObject, 44f, 180f);
+            var healthText = CreateText(CreateUIElement("HealthText", panel.transform), "生命: -", font, 20, TextAnchor.MiddleLeft);
+            healthText.color = new Color(0.93f, 0.64f, 0.64f, 1f);
+            AddLayoutElement(healthText.gameObject, 32f);
 
-            var content = CreateUIElement("Content", root.transform);
-            var contentLayout = content.AddComponent<HorizontalLayoutGroup>();
+            var resourceText = CreateText(CreateUIElement("ResourceText", panel.transform), "资源: -", font, 20, TextAnchor.MiddleLeft);
+            resourceText.color = new Color(0.67f, 0.8f, 0.97f, 1f);
+            AddLayoutElement(resourceText.gameObject, 32f);
+
+            var pointsText = CreateText(CreateUIElement("AttributePointsText", panel.transform), "未分配属性点: -", font, 20, TextAnchor.MiddleLeft);
+            pointsText.color = new Color(0.81f, 0.93f, 0.67f, 1f);
+            AddLayoutElement(pointsText.gameObject, 32f);
+
+            SetSerialized(screen, "nameText", nameText);
+            SetSerialized(screen, "levelText", levelText);
+            SetSerialized(screen, "healthText", healthText);
+            SetSerialized(screen, "resourceText", resourceText);
+            SetSerialized(screen, "attributePointsText", pointsText);
+        }
+
+        private static void BuildQuestJournalUI(QuestJournalScreen screen, Sprite sprite, Font font, UIScreenBase characterScreen, UIScreenBase inventoryScreen)
+        {
+            var shell = BuildGameplayMenuShell(
+                screen,
+                sprite,
+                font,
+                "JournalLayout",
+                "QUEST",
+                characterScreen,
+                inventoryScreen,
+                screen,
+                GameplayMenuTab.Quest);
+
+            var backButton = CreateButton(shell.Root, "Back", sprite, font);
+            backButton.gameObject.SetActive(false);
+
+            var contentLayout = shell.Content.gameObject.AddComponent<HorizontalLayoutGroup>();
             contentLayout.spacing = 16f;
             contentLayout.childAlignment = TextAnchor.UpperLeft;
             contentLayout.childControlHeight = true;
             contentLayout.childControlWidth = true;
             contentLayout.childForceExpandHeight = true;
             contentLayout.childForceExpandWidth = true;
-            var contentElement = content.AddComponent<LayoutElement>();
-            contentElement.flexibleHeight = 1f;
-            contentElement.flexibleWidth = 1f;
 
-            var listPanel = CreateUIElement("QuestListPanel", content.transform);
+            var listPanel = CreateUIElement("QuestListPanel", shell.Content);
             var listImage = listPanel.AddComponent<Image>();
             listImage.sprite = sprite;
             listImage.type = Image.Type.Sliced;
-            listImage.color = new Color(0.08f, 0.1f, 0.14f, 0.95f);
+            listImage.color = GameplayMenuPanelColor;
             listImage.raycastTarget = true;
             var listElement = listPanel.AddComponent<LayoutElement>();
             listElement.preferredWidth = 460f;
@@ -1667,11 +1779,11 @@ namespace CombatSystem.Editor
             var entryTemplate = CreateQuestJournalEntryTemplate(listViewport.transform, sprite, font);
             entryTemplate.gameObject.SetActive(false);
 
-            var detailPanel = CreateUIElement("QuestDetailPanel", content.transform);
+            var detailPanel = CreateUIElement("QuestDetailPanel", shell.Content);
             var detailImage = detailPanel.AddComponent<Image>();
             detailImage.sprite = sprite;
             detailImage.type = Image.Type.Sliced;
-            detailImage.color = new Color(0.1f, 0.12f, 0.17f, 0.95f);
+            detailImage.color = GameplayMenuPanelAltColor;
             detailImage.raycastTarget = true;
             var detailElement = detailPanel.AddComponent<LayoutElement>();
             detailElement.flexibleWidth = 1f;
@@ -1728,34 +1840,44 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "backButton", backButton);
         }
 
-        private static void BuildInventoryUI(InventoryScreen screen, Sprite sprite, Font font)
+        private static void BuildInventoryUI(InventoryScreen screen, Sprite sprite, Font font, UIScreenBase characterScreen, UIScreenBase questJournalScreen)
         {
-            if (screen.transform.childCount > 0)
-            {
-                Debug.LogWarning("[UIRootBuilder] InventoryScreen already has children. Skipping.");
-                return;
-            }
+            var shell = BuildGameplayMenuShell(
+                screen,
+                sprite,
+                font,
+                "MenuLayout",
+                "INVENTORY",
+                characterScreen,
+                screen,
+                questJournalScreen,
+                GameplayMenuTab.Inventory);
 
-            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.75f));
+            var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
+            contentLayout.childAlignment = TextAnchor.UpperCenter;
+            contentLayout.childControlHeight = true;
+            contentLayout.childControlWidth = true;
+            contentLayout.childForceExpandHeight = true;
+            contentLayout.childForceExpandWidth = true;
 
-            var layoutRoot = CreateUIElement("InventoryLayout", screen.transform);
-            var layoutRect = layoutRoot.GetComponent<RectTransform>();
-            StretchRect(layoutRect);
-
+            var layoutRoot = CreateUIElement("InventoryLayout", shell.Content);
             var layout = layoutRoot.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(32, 32, 32, 32);
+            layout.padding = new RectOffset(32, 32, 20, 20);
             layout.spacing = 24f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = true;
             layout.childForceExpandWidth = true;
+            var layoutElement = layoutRoot.AddComponent<LayoutElement>();
+            layoutElement.flexibleHeight = 1f;
+            layoutElement.flexibleWidth = 1f;
 
             var inventoryPanel = CreateUIElement("InventoryPanel", layoutRoot.transform);
             var inventoryImage = inventoryPanel.AddComponent<Image>();
             inventoryImage.sprite = sprite;
             inventoryImage.type = Image.Type.Sliced;
-            inventoryImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+            inventoryImage.color = GameplayMenuPanelColor;
             inventoryImage.raycastTarget = true;
 
             var inventoryLayout = inventoryPanel.AddComponent<VerticalLayoutGroup>();
@@ -1771,8 +1893,6 @@ namespace CombatSystem.Editor
             inventoryElement.preferredWidth = 980f;
             inventoryElement.flexibleWidth = 1f;
             inventoryElement.flexibleHeight = 1f;
-
-            CreateTitle(inventoryPanel.transform, "INVENTORY", font, 28);
 
             var gridRoot = CreateUIElement("InventoryGrid", inventoryPanel.transform);
             var gridRect = gridRoot.GetComponent<RectTransform>();
@@ -1797,7 +1917,7 @@ namespace CombatSystem.Editor
             var sideImage = sidePanel.AddComponent<Image>();
             sideImage.sprite = sprite;
             sideImage.type = Image.Type.Sliced;
-            sideImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            sideImage.color = GameplayMenuPanelAltColor;
             sideImage.raycastTarget = true;
 
             var sideLayout = sidePanel.AddComponent<VerticalLayoutGroup>();
@@ -1818,7 +1938,7 @@ namespace CombatSystem.Editor
             var equipmentImage = equipmentSection.AddComponent<Image>();
             equipmentImage.sprite = sprite;
             equipmentImage.type = Image.Type.Sliced;
-            equipmentImage.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+            equipmentImage.color = GameplayMenuPanelColor;
             equipmentImage.raycastTarget = true;
 
             var equipmentLayout = equipmentSection.AddComponent<VerticalLayoutGroup>();
@@ -1856,7 +1976,7 @@ namespace CombatSystem.Editor
             var detailsImage = detailsSection.AddComponent<Image>();
             detailsImage.sprite = sprite;
             detailsImage.type = Image.Type.Sliced;
-            detailsImage.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+            detailsImage.color = GameplayMenuPanelColor;
             detailsImage.raycastTarget = true;
 
             var detailsLayout = detailsSection.AddComponent<VerticalLayoutGroup>();
@@ -1960,6 +2080,216 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "comparePanel", comparePanel);
             SetSerialized(screen, "equipButton", equipButton);
             SetSerialized(screen, "unequipButton", unequipButton);
+        }
+
+        private static RectTransform CreateGameplayMenuTabsRow(Transform parent, Sprite sprite, Font font, out Button characterButton, out Button inventoryButton, out Button questButton)
+        {
+            var row = CreateUIElement("TopTabs", parent);
+            var rowRect = row.GetComponent<RectTransform>();
+
+            var image = row.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = GameplayMenuHeaderColor;
+            image.raycastTarget = true;
+
+            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.padding = new RectOffset(10, 10, 8, 8);
+            rowLayout.spacing = 12f;
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.childControlHeight = true;
+            rowLayout.childControlWidth = true;
+            rowLayout.childForceExpandHeight = false;
+            rowLayout.childForceExpandWidth = true;
+
+            AddLayoutElement(row, 60f);
+            var rowElement = row.GetComponent<LayoutElement>();
+            rowElement.flexibleWidth = 1f;
+
+            characterButton = CreateButton(row.transform, "Character", sprite, font);
+            inventoryButton = CreateButton(row.transform, "Inventory", sprite, font);
+            questButton = CreateButton(row.transform, "Quest", sprite, font);
+
+            ConfigureTabButtonLayout(characterButton);
+            ConfigureTabButtonLayout(inventoryButton);
+            ConfigureTabButtonLayout(questButton);
+
+            return rowRect;
+        }
+
+        private static GameplayMenuShell BuildGameplayMenuShell(
+            UIScreenBase screen,
+            Sprite sprite,
+            Font font,
+            string layoutRootName,
+            string title,
+            UIScreenBase characterScreen,
+            UIScreenBase inventoryScreen,
+            UIScreenBase questJournalScreen,
+            GameplayMenuTab activeTab)
+        {
+            if (screen == null)
+            {
+                return default;
+            }
+
+            ClearTransformChildren(screen.transform);
+            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
+
+            var root = CreateUIElement(layoutRootName, screen.transform);
+            var rootRect = root.GetComponent<RectTransform>();
+            StretchRect(rootRect);
+
+            var rootLayout = root.AddComponent<VerticalLayoutGroup>();
+            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.spacing = 0f;
+            rootLayout.childAlignment = TextAnchor.UpperCenter;
+            rootLayout.childControlHeight = true;
+            rootLayout.childControlWidth = true;
+            rootLayout.childForceExpandHeight = true;
+            rootLayout.childForceExpandWidth = true;
+
+            var frame = CreateUIElement("Frame", root.transform);
+            var frameImage = frame.AddComponent<Image>();
+            frameImage.sprite = sprite;
+            frameImage.type = Image.Type.Sliced;
+            frameImage.color = GameplayMenuPanelAltColor;
+            frameImage.raycastTarget = true;
+
+            var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
+            frameLayout.padding = new RectOffset(12, 12, 10, 12);
+            frameLayout.spacing = 10f;
+            frameLayout.childAlignment = TextAnchor.UpperCenter;
+            frameLayout.childControlHeight = true;
+            frameLayout.childControlWidth = true;
+            frameLayout.childForceExpandHeight = false;
+            frameLayout.childForceExpandWidth = true;
+
+            var frameElement = frame.AddComponent<LayoutElement>();
+            frameElement.flexibleHeight = 1f;
+            frameElement.flexibleWidth = 1f;
+
+            var tabsRow = CreateGameplayMenuTabsRow(frame.transform, sprite, font, out var characterButton, out var inventoryButton, out var questButton);
+            tabsRow.name = "TopTabs";
+            tabsRow.SetSiblingIndex(0);
+
+            var titleRow = CreateUIElement("TitleRow", frame.transform);
+            var titleRowLayout = titleRow.AddComponent<HorizontalLayoutGroup>();
+            titleRowLayout.padding = new RectOffset(2, 2, 0, 0);
+            titleRowLayout.spacing = 10f;
+            titleRowLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleRowLayout.childControlHeight = true;
+            titleRowLayout.childControlWidth = false;
+            titleRowLayout.childForceExpandHeight = false;
+            titleRowLayout.childForceExpandWidth = false;
+            AddLayoutElement(titleRow, 42f);
+
+            var titleGo = CreateUIElement("Title", titleRow.transform);
+            var titleText = CreateText(titleGo, title, font, 27, TextAnchor.MiddleLeft);
+            titleText.color = Color.white;
+            AddLayoutElement(titleGo, 42f, 360f);
+
+            // Secondary tabs placeholder for future page-specific navigation.
+            var secondaryTabs = CreateUIElement("SecondaryTabs", frame.transform);
+            secondaryTabs.SetActive(false);
+
+            var divider = CreateUIElement("Divider", frame.transform);
+            var dividerImage = divider.AddComponent<Image>();
+            dividerImage.color = new Color(1f, 1f, 1f, 0.08f);
+            dividerImage.raycastTarget = false;
+            AddLayoutElement(divider, 2f);
+
+            var content = CreateUIElement("Content", frame.transform);
+            var contentRect = content.GetComponent<RectTransform>();
+            var contentElement = content.AddComponent<LayoutElement>();
+            contentElement.flexibleHeight = 1f;
+            contentElement.flexibleWidth = 1f;
+
+            ConfigureGameplayMenuTabsComponent(screen, characterButton, inventoryButton, questButton, characterScreen, inventoryScreen, questJournalScreen, activeTab);
+
+            return new GameplayMenuShell
+            {
+                Root = rootRect,
+                Content = contentRect
+            };
+        }
+
+        private static void ConfigureTabButtonLayout(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 44f;
+            layout.preferredWidth = -1f;
+            layout.minWidth = 0f;
+            layout.flexibleWidth = 1f;
+        }
+
+        private static void ConfigureGameplayMenuTabsComponent(
+            UIScreenBase ownerScreen,
+            Button characterButton,
+            Button inventoryButton,
+            Button questButton,
+            UIScreenBase characterScreen,
+            UIScreenBase inventoryScreen,
+            UIScreenBase questJournalScreen,
+            GameplayMenuTab activeTab)
+        {
+            if (ownerScreen == null)
+            {
+                return;
+            }
+
+            var tabs = ownerScreen.GetComponent<GameplayMenuTabs>();
+            if (tabs == null)
+            {
+                tabs = ownerScreen.gameObject.AddComponent<GameplayMenuTabs>();
+            }
+
+            var uiManager = ownerScreen.GetComponentInParent<UIManager>();
+            if (uiManager == null)
+            {
+                uiManager = Object.FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
+            }
+
+            SetSerialized(tabs, "uiManager", uiManager);
+            SetSerialized(tabs, "ownerScreen", ownerScreen);
+            SetSerialized(tabs, "characterScreen", characterScreen);
+            SetSerialized(tabs, "inventoryScreen", inventoryScreen);
+            SetSerialized(tabs, "questJournalScreen", questJournalScreen);
+            SetSerialized(tabs, "characterButton", characterButton);
+            SetSerialized(tabs, "inventoryButton", inventoryButton);
+            SetSerialized(tabs, "questButton", questButton);
+            SetSerializedEnum(tabs, "activeTab", (int)activeTab);
+            SetSerialized(tabs, "activeTabId", ResolveGameplayTabId(activeTab));
+            SetSerialized(tabs, "disableActiveTabButton", true);
+            SetSerializedColor(tabs, "activeColor", GameplayMenuTabActiveColor);
+            SetSerializedColor(tabs, "inactiveColor", GameplayMenuTabInactiveColor);
+            SetSerializedColor(tabs, "activeTextColor", GameplayMenuTabActiveTextColor);
+            SetSerializedColor(tabs, "inactiveTextColor", GameplayMenuTabInactiveTextColor);
+        }
+
+        private static string ResolveGameplayTabId(GameplayMenuTab tab)
+        {
+            switch (tab)
+            {
+                case GameplayMenuTab.Character:
+                    return "Character";
+                case GameplayMenuTab.Inventory:
+                    return "Inventory";
+                case GameplayMenuTab.Quest:
+                    return "Quest";
+                default:
+                    return "Inventory";
+            }
         }
 
         internal static RectTransform CreateHudRect(
@@ -2654,6 +2984,25 @@ namespace CombatSystem.Editor
             StretchRect(textGo.GetComponent<RectTransform>());
 
             return button;
+        }
+
+        private static void ClearTransformChildren(Transform root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            for (int i = root.childCount - 1; i >= 0; i--)
+            {
+                var child = root.GetChild(i);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                Undo.DestroyObjectImmediate(child.gameObject);
+            }
         }
 
         private static GameObject CreateUIElement(string name, Transform parent)
