@@ -1400,6 +1400,13 @@ namespace CombatSystem.UI
                 {
                     image.color = isActive ? filterActiveColor : filterInactiveColor;
                 }
+                UIStyleKit.ApplyButtonStateColors(
+                    button,
+                    isActive ? filterActiveColor : filterInactiveColor,
+                    isActive ? 0.06f : 0.1f,
+                    0.18f,
+                    0.52f,
+                    0.08f);
 
                 var text = button.GetComponentInChildren<Text>(true);
                 if (text != null)
@@ -1692,6 +1699,13 @@ namespace CombatSystem.UI
             {
                 image.color = active ? filterActiveColor : filterInactiveColor;
             }
+            UIStyleKit.ApplyButtonStateColors(
+                button,
+                active ? filterActiveColor : filterInactiveColor,
+                active ? 0.06f : 0.1f,
+                0.18f,
+                0.52f,
+                0.08f);
 
             var labels = button.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)

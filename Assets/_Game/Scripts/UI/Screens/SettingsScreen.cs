@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CombatSystem.Persistence;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace CombatSystem.UI
@@ -36,7 +37,7 @@ namespace CombatSystem.UI
         [SerializeField] private Color inactiveCategoryColor = new Color(0.2f, 0.22f, 0.26f, 1f);
         [SerializeField] private Color activeCategoryTextColor = new Color(0.97f, 0.98f, 1f, 1f);
         [SerializeField] private Color inactiveCategoryTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
-        [SerializeField] private bool pauseGameplay = false;
+        [SerializeField] private PauseMenuModal pauseMenuModal;
 
         private static readonly int[] FpsOptions = { -1, 30, 60, 120 };
         private static readonly string[] FpsLabels = { "不限帧率", "30", "60", "120" };
@@ -45,10 +46,8 @@ namespace CombatSystem.UI
         private const float CameraZoomMin = 10f;
         private const float CameraZoomMax = 40f;
         private bool initialized;
-        private bool pauseRequested;
-        private bool pausedByScreen;
-        private float cachedTimeScale;
         private bool useStackBack;
+        private bool reopenPauseModalOnBack;
         private SettingsCategory activeCategory = SettingsCategory.Gameplay;
 
         private enum SettingsCategory
@@ -80,19 +79,20 @@ namespace CombatSystem.UI
             var data = SettingsService.LoadOrCreate();
             ApplyToUI(data);
             ApplyCategory(activeCategory);
-            ApplyPauseState();
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(false);
+            }
         }
 
         public override void OnExit()
         {
-            if (pausedByScreen)
-            {
-                Time.timeScale = cachedTimeScale;
-                pausedByScreen = false;
-            }
-
-            pauseRequested = false;
             useStackBack = false;
+            reopenPauseModalOnBack = false;
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(true);
+            }
         }
 
         public void Back()
@@ -104,14 +104,45 @@ namespace CombatSystem.UI
 
             if (useStackBack)
             {
+                var shouldReopenPause = reopenPauseModalOnBack;
                 useStackBack = false;
+                reopenPauseModalOnBack = false;
                 uiManager.PopScreen();
+
+                if (shouldReopenPause)
+                {
+                    EnsurePauseModalReference();
+                    if (pauseMenuModal != null)
+                    {
+                        uiManager.PushModal(pauseMenuModal);
+                    }
+                }
+
                 return;
             }
 
             if (backScreen != null)
             {
                 uiManager.ShowScreen(backScreen, true);
+            }
+        }
+
+        private void Update()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard == null || uiManager == null)
+            {
+                return;
+            }
+
+            if (uiManager.CurrentScreen != this || uiManager.ModalCount > 0)
+            {
+                return;
+            }
+
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                Back();
             }
         }
 
@@ -123,12 +154,24 @@ namespace CombatSystem.UI
 
         public void RequestPauseGameplay(bool value)
         {
-            pauseRequested = value;
+            if (!value)
+            {
+                reopenPauseModalOnBack = false;
+            }
         }
 
         public void RequestStackBack()
         {
             useStackBack = true;
+        }
+
+        public void RequestReturnToPauseMenu(bool value)
+        {
+            reopenPauseModalOnBack = value;
+            if (value)
+            {
+                useStackBack = true;
+            }
         }
 
         public void ShowGameplayCategory()
@@ -163,6 +206,7 @@ namespace CombatSystem.UI
                 return;
             }
 
+            EnsurePauseModalReference();
             BuildQualityOptions();
             BuildFpsOptions();
             BuildMovementModeOptions();
@@ -338,21 +382,6 @@ namespace CombatSystem.UI
             cameraModeDropdown.AddOptions(new List<string>(CameraModeLabels));
         }
 
-        private void ApplyPauseState()
-        {
-            if (!pauseGameplay && !pauseRequested)
-            {
-                return;
-            }
-
-            if (!Mathf.Approximately(Time.timeScale, 0f))
-            {
-                cachedTimeScale = Time.timeScale;
-                Time.timeScale = 0f;
-                pausedByScreen = true;
-            }
-        }
-
         private static int GetFpsIndex(int fps)
         {
             for (var i = 0; i < FpsOptions.Length; i++)
@@ -411,6 +440,16 @@ namespace CombatSystem.UI
             }
         }
 
+        private void EnsurePauseModalReference()
+        {
+            if (pauseMenuModal != null)
+            {
+                return;
+            }
+
+            pauseMenuModal = FindFirstObjectByType<PauseMenuModal>(FindObjectsInactive.Include);
+        }
+
         private void ApplyCategoryButtonState(Button button, bool active)
         {
             if (button == null)
@@ -425,6 +464,13 @@ namespace CombatSystem.UI
             {
                 image.color = active ? activeCategoryColor : inactiveCategoryColor;
             }
+            UIStyleKit.ApplyButtonStateColors(
+                button,
+                active ? activeCategoryColor : inactiveCategoryColor,
+                active ? 0.06f : 0.1f,
+                0.18f,
+                0.52f,
+                0.08f);
 
             var labels = button.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)

@@ -4,15 +4,22 @@ using UnityEngine.InputSystem;
 namespace CombatSystem.UI
 {
     /// <summary>
-    /// 游戏功能菜单热键（默认 Tab）：打开/关闭角色-背包-任务页签菜单。
+    /// 游戏功能菜单热键：
+    /// - Tab 打开/关闭角色-背包-任务页签菜单
+    /// - Esc 在菜单打开时关闭菜单
+    /// - 左右方向键在菜单内切换页签
     /// </summary>
     public class GameplayMenuHotkey : MonoBehaviour
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIScreenBase defaultMenuScreen;
         [SerializeField] private Key toggleKey = Key.Tab;
+        [SerializeField] private Key closeKey = Key.Escape;
+        [SerializeField] private Key previousTabKey = Key.LeftArrow;
+        [SerializeField] private Key nextTabKey = Key.RightArrow;
         [SerializeField] private bool onlyWhenGameplayScreen = true;
         [SerializeField] private bool closeIfMenuAlreadyOpen = true;
+        [SerializeField] private bool allowArrowTabSwitch = true;
 
         private void Awake()
         {
@@ -27,8 +34,18 @@ namespace CombatSystem.UI
                 return;
             }
 
-            var key = keyboard[toggleKey];
-            if (key == null || !key.wasPressedThisFrame)
+            if (TryHandleArrowTabSwitch(keyboard))
+            {
+                return;
+            }
+
+            if (TryHandleCloseKey(keyboard))
+            {
+                return;
+            }
+
+            var toggle = keyboard[toggleKey];
+            if (toggle == null || !toggle.wasPressedThisFrame)
             {
                 return;
             }
@@ -73,18 +90,7 @@ namespace CombatSystem.UI
             var current = uiManager.CurrentScreen;
             if (closeIfMenuAlreadyOpen && GameplayMenuTabs.IsGameplayMenuScreen(current))
             {
-                GameplayMenuTabs.CollapseGameplayMenuStack(uiManager);
-
-                if (GameplayMenuTabs.IsGameplayMenuScreen(uiManager.CurrentScreen))
-                {
-                    var tabs = current.GetComponent<GameplayMenuTabs>();
-                    var fallback = tabs != null ? tabs.ResolveFallbackGameplayScreen() : FindFallbackGameplayScreen(current);
-                    if (fallback != null && fallback != current)
-                    {
-                        uiManager.ShowScreen(fallback, true);
-                    }
-                }
-
+                CloseGameplayMenu(current);
                 return;
             }
 
@@ -99,6 +105,97 @@ namespace CombatSystem.UI
             }
 
             uiManager.PushScreen(defaultMenuScreen);
+        }
+
+        private bool TryHandleCloseKey(Keyboard keyboard)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+            if (uiManager == null || uiManager.ModalCount > 0)
+            {
+                return false;
+            }
+
+            var close = keyboard[closeKey];
+            if (close == null || !close.wasPressedThisFrame)
+            {
+                return false;
+            }
+
+            var current = uiManager.CurrentScreen;
+            if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
+            {
+                return false;
+            }
+
+            CloseGameplayMenu(current);
+            return true;
+        }
+
+        private bool TryHandleArrowTabSwitch(Keyboard keyboard)
+        {
+            if (!allowArrowTabSwitch || keyboard == null)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+            if (uiManager == null || uiManager.ModalCount > 0)
+            {
+                return false;
+            }
+
+            var current = uiManager.CurrentScreen;
+            if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
+            {
+                return false;
+            }
+
+            var tabs = current.GetComponent<GameplayMenuTabs>();
+            if (tabs == null)
+            {
+                return false;
+            }
+
+            var left = keyboard[previousTabKey];
+            if (left != null && left.wasPressedThisFrame)
+            {
+                return tabs.OpenRelativeTab(-1);
+            }
+
+            var right = keyboard[nextTabKey];
+            if (right != null && right.wasPressedThisFrame)
+            {
+                return tabs.OpenRelativeTab(1);
+            }
+
+            return false;
+        }
+
+        private void CloseGameplayMenu(UIScreenBase current)
+        {
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            GameplayMenuTabs.CollapseGameplayMenuStack(uiManager);
+
+            if (!GameplayMenuTabs.IsGameplayMenuScreen(uiManager.CurrentScreen))
+            {
+                return;
+            }
+
+            var tabs = current != null ? current.GetComponent<GameplayMenuTabs>() : null;
+            var fallback = tabs != null ? tabs.ResolveFallbackGameplayScreen() : FindFallbackGameplayScreen(current);
+            if (fallback != null && fallback != current)
+            {
+                uiManager.ShowScreen(fallback, true);
+            }
         }
 
         private static UIScreenBase FindFallbackGameplayScreen(UIScreenBase excludeScreen)

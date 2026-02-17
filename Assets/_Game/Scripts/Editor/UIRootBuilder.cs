@@ -25,14 +25,14 @@ namespace CombatSystem.Editor
         private const float CanvasReferenceHeight = 1080f;
 
         // Gameplay menu style tokens
-        private static readonly Color GameplayMenuOverlayColor = new Color(0.03f, 0.04f, 0.06f, 0.68f);
-        private static readonly Color GameplayMenuHeaderColor = new Color(0.05f, 0.08f, 0.12f, 0.92f);
-        private static readonly Color GameplayMenuPanelColor = new Color(0.09f, 0.12f, 0.18f, 0.94f);
-        private static readonly Color GameplayMenuPanelAltColor = new Color(0.12f, 0.15f, 0.2f, 0.94f);
-        private static readonly Color GameplayMenuTabActiveColor = new Color(0.26f, 0.38f, 0.56f, 1f);
-        private static readonly Color GameplayMenuTabInactiveColor = new Color(0.2f, 0.22f, 0.26f, 1f);
-        private static readonly Color GameplayMenuTabActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
-        private static readonly Color GameplayMenuTabInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
+        private static readonly Color GameplayMenuOverlayColor = UIStyleKit.GameplayOverlayColor;
+        private static readonly Color GameplayMenuHeaderColor = UIStyleKit.GameplayHeaderColor;
+        private static readonly Color GameplayMenuPanelColor = UIStyleKit.GameplayPanelColor;
+        private static readonly Color GameplayMenuPanelAltColor = UIStyleKit.GameplayPanelAltColor;
+        private static readonly Color GameplayMenuTabActiveColor = UIStyleKit.TabActiveColor;
+        private static readonly Color GameplayMenuTabInactiveColor = UIStyleKit.TabInactiveColor;
+        private static readonly Color GameplayMenuTabActiveTextColor = UIStyleKit.TabActiveTextColor;
+        private static readonly Color GameplayMenuTabInactiveTextColor = UIStyleKit.TabInactiveTextColor;
 
         [MenuItem("Combat/UI/Create UIRoot")]
         public static void CreateUIRoot()
@@ -1458,7 +1458,7 @@ namespace CombatSystem.Editor
             }
 
             ClearTransformChildren(screen.transform);
-            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
+            CreateBackground(screen.transform, sprite, new Color(0.03f, 0.04f, 0.06f, 1f));
 
             var root = CreateUIElement("SettingsLayout", screen.transform);
             var rootRect = root.GetComponent<RectTransform>();
@@ -1762,64 +1762,82 @@ namespace CombatSystem.Editor
 
         private static void BuildPauseModalUI(PauseMenuModal modal, Sprite sprite, Font font)
         {
-            if (modal.transform.childCount > 0)
-            {
-                EnsurePauseModalSystemButtons(modal);
-                return;
-            }
-
-            var background = CreateBackground(modal.transform, sprite, new Color(0f, 0f, 0f, 0.7f));
-            var backgroundButton = background.gameObject.AddComponent<Button>();
-            backgroundButton.targetGraphic = background;
-            UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
-
-            var panel = CreatePanel(modal.transform, sprite, new Color(0.1f, 0.1f, 0.1f, 0.95f), new Vector2(420f, 380f));
-            ConfigureVerticalLayout(panel, 20, 10, TextAnchor.MiddleCenter);
-
-            CreateTitle(panel, "PAUSED", font, 30);
-
-            var resumeButton = CreateButton(panel, "Resume", sprite, font);
-            UnityEventTools.AddPersistentListener(resumeButton.onClick, modal.Resume);
-
-            var saveButton = CreateButton(panel, "Save Game", sprite, font);
-            UnityEventTools.AddPersistentListener(saveButton.onClick, modal.SaveGame);
-
-            var settingsButton = CreateButton(panel, "Settings", sprite, font);
-            UnityEventTools.AddPersistentListener(settingsButton.onClick, modal.OpenSettings);
-
-            var menuButton = CreateButton(panel, "Main Menu", sprite, font);
-            UnityEventTools.AddPersistentListener(menuButton.onClick, modal.BackToMenu);
-        }
-
-        private static void EnsurePauseModalSystemButtons(PauseMenuModal modal)
-        {
             if (modal == null)
             {
                 return;
             }
 
-            var panel = modal.transform.Find("Panel");
-            if (panel == null)
-            {
-                return;
-            }
+            // Always rebuild to keep pause menu style in sync with current UI tokens.
+            ClearTransformChildren(modal.transform);
 
-            for (int i = panel.childCount - 1; i >= 0; i--)
-            {
-                var child = panel.GetChild(i);
-                if (!child.name.Contains("Quest"))
-                {
-                    continue;
-                }
+            var background = CreateBackground(modal.transform, sprite, GameplayMenuOverlayColor);
+            var backgroundButton = background.gameObject.AddComponent<Button>();
+            backgroundButton.targetGraphic = background;
+            UIStyleKit.ApplyButtonStateColors(backgroundButton, GameplayMenuOverlayColor, 0f, 0f, 0f, 0f);
+            UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
 
-                Undo.DestroyObjectImmediate(child.gameObject);
-            }
+            var panel = CreatePanel(modal.transform, sprite, GameplayMenuPanelAltColor, new Vector2(620f, 540f));
+            ConfigureVerticalLayout(panel, 24, 12f, TextAnchor.UpperCenter);
 
-            var rect = panel as RectTransform;
-            if (rect != null && rect.sizeDelta.y > 380f)
-            {
-                rect.sizeDelta = new Vector2(rect.sizeDelta.x, 380f);
-            }
+            var header = CreateUIElement("Header", panel.transform);
+            var headerImage = header.AddComponent<Image>();
+            headerImage.sprite = sprite;
+            headerImage.type = Image.Type.Sliced;
+            headerImage.color = GameplayMenuHeaderColor;
+            headerImage.raycastTarget = false;
+            AddLayoutElement(header, 110f);
+
+            var headerLayout = header.AddComponent<VerticalLayoutGroup>();
+            headerLayout.padding = new RectOffset(18, 18, 18, 12);
+            headerLayout.spacing = 6f;
+            headerLayout.childAlignment = TextAnchor.UpperLeft;
+            headerLayout.childControlHeight = true;
+            headerLayout.childControlWidth = true;
+            headerLayout.childForceExpandHeight = false;
+            headerLayout.childForceExpandWidth = true;
+
+            var titleGo = CreateUIElement("Title", header.transform);
+            var title = CreateText(titleGo, "系统菜单", font, 40, TextAnchor.MiddleLeft);
+            title.color = Color.white;
+            AddLayoutElement(titleGo, 54f);
+
+            var subtitleGo = CreateUIElement("Subtitle", header.transform);
+            var subtitle = CreateText(subtitleGo, "游戏已暂停", font, 20, TextAnchor.MiddleLeft);
+            subtitle.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(subtitleGo, 30f);
+
+            var actions = CreateUIElement("Actions", panel.transform);
+            var actionsLayout = actions.AddComponent<VerticalLayoutGroup>();
+            actionsLayout.spacing = 10f;
+            actionsLayout.childAlignment = TextAnchor.UpperCenter;
+            actionsLayout.childControlHeight = true;
+            actionsLayout.childControlWidth = true;
+            actionsLayout.childForceExpandHeight = false;
+            actionsLayout.childForceExpandWidth = true;
+            var actionsElement = actions.AddComponent<LayoutElement>();
+            actionsElement.flexibleWidth = 1f;
+            actionsElement.flexibleHeight = 1f;
+
+            var resumeButton = CreateButton(actions.transform, "继续游戏", sprite, font);
+            ConfigureMainMenuActionButton(resumeButton, true);
+            UnityEventTools.AddPersistentListener(resumeButton.onClick, modal.Resume);
+
+            var saveButton = CreateButton(actions.transform, "保存游戏", sprite, font);
+            ConfigureMainMenuActionButton(saveButton, false);
+            UnityEventTools.AddPersistentListener(saveButton.onClick, modal.SaveGame);
+
+            var settingsButton = CreateButton(actions.transform, "设置", sprite, font);
+            ConfigureMainMenuActionButton(settingsButton, false);
+            UnityEventTools.AddPersistentListener(settingsButton.onClick, modal.OpenSettings);
+
+            var menuButton = CreateButton(actions.transform, "返回主菜单", sprite, font);
+            ConfigureMainMenuActionButton(menuButton, false);
+            UnityEventTools.AddPersistentListener(menuButton.onClick, modal.BackToMenu);
+
+            var footerGo = CreateUIElement("FooterHint", panel.transform);
+            var footer = CreateText(footerGo, "ESC：继续游戏", font, 16, TextAnchor.MiddleLeft);
+            footer.color = new Color(0.72f, 0.76f, 0.82f, 1f);
+            AddLayoutElement(footerGo, 28f);
         }
 
         private static void BuildQuestGiverModalUI(QuestGiverModal modal, Sprite sprite, Font font)
@@ -2870,6 +2888,35 @@ namespace CombatSystem.Editor
             contentElement.flexibleHeight = 1f;
             contentElement.flexibleWidth = 1f;
 
+            var footerHints = CreateUIElement("FooterHints", frame.transform);
+            var footerHintsImage = footerHints.AddComponent<Image>();
+            footerHintsImage.sprite = sprite;
+            footerHintsImage.type = Image.Type.Sliced;
+            footerHintsImage.color = GameplayMenuHeaderColor;
+            footerHintsImage.raycastTarget = false;
+
+            var footerHintsLayout = footerHints.AddComponent<HorizontalLayoutGroup>();
+            footerHintsLayout.padding = new RectOffset(12, 12, 0, 0);
+            footerHintsLayout.spacing = 12f;
+            footerHintsLayout.childAlignment = TextAnchor.MiddleLeft;
+            footerHintsLayout.childControlHeight = true;
+            footerHintsLayout.childControlWidth = true;
+            footerHintsLayout.childForceExpandHeight = false;
+            footerHintsLayout.childForceExpandWidth = false;
+            AddLayoutElement(footerHints, 34f);
+
+            var footerHintsTextGo = CreateUIElement("HintText", footerHints.transform);
+            var footerHintsText = CreateText(
+                footerHintsTextGo,
+                "TAB 切换页面   ESC 返回游戏   鼠标左键 选择   双击/拖拽 快捷操作",
+                font,
+                14,
+                TextAnchor.MiddleLeft);
+            footerHintsText.color = new Color(0.74f, 0.79f, 0.86f, 1f);
+            var footerHintsTextElement = footerHintsTextGo.AddComponent<LayoutElement>();
+            footerHintsTextElement.flexibleWidth = 1f;
+            footerHintsTextElement.minWidth = 0f;
+
             ConfigureGameplayMenuTabsComponent(screen, characterButton, inventoryButton, questButton, characterScreen, inventoryScreen, questJournalScreen, activeTab);
 
             return new GameplayMenuShell
@@ -2897,6 +2944,7 @@ namespace CombatSystem.Editor
             layout.preferredWidth = -1f;
             layout.minWidth = 0f;
             layout.flexibleWidth = 1f;
+            UIStyleKit.ApplyButtonStateColors(button, GameplayMenuTabInactiveColor, 0.1f, 0.18f, 0.52f, 0.08f);
         }
 
         private static void ConfigureSecondaryFilterButtonLayout(Button button)
@@ -2922,6 +2970,7 @@ namespace CombatSystem.Editor
             {
                 buttonImage.color = GameplayMenuTabInactiveColor;
             }
+            UIStyleKit.ApplyButtonStateColors(button, GameplayMenuTabInactiveColor, 0.1f, 0.18f, 0.52f, 0.08f);
 
             var labels = button.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)
@@ -3015,6 +3064,7 @@ namespace CombatSystem.Editor
                 image.color = GameplayMenuTabInactiveColor;
                 image.raycastTarget = true;
             }
+            UIStyleKit.ApplySelectableStateColors(dropdown, GameplayMenuTabInactiveColor, 0.1f, 0.18f, 0.52f, 0.08f);
 
             var caption = dropdown.captionText;
             if (caption == null)
@@ -3205,6 +3255,13 @@ namespace CombatSystem.Editor
             {
                 image.color = primary ? GameplayMenuTabActiveColor : GameplayMenuTabInactiveColor;
             }
+            UIStyleKit.ApplyButtonStateColors(
+                button,
+                primary ? GameplayMenuTabActiveColor : GameplayMenuTabInactiveColor,
+                primary ? 0.06f : 0.1f,
+                0.16f,
+                0.52f,
+                0.08f);
 
             var labels = button.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)
@@ -3276,6 +3333,7 @@ namespace CombatSystem.Editor
             {
                 image.color = GameplayMenuTabInactiveColor;
             }
+            UIStyleKit.ApplyButtonStateColors(button, GameplayMenuTabInactiveColor, 0.1f, 0.18f, 0.52f, 0.08f);
 
             var labels = button.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)
@@ -3303,6 +3361,7 @@ namespace CombatSystem.Editor
             }
 
             SetLayoutSize(toggle.gameObject, 30f, 72f);
+            UIStyleKit.ApplySelectableStateColors(toggle, GameplayMenuTabInactiveColor, 0.1f, 0.16f, 0.5f, 0.08f);
             var labels = toggle.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < labels.Length; i++)
             {
@@ -3328,6 +3387,12 @@ namespace CombatSystem.Editor
             if (layout != null)
             {
                 layout.flexibleWidth = 0f;
+            }
+
+            var selectable = go.GetComponent<Selectable>();
+            if (selectable != null)
+            {
+                UIStyleKit.ApplySelectableStateColors(selectable, GameplayMenuTabInactiveColor, 0.1f, 0.16f, 0.5f, 0.08f);
             }
         }
 
@@ -4107,6 +4172,7 @@ namespace CombatSystem.Editor
 
             var button = go.AddComponent<Button>();
             button.targetGraphic = image;
+            UIStyleKit.ApplyButtonStateColors(button, image.color, 0.1f, 0.18f, 0.52f, 0.08f);
 
             AddLayoutElement(go, 48f, 320f);
 

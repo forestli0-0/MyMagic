@@ -119,6 +119,61 @@ namespace CombatSystem.UI
             SwitchTo(questJournalScreen, "Quest");
         }
 
+        public bool OpenRelativeTab(int direction)
+        {
+            if (direction == 0)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+            CollectTabs();
+            if (runtimeBindings.Count <= 1)
+            {
+                return false;
+            }
+
+            var resolvedActiveId = string.IsNullOrWhiteSpace(activeTabId) ? ResolveLegacyTabId(activeTab) : activeTabId;
+            var currentIndex = -1;
+            for (int i = 0; i < runtimeBindings.Count; i++)
+            {
+                var binding = runtimeBindings[i];
+                if (binding == null || string.IsNullOrWhiteSpace(binding.id))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(binding.id, resolvedActiveId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                currentIndex = i;
+                break;
+            }
+
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+            }
+
+            var step = direction > 0 ? 1 : -1;
+            for (int i = 0; i < runtimeBindings.Count; i++)
+            {
+                currentIndex = (currentIndex + step + runtimeBindings.Count) % runtimeBindings.Count;
+                var binding = runtimeBindings[currentIndex];
+                if (binding == null || binding.targetScreen == null || string.IsNullOrWhiteSpace(binding.id))
+                {
+                    continue;
+                }
+
+                SwitchTo(binding.targetScreen, binding.id);
+                return true;
+            }
+
+            return false;
+        }
+
         public UIScreenBase ResolveFallbackGameplayScreen()
         {
             var inGame = FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
@@ -342,6 +397,13 @@ namespace CombatSystem.UI
             {
                 image.color = isActive ? activeColor : inactiveColor;
             }
+            UIStyleKit.ApplyButtonStateColors(
+                button,
+                isActive ? activeColor : inactiveColor,
+                isActive ? 0.06f : 0.1f,
+                0.18f,
+                0.52f,
+                0.08f);
 
             var texts = button.GetComponentsInChildren<Text>(true);
             if (texts == null)

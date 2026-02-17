@@ -58,6 +58,7 @@ namespace CombatSystem.UI
                 {
                     screen.RequestPauseGameplay(true);
                     screen.RequestStackBack();
+                    screen.RequestReturnToPauseMenu(true);
                 }
 
                 uiManager.PushScreen(settingsScreen);
