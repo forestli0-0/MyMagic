@@ -156,7 +156,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "ESC 返回主菜单    鼠标左键 / Enter 读取存档    输入存档名后可新建";
+            return "{BACK} 返回主菜单    {CONFIRM} 读取存档    输入存档名后可新建";
         }
     }
 }

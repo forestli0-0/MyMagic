@@ -179,7 +179,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "ESC 继续游戏    ↑↓ 切换选项    Enter 选择";
+            return "{PAUSE} 继续游戏    {NAV_VERTICAL} 切换选项    {CONFIRM} 选择";
         }
 
         public override void OnFocus()

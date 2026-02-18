@@ -499,7 +499,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "ESC 返回上一页    鼠标左键 调整选项    点击应用保存设置";
+            return "{BACK} 返回上一页    {CONFIRM} 调整选项    点击应用保存设置";
         }
 
         private void HandleThemeChanged(UIThemeConfig theme)

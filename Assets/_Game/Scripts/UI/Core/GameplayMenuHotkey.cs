@@ -6,6 +6,7 @@ namespace CombatSystem.UI
     /// <summary>
     /// 游戏功能菜单热键：
     /// - Tab 打开/关闭角色-背包-任务页签菜单
+    /// - 手柄 View 打开/关闭角色-背包-任务页签菜单
     /// - Esc 在菜单打开时关闭菜单
     /// - 左右方向键在菜单内切换页签
     /// - 手柄 LB/RB 或十字键左右切页，B 关闭
@@ -21,6 +22,7 @@ namespace CombatSystem.UI
         [SerializeField] private bool onlyWhenGameplayScreen = true;
         [SerializeField] private bool closeIfMenuAlreadyOpen = true;
         [SerializeField] private bool allowArrowTabSwitch = true;
+        [SerializeField] private bool allowGamepadToggle = true;
         [SerializeField] private bool allowGamepadTabSwitch = true;
         [SerializeField] private bool allowGamepadClose = true;
 
@@ -44,7 +46,12 @@ namespace CombatSystem.UI
                 return;
             }
 
-            TryHandleToggleKey(keyboard);
+            if (TryHandleToggleKey(keyboard))
+            {
+                return;
+            }
+
+            TryHandleGamepadToggle(gamepad);
         }
 
         private void ResolveReferences()
@@ -250,6 +257,22 @@ namespace CombatSystem.UI
             }
 
             CloseGameplayMenu(current);
+            return true;
+        }
+
+        private bool TryHandleGamepadToggle(Gamepad gamepad)
+        {
+            if (!allowGamepadToggle || gamepad == null)
+            {
+                return false;
+            }
+
+            if (!gamepad.selectButton.wasPressedThisFrame)
+            {
+                return false;
+            }
+
+            ToggleMenu();
             return true;
         }
 

@@ -106,7 +106,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "鼠标左键 / Enter 选择    ESC 返回上一页";
+            return "{CONFIRM} 选择    {BACK} 返回上一页";
         }
     }
 }

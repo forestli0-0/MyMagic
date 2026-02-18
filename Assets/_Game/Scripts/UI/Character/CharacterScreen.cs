@@ -1071,7 +1071,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "TAB 关闭菜单    ESC 返回游戏    ←/→ 切换页签    鼠标左键 分配属性";
+            return "{MENU_CLOSE} 关闭菜单    {BACK} 返回游戏    {TAB_SWITCH} 切换页签    {CONFIRM} 分配属性";
         }
     }
 }
