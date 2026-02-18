@@ -24,3 +24,11 @@ MonoBehaviour:
   tabInactiveTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
   footerHintBackgroundColor: {r: 0.05, g: 0.08, b: 0.12, a: 0.92}
   footerHintTextColor: {r: 0.74, g: 0.79, b: 0.86, a: 1}
+  interactionHoverBoost: 0.1
+  interactionPressDepth: 0.18
+  interactionSelectedBoost: 0.08
+  interactionDisabledDepth: 0.52
+  interactionFadeDuration: 0.08
+  focusOutlineColor: {r: 0.62, g: 0.78, b: 1, a: 0.95}
+  focusOutlineWidth: 1.8
+  focusScaleMultiplier: 1.02

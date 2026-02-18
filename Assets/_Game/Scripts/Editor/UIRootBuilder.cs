@@ -24,6 +24,12 @@ namespace CombatSystem.Editor
         private const string DefaultThemeAssetPath = "Assets/_Game/ScriptableObjects/UI/UITheme_Default.asset";
         private const float CanvasReferenceWidth = 1920f;
         private const float CanvasReferenceHeight = 1080f;
+        private const int FullscreenOuterInset = 18;
+        private const int FullscreenFrameInsetHorizontal = 12;
+        private const int FullscreenFrameInsetTop = 10;
+        private const int FullscreenFrameInsetBottom = 12;
+        private const float GlobalFooterBottomInset = 18f;
+        private const float GlobalFooterTopInset = 54f;
 
         // Gameplay menu style tokens
         private static Color GameplayMenuOverlayColor => UIStyleKit.GameplayOverlayColor;
@@ -34,6 +40,15 @@ namespace CombatSystem.Editor
         private static Color GameplayMenuTabInactiveColor => UIStyleKit.TabInactiveColor;
         private static Color GameplayMenuTabActiveTextColor => UIStyleKit.TabActiveTextColor;
         private static Color GameplayMenuTabInactiveTextColor => UIStyleKit.TabInactiveTextColor;
+        private static Color FullscreenScreenBackdropColor
+        {
+            get
+            {
+                var color = GameplayMenuOverlayColor;
+                color.a = 1f;
+                return color;
+            }
+        }
 
         [MenuItem("Combat/UI/Create UIRoot")]
         public static void CreateUIRoot()
@@ -1340,14 +1355,14 @@ namespace CombatSystem.Editor
 
             ClearTransformChildren(screen.transform);
 
-            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
+            CreateBackground(screen.transform, sprite, FullscreenScreenBackdropColor);
 
             var layoutRoot = CreateUIElement("MainMenuLayout", screen.transform);
             var layoutRect = layoutRoot.GetComponent<RectTransform>();
             StretchRect(layoutRect);
 
             var rootPadding = layoutRoot.AddComponent<HorizontalLayoutGroup>();
-            rootPadding.padding = new RectOffset(24, 24, 24, 24);
+            rootPadding.padding = new RectOffset(FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset);
             rootPadding.spacing = 0f;
             rootPadding.childAlignment = TextAnchor.MiddleCenter;
             rootPadding.childControlHeight = true;
@@ -1363,7 +1378,11 @@ namespace CombatSystem.Editor
             frameImage.raycastTarget = true;
 
             var frameLayout = frame.AddComponent<HorizontalLayoutGroup>();
-            frameLayout.padding = new RectOffset(20, 20, 20, 20);
+            frameLayout.padding = new RectOffset(
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetTop,
+                FullscreenFrameInsetBottom);
             frameLayout.spacing = 18f;
             frameLayout.childAlignment = TextAnchor.MiddleCenter;
             frameLayout.childControlHeight = true;
@@ -1495,14 +1514,14 @@ namespace CombatSystem.Editor
             }
 
             ClearTransformChildren(screen.transform);
-            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
+            CreateBackground(screen.transform, sprite, FullscreenScreenBackdropColor);
 
             var root = CreateUIElement("SaveSelectLayout", screen.transform);
             var rootRect = root.GetComponent<RectTransform>();
             StretchRect(rootRect);
 
             var rootLayout = root.AddComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.padding = new RectOffset(FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset);
             rootLayout.spacing = 0f;
             rootLayout.childAlignment = TextAnchor.UpperCenter;
             rootLayout.childControlHeight = true;
@@ -1518,7 +1537,11 @@ namespace CombatSystem.Editor
             frameImage.raycastTarget = true;
 
             var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
-            frameLayout.padding = new RectOffset(14, 14, 12, 12);
+            frameLayout.padding = new RectOffset(
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetTop,
+                FullscreenFrameInsetBottom);
             frameLayout.spacing = 10f;
             frameLayout.childAlignment = TextAnchor.UpperCenter;
             frameLayout.childControlHeight = true;
@@ -1685,14 +1708,14 @@ namespace CombatSystem.Editor
             }
 
             ClearTransformChildren(screen.transform);
-            CreateBackground(screen.transform, sprite, new Color(0.03f, 0.04f, 0.06f, 1f));
+            CreateBackground(screen.transform, sprite, FullscreenScreenBackdropColor);
 
             var root = CreateUIElement("SettingsLayout", screen.transform);
             var rootRect = root.GetComponent<RectTransform>();
             StretchRect(rootRect);
 
             var rootLayout = root.AddComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.padding = new RectOffset(FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset);
             rootLayout.spacing = 0f;
             rootLayout.childAlignment = TextAnchor.UpperCenter;
             rootLayout.childControlHeight = true;
@@ -1708,7 +1731,11 @@ namespace CombatSystem.Editor
             frameImage.raycastTarget = true;
 
             var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
-            frameLayout.padding = new RectOffset(14, 14, 12, 12);
+            frameLayout.padding = new RectOffset(
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetTop,
+                FullscreenFrameInsetBottom);
             frameLayout.spacing = 10f;
             frameLayout.childAlignment = TextAnchor.UpperCenter;
             frameLayout.childControlHeight = true;
@@ -3284,14 +3311,14 @@ namespace CombatSystem.Editor
             }
 
             ClearTransformChildren(screen.transform);
-            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
+            CreateBackground(screen.transform, sprite, FullscreenScreenBackdropColor);
 
             var root = CreateUIElement(layoutRootName, screen.transform);
             var rootRect = root.GetComponent<RectTransform>();
             StretchRect(rootRect);
 
             var rootLayout = root.AddComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.padding = new RectOffset(FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset, FullscreenOuterInset);
             rootLayout.spacing = 0f;
             rootLayout.childAlignment = TextAnchor.UpperCenter;
             rootLayout.childControlHeight = true;
@@ -3307,7 +3334,11 @@ namespace CombatSystem.Editor
             frameImage.raycastTarget = true;
 
             var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
-            frameLayout.padding = new RectOffset(12, 12, 10, 12);
+            frameLayout.padding = new RectOffset(
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetHorizontal,
+                FullscreenFrameInsetTop,
+                FullscreenFrameInsetBottom);
             frameLayout.spacing = 10f;
             frameLayout.childAlignment = TextAnchor.UpperCenter;
             frameLayout.childControlHeight = true;
@@ -4667,8 +4698,8 @@ namespace CombatSystem.Editor
             barRect.anchorMin = new Vector2(0f, 0f);
             barRect.anchorMax = new Vector2(1f, 0f);
             barRect.pivot = new Vector2(0.5f, 0f);
-            barRect.offsetMin = new Vector2(24f, 12f);
-            barRect.offsetMax = new Vector2(-24f, 48f);
+            barRect.offsetMin = new Vector2(FullscreenOuterInset, GlobalFooterBottomInset);
+            barRect.offsetMax = new Vector2(-FullscreenOuterInset, GlobalFooterTopInset);
 
             var canvasGroup = barGo.GetComponent<CanvasGroup>();
             if (canvasGroup == null)
