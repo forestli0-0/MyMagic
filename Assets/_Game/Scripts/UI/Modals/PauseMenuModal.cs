@@ -80,13 +80,21 @@ namespace CombatSystem.UI
 
             if (saveManager == null)
             {
+                UIToast.Warning("保存失败：未找到存档服务。");
                 return;
             }
 
             if (!saveManager.SaveCurrent())
             {
-                saveManager.SaveCurrentOrNew(null);
+                var created = saveManager.SaveCurrentOrNew(null);
+                var displayName = created != null && !string.IsNullOrWhiteSpace(created.displayName)
+                    ? created.displayName
+                    : "快速存档";
+                UIToast.Success($"已创建存档：{displayName}");
+                return;
             }
+
+            UIToast.Success("保存成功。");
         }
 
         // Legacy compatibility hook: quest journal moved out of pause menu.

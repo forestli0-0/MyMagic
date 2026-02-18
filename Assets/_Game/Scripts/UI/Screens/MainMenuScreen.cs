@@ -89,9 +89,11 @@ namespace CombatSystem.UI
 
             if (saveManager != null && saveManager.TryLoadLatest())
             {
+                UIToast.Success("已读取最近存档。");
                 return;
             }
 
+            UIToast.Info("未找到可用存档，已开始新游戏。");
             StartNewGame();
         }
 

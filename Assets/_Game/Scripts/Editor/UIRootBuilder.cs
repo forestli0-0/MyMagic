@@ -419,6 +419,7 @@ namespace CombatSystem.Editor
             }
 
             BuildGlobalFooterHintBar(root, sprite, font, uiManager);
+            BuildGlobalToastOverlay(root, sprite, font);
 
             LinkQuestGiverTriggers(uiManager, questGiverModal);
             LinkNpcInteractionTriggers(uiManager, npcInteractionModal);
@@ -4678,6 +4679,86 @@ namespace CombatSystem.Editor
             SetSerialized(slot, "itemLabel", itemLabel);
 
             return slot;
+        }
+
+        private static void BuildGlobalToastOverlay(UIRoot root, Sprite sprite, Font font)
+        {
+            if (root == null || root.OverlayCanvas == null)
+            {
+                return;
+            }
+
+            var overlayRoot = root.OverlayCanvas.transform;
+            var toastGo = FindOrCreateChild(overlayRoot, "GlobalToastOverlay");
+            var toastRect = toastGo.GetComponent<RectTransform>();
+            if (toastRect == null)
+            {
+                toastRect = toastGo.AddComponent<RectTransform>();
+            }
+
+            toastRect.anchorMin = new Vector2(0.5f, 1f);
+            toastRect.anchorMax = new Vector2(0.5f, 1f);
+            toastRect.pivot = new Vector2(0.5f, 1f);
+            toastRect.anchoredPosition = new Vector2(0f, -86f);
+            toastRect.sizeDelta = new Vector2(560f, 58f);
+
+            var canvasGroup = toastGo.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = toastGo.AddComponent<CanvasGroup>();
+            }
+
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+
+            var background = toastGo.GetComponent<Image>();
+            if (background == null)
+            {
+                background = toastGo.AddComponent<Image>();
+            }
+
+            background.sprite = sprite;
+            background.type = Image.Type.Sliced;
+            background.color = UIStyleKit.FooterHintBackgroundColor;
+            background.raycastTarget = false;
+
+            var textGo = FindOrCreateChild(toastGo.transform, "Message");
+            var textRect = textGo.GetComponent<RectTransform>();
+            if (textRect == null)
+            {
+                textRect = textGo.AddComponent<RectTransform>();
+            }
+
+            StretchRect(textRect);
+            textRect.offsetMin = new Vector2(18f, 8f);
+            textRect.offsetMax = new Vector2(-18f, -8f);
+
+            var messageText = textGo.GetComponent<Text>();
+            if (messageText == null)
+            {
+                messageText = textGo.AddComponent<Text>();
+            }
+
+            messageText.font = font;
+            messageText.fontSize = 20;
+            messageText.alignment = TextAnchor.MiddleCenter;
+            messageText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            messageText.verticalOverflow = VerticalWrapMode.Truncate;
+            messageText.color = new Color(0.93f, 0.96f, 1f, 1f);
+            messageText.raycastTarget = false;
+            messageText.text = string.Empty;
+
+            var toastOverlay = toastGo.GetComponent<HudToastOverlay>();
+            if (toastOverlay == null)
+            {
+                toastOverlay = toastGo.AddComponent<HudToastOverlay>();
+            }
+
+            SetSerialized(toastOverlay, "container", toastRect);
+            SetSerialized(toastOverlay, "canvasGroup", canvasGroup);
+            SetSerialized(toastOverlay, "background", background);
+            SetSerialized(toastOverlay, "messageText", messageText);
         }
 
         private static void BuildGlobalFooterHintBar(UIRoot root, Sprite sprite, Font font, UIManager uiManager)

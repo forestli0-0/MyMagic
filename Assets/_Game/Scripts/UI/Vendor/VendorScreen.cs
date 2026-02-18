@@ -149,23 +149,30 @@ namespace CombatSystem.UI
             if (vendorService == null)
             {
                 SetStatus("商店服务未就绪。");
+                UIToast.Warning("商店服务未就绪。");
                 return;
             }
 
             if (selectedVendorIndex < 0 || selectedVendorIndex >= vendorService.Items.Count)
             {
                 SetStatus("请选择一个商品。");
+                UIToast.Warning("请选择一个商品。");
                 return;
             }
 
+            var selectedItemName = ResolveItemName(vendorService.Items[selectedVendorIndex].Definition);
             if (vendorService.TryBuy(selectedVendorIndex, 1))
             {
                 RefreshSelectionAfterChange();
                 SetStatus(string.Empty);
+                UIToast.Success($"购买成功：{selectedItemName} x1");
             }
             else
             {
                 SetStatus(vendorService.LastFailureReason);
+                UIToast.Warning(string.IsNullOrWhiteSpace(vendorService.LastFailureReason)
+                    ? "购买失败。"
+                    : vendorService.LastFailureReason);
             }
         }
 
@@ -177,12 +184,14 @@ namespace CombatSystem.UI
             if (vendorService == null || playerInventory == null)
             {
                 SetStatus("背包或商店服务未就绪。");
+                UIToast.Warning("背包或商店服务未就绪。");
                 return;
             }
 
             if (selectedInventoryIndex < 0 || selectedInventoryIndex >= playerInventory.Items.Count)
             {
                 SetStatus("请选择背包中的物品。");
+                UIToast.Warning("请选择背包中的物品。");
                 return;
             }
 
@@ -190,17 +199,23 @@ namespace CombatSystem.UI
             if (item == null)
             {
                 SetStatus("该槽位没有可出售物品。");
+                UIToast.Warning("该槽位没有可出售物品。");
                 return;
             }
 
+            var itemName = ResolveItemName(item.Definition);
             if (vendorService.TrySell(item, 1))
             {
                 RefreshSelectionAfterChange();
                 SetStatus(string.Empty);
+                UIToast.Success($"出售成功：{itemName} x1");
             }
             else
             {
                 SetStatus(vendorService.LastFailureReason);
+                UIToast.Warning(string.IsNullOrWhiteSpace(vendorService.LastFailureReason)
+                    ? "出售失败。"
+                    : vendorService.LastFailureReason);
             }
         }
 

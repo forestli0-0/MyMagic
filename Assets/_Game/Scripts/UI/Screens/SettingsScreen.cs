@@ -162,6 +162,7 @@ namespace CombatSystem.UI
         {
             var data = ReadFromUI();
             SettingsService.Apply(data, true);
+            UIToast.Success("设置已应用。");
         }
 
         public void RequestPauseGameplay(bool value)

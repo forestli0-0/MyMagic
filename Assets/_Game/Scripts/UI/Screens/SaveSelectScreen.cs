@@ -64,12 +64,18 @@ namespace CombatSystem.UI
         {
             if (saveManager == null)
             {
+                UIToast.Warning("新建存档失败：未找到存档服务。");
                 return;
             }
 
             var name = saveNameInput != null ? saveNameInput.text : string.Empty;
-            saveManager.SaveNew(name);
+            var saved = saveManager.SaveNew(name);
             RefreshList();
+
+            var displayName = saved != null && !string.IsNullOrWhiteSpace(saved.displayName)
+                ? saved.displayName
+                : "新存档";
+            UIToast.Success($"已创建存档：{displayName}");
             StartGame();
         }
 
@@ -107,24 +113,33 @@ namespace CombatSystem.UI
         {
             if (info == null || saveManager == null)
             {
+                UIToast.Warning("读取存档失败。");
                 return;
             }
 
             if (saveManager.LoadSlot(info.slotId))
             {
+                var displayName = !string.IsNullOrWhiteSpace(info.displayName) ? info.displayName : "存档";
+                UIToast.Success($"已读取存档：{displayName}");
                 StartGame();
+                return;
             }
+
+            UIToast.Warning("读取存档失败。");
         }
 
         private void HandleDelete(SaveSlotInfo info)
         {
             if (info == null || saveManager == null)
             {
+                UIToast.Warning("删除存档失败。");
                 return;
             }
 
             saveManager.DeleteSlot(info.slotId);
             RefreshList();
+            var displayName = !string.IsNullOrWhiteSpace(info.displayName) ? info.displayName : "存档";
+            UIToast.Info($"已删除存档：{displayName}");
         }
 
         private void EnsureManager()

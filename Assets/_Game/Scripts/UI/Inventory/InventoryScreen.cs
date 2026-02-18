@@ -201,39 +201,62 @@ namespace CombatSystem.UI
         {
             if (inventory == null || equipment == null)
             {
+                UIToast.Warning("无法装备：背包或装备组件未就绪。");
                 return;
             }
 
             if (selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
             {
+                UIToast.Warning("请先选择可装备物品。");
                 return;
             }
 
             var item = inventory.Items[selectedInventoryIndex];
+            if (item == null || item.Definition == null)
+            {
+                UIToast.Warning("请选择可装备物品。");
+                return;
+            }
+
             if (equipment.TryEquip(item, inventory))
             {
                 selectedInventoryIndex = -1;
                 RefreshSelectionAfterChange();
+                UIToast.Success($"已装备：{ResolveItemName(item)}");
+                return;
             }
+
+            UIToast.Warning("装备失败。");
         }
 
         public void UnequipSelected()
         {
             if (inventory == null || equipment == null)
             {
+                UIToast.Warning("无法卸下：背包或装备组件未就绪。");
                 return;
             }
 
             if (selectedEquipmentIndex < 0 || selectedEquipmentIndex >= equipment.Slots.Count)
             {
+                UIToast.Warning("请先选择装备槽位。");
                 return;
             }
 
+            var slotItem = equipment.Slots[selectedEquipmentIndex] != null
+                ? equipment.Slots[selectedEquipmentIndex].Item
+                : null;
             if (equipment.TryUnequip(selectedEquipmentIndex, inventory))
             {
                 selectedEquipmentIndex = -1;
                 RefreshSelectionAfterChange();
+                UIToast.Success(slotItem != null
+                    ? $"已卸下：{ResolveItemName(slotItem)}"
+                    : "已卸下装备。");
+                return;
             }
+
+            UIToast.Warning("卸下失败。");
         }
 
         public void ShowAllItems()
@@ -904,6 +927,7 @@ namespace CombatSystem.UI
         {
             if (inventory == null)
             {
+                UIToast.Warning("整理失败：背包未就绪。");
                 return;
             }
 
@@ -911,7 +935,13 @@ namespace CombatSystem.UI
             EndDrag();
             selectedInventoryIndex = -1;
             selectedEquipmentIndex = -1;
-            inventory.TryAutoOrganize(CompareOrganizeItems, true);
+            if (inventory.TryAutoOrganize(CompareOrganizeItems, true))
+            {
+                UIToast.Success("背包已整理。");
+                return;
+            }
+
+            UIToast.Info("背包无需整理。");
         }
 
         private static bool IsTextInputFocused()
@@ -981,6 +1011,21 @@ namespace CombatSystem.UI
         private static bool CanSplit(ItemInstance item)
         {
             return item != null && item.IsStackable && item.Stack > 1;
+        }
+
+        private static string ResolveItemName(ItemInstance item)
+        {
+            if (item == null || item.Definition == null)
+            {
+                return "物品";
+            }
+
+            if (!string.IsNullOrWhiteSpace(item.Definition.DisplayName))
+            {
+                return item.Definition.DisplayName;
+            }
+
+            return item.Definition.name;
         }
 
         private void ApplyActionState(Button button, string label, bool interactable)
