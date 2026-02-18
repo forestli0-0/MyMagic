@@ -29,6 +29,12 @@ namespace CombatSystem.UI
         [SerializeField] private float interactionSelectedBoost = 0.08f;
         [SerializeField] private float interactionDisabledDepth = 0.52f;
         [SerializeField] private float interactionFadeDuration = 0.08f;
+        [SerializeField] private float interactionHoverScale = 1.02f;
+        [SerializeField] private float interactionPressScale = 0.97f;
+        [SerializeField] private float interactionHoverColorSmoothing = 22f;
+        [SerializeField] private float interactionHoverScaleSmoothing = 18f;
+        [SerializeField] private float interactionClickPulseScale = 1.045f;
+        [SerializeField] private float interactionClickPulseDuration = 0.11f;
 
         [Header("Focus Highlight")]
         [SerializeField] private Color focusOutlineColor = new Color(0.62f, 0.78f, 1f, 0.95f);
@@ -55,6 +61,12 @@ namespace CombatSystem.UI
         public float InteractionSelectedBoost => interactionSelectedBoost;
         public float InteractionDisabledDepth => interactionDisabledDepth;
         public float InteractionFadeDuration => interactionFadeDuration;
+        public float InteractionHoverScale => interactionHoverScale;
+        public float InteractionPressScale => interactionPressScale;
+        public float InteractionHoverColorSmoothing => interactionHoverColorSmoothing;
+        public float InteractionHoverScaleSmoothing => interactionHoverScaleSmoothing;
+        public float InteractionClickPulseScale => interactionClickPulseScale;
+        public float InteractionClickPulseDuration => interactionClickPulseDuration;
 
         public Color FocusOutlineColor => focusOutlineColor;
         public float FocusOutlineWidth => focusOutlineWidth;

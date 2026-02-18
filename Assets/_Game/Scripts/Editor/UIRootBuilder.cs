@@ -24,6 +24,7 @@ namespace CombatSystem.Editor
         private const string DefaultThemeAssetPath = "Assets/_Game/ScriptableObjects/UI/UITheme_Default.asset";
         private const float CanvasReferenceWidth = 1920f;
         private const float CanvasReferenceHeight = 1080f;
+        private const float CanvasMatchWidthOrHeight = 0.5f;
         private const int FullscreenOuterInset = 18;
         private const int FullscreenFrameInsetHorizontal = 12;
         private const int FullscreenFrameInsetTop = 10;
@@ -489,8 +490,14 @@ namespace CombatSystem.Editor
             NormalizeCanvasTransform(canvas);
 
             var scaler = go.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(CanvasReferenceWidth, CanvasReferenceHeight);
+            if (scaler != null)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(CanvasReferenceWidth, CanvasReferenceHeight);
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = CanvasMatchWidthOrHeight;
+                scaler.referencePixelsPerUnit = 100f;
+            }
 
             return canvas;
         }
@@ -503,15 +510,20 @@ namespace CombatSystem.Editor
             }
 
             NormalizeCanvasTransform(root.ScreensCanvas);
+            NormalizeCanvasScaler(root.ScreensCanvas);
             NormalizeCanvasTransform(root.HudCanvas);
+            NormalizeCanvasScaler(root.HudCanvas);
             NormalizeCanvasTransform(root.ModalCanvas);
+            NormalizeCanvasScaler(root.ModalCanvas);
             NormalizeCanvasTransform(root.OverlayCanvas);
+            NormalizeCanvasScaler(root.OverlayCanvas);
 
             var rootTransform = root.transform;
             for (int i = 0; i < rootTransform.childCount; i++)
             {
                 var canvas = rootTransform.GetChild(i).GetComponent<Canvas>();
                 NormalizeCanvasTransform(canvas);
+                NormalizeCanvasScaler(canvas);
             }
         }
 
@@ -569,6 +581,26 @@ namespace CombatSystem.Editor
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        private static void NormalizeCanvasScaler(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var scaler = canvas.GetComponent<CanvasScaler>();
+            if (scaler == null)
+            {
+                scaler = canvas.gameObject.AddComponent<CanvasScaler>();
+            }
+
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(CanvasReferenceWidth, CanvasReferenceHeight);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = CanvasMatchWidthOrHeight;
+            scaler.referencePixelsPerUnit = 100f;
         }
 
         private static T CreateScreen<T>(string name, Transform parent) where T : UIScreenBase

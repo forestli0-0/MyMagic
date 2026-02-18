@@ -53,6 +53,10 @@ namespace CombatSystem.UI
         [SerializeField] private Color filterActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
         [SerializeField] private Color filterInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
 
+        [Header("Action Profiles")]
+        [SerializeField] private List<InventoryActionProfile> actionProfiles = new List<InventoryActionProfile>(8);
+        [SerializeField] private List<InventoryCategoryActionOverride> categoryActionOverrides = new List<InventoryCategoryActionOverride>(4);
+
         private int selectedInventoryIndex = -1;
         private int selectedEquipmentIndex = -1;
         private InventoryFilter activeFilter = InventoryFilter.All;
@@ -75,6 +79,8 @@ namespace CombatSystem.UI
         private Canvas dragCanvas;
         private InventorySlotUI currentDragInventoryTarget;
         private EquipmentSlotUI currentDragEquipmentTarget;
+        private InventoryActionCommand currentPrimaryAction = InventoryActionCommand.None;
+        private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
 
         private enum InventoryFilter
         {
@@ -103,6 +109,88 @@ namespace CombatSystem.UI
             Legendary = 5
         }
 
+        private enum InventoryActionCommand
+        {
+            None = 0,
+            EquipSelected = 1,
+            UnequipSelected = 2,
+            SplitSelected = 3,
+            DropInventoryOne = 4,
+            DropEquipment = 5,
+            UseSelectedConsumable = 6,
+            OpenQuestJournal = 7
+        }
+
+        private enum InventoryActionProfileId
+        {
+            None = 0,
+            InventoryEquippable = 1,
+            InventorySplitStack = 2,
+            InventoryStack = 3,
+            InventoryGeneric = 4,
+            EquipmentSelected = 5,
+            InventoryConsumable = 6,
+            InventoryQuestItem = 7
+        }
+
+        [Serializable]
+        private class InventoryActionProfile
+        {
+            [SerializeField] private InventoryActionProfileId profileId = InventoryActionProfileId.None;
+            [SerializeField] private string primaryLabel = "装备";
+            [SerializeField] private InventoryActionCommand primaryCommand = InventoryActionCommand.None;
+            [SerializeField] private string secondaryLabel = "卸下";
+            [SerializeField] private InventoryActionCommand secondaryCommand = InventoryActionCommand.None;
+            [SerializeField] private string hint = "选择背包或装备中的物品";
+
+            public InventoryActionProfileId ProfileId => profileId;
+            public string PrimaryLabel => string.IsNullOrWhiteSpace(primaryLabel) ? "操作1" : primaryLabel;
+            public InventoryActionCommand PrimaryCommand => primaryCommand;
+            public string SecondaryLabel => string.IsNullOrWhiteSpace(secondaryLabel) ? "操作2" : secondaryLabel;
+            public InventoryActionCommand SecondaryCommand => secondaryCommand;
+            public string Hint => hint ?? string.Empty;
+
+            public InventoryActionProfile()
+            {
+            }
+
+            public InventoryActionProfile(
+                InventoryActionProfileId profileId,
+                string primaryLabel,
+                InventoryActionCommand primaryCommand,
+                string secondaryLabel,
+                InventoryActionCommand secondaryCommand,
+                string hint)
+            {
+                this.profileId = profileId;
+                this.primaryLabel = primaryLabel;
+                this.primaryCommand = primaryCommand;
+                this.secondaryLabel = secondaryLabel;
+                this.secondaryCommand = secondaryCommand;
+                this.hint = hint;
+            }
+        }
+
+        [Serializable]
+        private class InventoryCategoryActionOverride
+        {
+            [SerializeField] private ItemCategory category = ItemCategory.General;
+            [SerializeField] private InventoryActionProfileId profileId = InventoryActionProfileId.InventoryGeneric;
+
+            public ItemCategory Category => category;
+            public InventoryActionProfileId ProfileId => profileId;
+
+            public InventoryCategoryActionOverride()
+            {
+            }
+
+            public InventoryCategoryActionOverride(ItemCategory category, InventoryActionProfileId profileId)
+            {
+                this.category = category;
+                this.profileId = profileId;
+            }
+        }
+
         private void Reset()
         {
             inputMode = UIInputMode.UI;
@@ -116,6 +204,7 @@ namespace CombatSystem.UI
         {
             ApplyThemeColors();
             EnsureReferences();
+            EnsureActionProfilesConfigured();
             Subscribe();
             RefreshAll();
 
@@ -156,6 +245,7 @@ namespace CombatSystem.UI
         {
             UIThemeRuntime.ThemeChanged += HandleThemeChanged;
             ApplyThemeColors();
+            EnsureActionProfilesConfigured();
         }
 
         private void OnDisable()
@@ -325,6 +415,106 @@ namespace CombatSystem.UI
             {
                 equipment = FindFirstObjectByType<EquipmentComponent>();
             }
+        }
+
+        private void EnsureActionProfilesConfigured()
+        {
+            if (actionProfiles == null)
+            {
+                actionProfiles = new List<InventoryActionProfile>(8);
+            }
+
+            EnsureActionProfile(
+                InventoryActionProfileId.None,
+                "装备", InventoryActionCommand.None,
+                "卸下", InventoryActionCommand.None,
+                "选择背包或装备中的物品");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventoryEquippable,
+                "装备", InventoryActionCommand.EquipSelected,
+                "丢弃", InventoryActionCommand.DropInventoryOne,
+                "主操作: 装备该物品    次操作: 丢弃该物品");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventorySplitStack,
+                "拆分", InventoryActionCommand.SplitSelected,
+                "丢弃", InventoryActionCommand.DropInventoryOne,
+                "主操作: 平分堆叠    次操作: 丢弃 1 个");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventoryStack,
+                "丢弃", InventoryActionCommand.DropInventoryOne,
+                "拆分", InventoryActionCommand.SplitSelected,
+                "主操作: 丢弃 1 个");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventoryGeneric,
+                "丢弃", InventoryActionCommand.DropInventoryOne,
+                "拆分", InventoryActionCommand.None,
+                "主操作: 丢弃该物品");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventoryConsumable,
+                "使用", InventoryActionCommand.UseSelectedConsumable,
+                "丢弃", InventoryActionCommand.DropInventoryOne,
+                "主操作: 使用 1 个    次操作: 丢弃 1 个");
+            EnsureActionProfile(
+                InventoryActionProfileId.InventoryQuestItem,
+                "任务", InventoryActionCommand.OpenQuestJournal,
+                "丢弃", InventoryActionCommand.None,
+                "主操作: 打开任务日志");
+            EnsureActionProfile(
+                InventoryActionProfileId.EquipmentSelected,
+                "卸下", InventoryActionCommand.UnequipSelected,
+                "丢弃", InventoryActionCommand.DropEquipment,
+                "主操作: 卸下到背包    次操作: 直接丢弃装备");
+
+            if (categoryActionOverrides == null)
+            {
+                categoryActionOverrides = new List<InventoryCategoryActionOverride>(4);
+            }
+
+            EnsureCategoryOverride(ItemCategory.Consumable, InventoryActionProfileId.InventoryConsumable);
+            EnsureCategoryOverride(ItemCategory.Quest, InventoryActionProfileId.InventoryQuestItem);
+        }
+
+        private void EnsureActionProfile(
+            InventoryActionProfileId profileId,
+            string primaryLabel,
+            InventoryActionCommand primaryCommand,
+            string secondaryLabel,
+            InventoryActionCommand secondaryCommand,
+            string hint)
+        {
+            if (TryGetActionProfile(profileId, out var existing) && existing != null)
+            {
+                return;
+            }
+
+            actionProfiles.Add(new InventoryActionProfile(
+                profileId,
+                primaryLabel,
+                primaryCommand,
+                secondaryLabel,
+                secondaryCommand,
+                hint));
+        }
+
+        private void EnsureCategoryOverride(ItemCategory category, InventoryActionProfileId profileId)
+        {
+            if (categoryActionOverrides == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < categoryActionOverrides.Count; i++)
+            {
+                var entry = categoryActionOverrides[i];
+                if (entry == null || entry.Category != category)
+                {
+                    continue;
+                }
+
+                return;
+            }
+
+            categoryActionOverrides.Add(new InventoryCategoryActionOverride(category, profileId));
         }
 
         private void Subscribe()
@@ -798,93 +988,203 @@ namespace CombatSystem.UI
 
         private void UpdateButtons(ItemInstance inventoryItem, ItemInstance equipmentItem)
         {
-            if (inventoryItem != null && inventoryItem.Definition != null)
+            EnsureActionProfilesConfigured();
+            var profile = ResolveActionProfile(inventoryItem, equipmentItem);
+            if (profile == null)
             {
-                if (inventoryItem.Definition.IsEquippable)
-                {
-                    ApplyActionState(equipButton, "装备", true);
-                    ApplyActionState(unequipButton, "丢弃", true);
-                    SetActionHint("主操作: 装备该物品    次操作: 丢弃该物品");
-                    return;
-                }
-
-                if (CanSplit(inventoryItem) && HasEmptyInventorySlot())
-                {
-                    ApplyActionState(equipButton, "拆分", true);
-                    ApplyActionState(unequipButton, "丢弃", true);
-                    SetActionHint("主操作: 平分堆叠    次操作: 丢弃 1 个");
-                    return;
-                }
-
-                if (inventoryItem.IsStackable)
-                {
-                    ApplyActionState(equipButton, "丢弃", true);
-                    ApplyActionState(unequipButton, "拆分", false);
-                    SetActionHint("主操作: 丢弃 1 个");
-                    return;
-                }
-
-                ApplyActionState(equipButton, "丢弃", true);
-                ApplyActionState(unequipButton, "拆分", false);
-                SetActionHint("主操作: 丢弃该物品");
-                return;
+                profile = CreateFallbackNoneProfile();
             }
 
-            if (equipmentItem != null)
-            {
-                ApplyActionState(equipButton, "卸下", true);
-                ApplyActionState(unequipButton, "丢弃", true);
-                SetActionHint("主操作: 卸下到背包    次操作: 直接丢弃装备");
-                return;
-            }
+            currentPrimaryAction = profile.PrimaryCommand;
+            currentSecondaryAction = profile.SecondaryCommand;
 
-            ApplyActionState(equipButton, "装备", false);
-            ApplyActionState(unequipButton, "卸下", false);
-            SetActionHint("选择背包或装备中的物品");
+            var primaryEnabled = IsActionCommandAvailable(currentPrimaryAction, inventoryItem, equipmentItem);
+            var secondaryEnabled = IsActionCommandAvailable(currentSecondaryAction, inventoryItem, equipmentItem);
+
+            ApplyActionState(equipButton, profile.PrimaryLabel, primaryEnabled);
+            ApplyActionState(unequipButton, profile.SecondaryLabel, secondaryEnabled);
+            SetActionHint(string.IsNullOrWhiteSpace(profile.Hint)
+                ? "选择背包或装备中的物品"
+                : profile.Hint);
         }
 
         private void HandlePrimaryAction()
         {
-            var inventoryItem = ResolveInventorySelection();
-            if (inventoryItem != null && inventoryItem.Definition != null)
-            {
-                if (inventoryItem.Definition.IsEquippable)
-                {
-                    EquipSelected();
-                    return;
-                }
-
-                if (CanSplit(inventoryItem) && HasEmptyInventorySlot())
-                {
-                    SplitSelected();
-                    return;
-                }
-
-                DropSelectedInventory(1);
-                return;
-            }
-
-            var equipmentItem = ResolveEquipmentSelection();
-            if (equipmentItem != null)
-            {
-                UnequipSelected();
-            }
+            ExecuteActionCommand(currentPrimaryAction);
         }
 
         private void HandleSecondaryAction()
         {
+            ExecuteActionCommand(currentSecondaryAction);
+        }
+
+        private bool ExecuteActionCommand(InventoryActionCommand command)
+        {
             var inventoryItem = ResolveInventorySelection();
-            if (inventoryItem != null && inventoryItem.Definition != null)
+            var equipmentItem = ResolveEquipmentSelection();
+            if (!IsActionCommandAvailable(command, inventoryItem, equipmentItem))
             {
-                DropSelectedInventory(1);
-                return;
+                return false;
             }
 
-            var equipmentItem = ResolveEquipmentSelection();
+            switch (command)
+            {
+                case InventoryActionCommand.EquipSelected:
+                    EquipSelected();
+                    return true;
+                case InventoryActionCommand.UnequipSelected:
+                    UnequipSelected();
+                    return true;
+                case InventoryActionCommand.SplitSelected:
+                    return SplitSelected();
+                case InventoryActionCommand.DropInventoryOne:
+                    return DropSelectedInventory(1);
+                case InventoryActionCommand.DropEquipment:
+                    return DropSelectedEquipment();
+                case InventoryActionCommand.UseSelectedConsumable:
+                    return UseSelectedConsumable();
+                case InventoryActionCommand.OpenQuestJournal:
+                    return OpenQuestJournalFromInventory();
+                case InventoryActionCommand.None:
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsActionCommandAvailable(InventoryActionCommand command, ItemInstance inventoryItem, ItemInstance equipmentItem)
+        {
+            switch (command)
+            {
+                case InventoryActionCommand.EquipSelected:
+                    return inventoryItem != null && inventoryItem.Definition != null && inventoryItem.Definition.IsEquippable;
+                case InventoryActionCommand.UnequipSelected:
+                    return equipmentItem != null;
+                case InventoryActionCommand.SplitSelected:
+                    return inventoryItem != null && CanSplit(inventoryItem) && HasEmptyInventorySlot();
+                case InventoryActionCommand.DropInventoryOne:
+                    return inventoryItem != null;
+                case InventoryActionCommand.DropEquipment:
+                    return equipmentItem != null;
+                case InventoryActionCommand.UseSelectedConsumable:
+                    return inventoryItem != null &&
+                           inventoryItem.Definition != null &&
+                           inventoryItem.Definition.Category == ItemCategory.Consumable;
+                case InventoryActionCommand.OpenQuestJournal:
+                    return inventoryItem != null &&
+                           inventoryItem.Definition != null &&
+                           inventoryItem.Definition.Category == ItemCategory.Quest;
+                case InventoryActionCommand.None:
+                default:
+                    return false;
+            }
+        }
+
+        private InventoryActionProfile ResolveActionProfile(ItemInstance inventoryItem, ItemInstance equipmentItem)
+        {
+            var profileId = ResolveActionProfileId(inventoryItem, equipmentItem);
+            if (TryGetActionProfile(profileId, out var resolved) && resolved != null)
+            {
+                return resolved;
+            }
+
+            if (TryGetActionProfile(InventoryActionProfileId.None, out var fallback) && fallback != null)
+            {
+                return fallback;
+            }
+
+            return null;
+        }
+
+        private InventoryActionProfileId ResolveActionProfileId(ItemInstance inventoryItem, ItemInstance equipmentItem)
+        {
+            if (inventoryItem != null && inventoryItem.Definition != null)
+            {
+                if (inventoryItem.Definition.IsEquippable)
+                {
+                    return InventoryActionProfileId.InventoryEquippable;
+                }
+
+                if (TryGetCategoryProfileId(inventoryItem.Definition.Category, out var categoryProfile))
+                {
+                    return categoryProfile;
+                }
+
+                if (CanSplit(inventoryItem) && HasEmptyInventorySlot())
+                {
+                    return InventoryActionProfileId.InventorySplitStack;
+                }
+
+                if (inventoryItem.IsStackable)
+                {
+                    return InventoryActionProfileId.InventoryStack;
+                }
+
+                return InventoryActionProfileId.InventoryGeneric;
+            }
+
             if (equipmentItem != null)
             {
-                DropSelectedEquipment();
+                return InventoryActionProfileId.EquipmentSelected;
             }
+
+            return InventoryActionProfileId.None;
+        }
+
+        private bool TryGetCategoryProfileId(ItemCategory category, out InventoryActionProfileId profileId)
+        {
+            profileId = InventoryActionProfileId.None;
+            if (categoryActionOverrides == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < categoryActionOverrides.Count; i++)
+            {
+                var entry = categoryActionOverrides[i];
+                if (entry == null || entry.Category != category)
+                {
+                    continue;
+                }
+
+                profileId = entry.ProfileId;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetActionProfile(InventoryActionProfileId profileId, out InventoryActionProfile profile)
+        {
+            profile = null;
+            if (actionProfiles == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < actionProfiles.Count; i++)
+            {
+                var candidate = actionProfiles[i];
+                if (candidate == null || candidate.ProfileId != profileId)
+                {
+                    continue;
+                }
+
+                profile = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static InventoryActionProfile CreateFallbackNoneProfile()
+        {
+            return new InventoryActionProfile(
+                InventoryActionProfileId.None,
+                "装备",
+                InventoryActionCommand.None,
+                "卸下",
+                InventoryActionCommand.None,
+                "选择背包或装备中的物品");
         }
 
         private bool SplitSelected()
@@ -942,6 +1242,53 @@ namespace CombatSystem.UI
             }
 
             UIToast.Info("背包无需整理。");
+        }
+
+        private bool UseSelectedConsumable()
+        {
+            var selected = ResolveInventorySelection();
+            if (selected == null || selected.Definition == null || selected.Definition.Category != ItemCategory.Consumable)
+            {
+                return false;
+            }
+
+            if (!DropSelectedInventory(1))
+            {
+                UIToast.Warning("使用失败。");
+                return false;
+            }
+
+            UIToast.Success($"已使用：{ResolveItemName(selected)}");
+            return true;
+        }
+
+        private bool OpenQuestJournalFromInventory()
+        {
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>();
+            }
+
+            if (uiManager == null)
+            {
+                UIToast.Warning("无法打开任务日志。");
+                return false;
+            }
+
+            var questScreen = FindFirstObjectByType<QuestJournalScreen>(FindObjectsInactive.Include);
+            if (questScreen == null)
+            {
+                UIToast.Warning("任务日志界面未配置。");
+                return false;
+            }
+
+            if (uiManager.CurrentScreen == questScreen)
+            {
+                return true;
+            }
+
+            uiManager.PushScreen(questScreen);
+            return true;
         }
 
         private static bool IsTextInputFocused()

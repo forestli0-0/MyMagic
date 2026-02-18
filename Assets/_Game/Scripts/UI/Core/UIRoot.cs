@@ -1,10 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
     public class UIRoot : MonoBehaviour
     {
+        private const float CanvasReferenceWidth = 1920f;
+        private const float CanvasReferenceHeight = 1080f;
+        private const float CanvasMatchWidthOrHeight = 0.5f;
+
         [Header("Roots")]
         [SerializeField] private Canvas screensCanvas;
         [SerializeField] private Canvas hudCanvas;
@@ -201,14 +206,19 @@ namespace CombatSystem.UI
         private void EnsureCanvasTransforms()
         {
             NormalizeCanvasRect(screensCanvas);
+            NormalizeCanvasScaler(screensCanvas);
             NormalizeCanvasRect(hudCanvas);
+            NormalizeCanvasScaler(hudCanvas);
             NormalizeCanvasRect(modalCanvas);
+            NormalizeCanvasScaler(modalCanvas);
             NormalizeCanvasRect(overlayCanvas);
+            NormalizeCanvasScaler(overlayCanvas);
 
             for (int i = 0; i < transform.childCount; i++)
             {
                 var canvas = transform.GetChild(i).GetComponent<Canvas>();
                 NormalizeCanvasRect(canvas);
+                NormalizeCanvasScaler(canvas);
             }
         }
 
@@ -233,6 +243,26 @@ namespace CombatSystem.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        private static void NormalizeCanvasScaler(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var scaler = canvas.GetComponent<CanvasScaler>();
+            if (scaler == null)
+            {
+                scaler = canvas.gameObject.AddComponent<CanvasScaler>();
+            }
+
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(CanvasReferenceWidth, CanvasReferenceHeight);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = CanvasMatchWidthOrHeight;
+            scaler.referencePixelsPerUnit = 100f;
         }
 
         private void EnsureThemeController()

@@ -26,6 +26,12 @@ namespace CombatSystem.UI
         private const float DefaultInteractionSelectedBoost = 0.08f;
         private const float DefaultInteractionDisabledDepth = 0.52f;
         private const float DefaultInteractionFadeDuration = 0.08f;
+        private const float DefaultInteractionHoverScale = 1.02f;
+        private const float DefaultInteractionPressScale = 0.97f;
+        private const float DefaultInteractionHoverColorSmoothing = 22f;
+        private const float DefaultInteractionHoverScaleSmoothing = 18f;
+        private const float DefaultInteractionClickPulseScale = 1.045f;
+        private const float DefaultInteractionClickPulseDuration = 0.11f;
         private const float DefaultFocusOutlineWidth = 1.8f;
         private const float DefaultFocusScaleMultiplier = 1.02f;
         private static Font fallbackFont;
@@ -89,6 +95,30 @@ namespace CombatSystem.UI
         public static float InteractionFadeDuration => UIThemeRuntime.ActiveTheme != null
             ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionFadeDuration)
             : DefaultInteractionFadeDuration;
+
+        public static float InteractionHoverScale => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(1f, UIThemeRuntime.ActiveTheme.InteractionHoverScale)
+            : DefaultInteractionHoverScale;
+
+        public static float InteractionPressScale => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Clamp(UIThemeRuntime.ActiveTheme.InteractionPressScale, 0.85f, 1f)
+            : DefaultInteractionPressScale;
+
+        public static float InteractionHoverColorSmoothing => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(1f, UIThemeRuntime.ActiveTheme.InteractionHoverColorSmoothing)
+            : DefaultInteractionHoverColorSmoothing;
+
+        public static float InteractionHoverScaleSmoothing => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(1f, UIThemeRuntime.ActiveTheme.InteractionHoverScaleSmoothing)
+            : DefaultInteractionHoverScaleSmoothing;
+
+        public static float InteractionClickPulseScale => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(1f, UIThemeRuntime.ActiveTheme.InteractionClickPulseScale)
+            : DefaultInteractionClickPulseScale;
+
+        public static float InteractionClickPulseDuration => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0.02f, UIThemeRuntime.ActiveTheme.InteractionClickPulseDuration)
+            : DefaultInteractionClickPulseDuration;
 
         public static Color FocusOutlineColor => UIThemeRuntime.ActiveTheme != null
             ? UIThemeRuntime.ActiveTheme.FocusOutlineColor

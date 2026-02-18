@@ -16,10 +16,15 @@ namespace CombatSystem.UI
 
         [Header("Behavior")]
         [SerializeField] private bool applyOnlyInUiMode = true;
+        [SerializeField] private bool useThemeMotion = true;
         [SerializeField] private bool enableScaleFeedback = true;
         [SerializeField] private float hoverScaleMultiplier = 1.02f;
         [SerializeField] private float pressScaleMultiplier = 0.97f;
-        [SerializeField] [Range(0.06f, 0.2f)] private float scaleAnimationDuration = 0.1f;
+        [SerializeField] [Range(2f, 40f)] private float colorAnimationSmoothing = 22f;
+        [SerializeField] [Range(2f, 40f)] private float scaleAnimationSmoothing = 18f;
+        [SerializeField] private bool enableClickPulse = true;
+        [SerializeField] [Range(1f, 1.2f)] private float clickPulseScale = 1.045f;
+        [SerializeField] [Range(0.04f, 0.3f)] private float clickPulseDuration = 0.11f;
         [SerializeField] private bool ignoreBackdropSelectables = true;
         [SerializeField] [Range(0.05f, 1f)] private float maxHoverAreaRatio = 0.3f;
 
@@ -44,7 +49,7 @@ namespace CombatSystem.UI
         private bool hasHoveredAppliedColor;
         private Vector3 hoveredBaseScale = Vector3.one;
         private bool hasHoveredBaseScale;
-        private Vector3 scaleVelocity;
+        private float clickPulseRemaining;
 
         private AudioClip fallbackHoverClip;
         private AudioClip fallbackClickClip;
@@ -189,11 +194,10 @@ namespace CombatSystem.UI
                 hoveredBaseScale = Vector3.one;
             }
 
-            scaleVelocity = Vector3.zero;
-
             hoveredBaseColor = ResolveBaseGraphicColor(hoveredSelectable, hoveredGraphic);
             hoveredAppliedColor = hoveredBaseColor;
             hasHoveredAppliedColor = false;
+            clickPulseRemaining = 0f;
         }
 
         private void UpdateHoverVisuals()
@@ -203,10 +207,15 @@ namespace CombatSystem.UI
                 return;
             }
 
+            var delta = Mathf.Max(0f, Time.unscaledDeltaTime);
             var isPressed = UnityEngine.Input.GetMouseButton(0);
             if (UnityEngine.Input.GetMouseButtonDown(0))
             {
                 TryPlayClickSound();
+                if (enableClickPulse && enableScaleFeedback)
+                {
+                    clickPulseRemaining = ResolveClickPulseDuration();
+                }
             }
 
             if (hoveredGraphic != null)
@@ -223,8 +232,10 @@ namespace CombatSystem.UI
                     ? UIStyleKit.Shade(hoveredBaseColor, pressDepth)
                     : UIStyleKit.Lift(hoveredBaseColor, hoverBoost);
 
-                hoveredGraphic.color = targetColor;
-                hoveredAppliedColor = targetColor;
+                var colorLerpT = 1f - Mathf.Exp(-ResolveColorSmoothing() * delta);
+                var resolvedColor = Color.Lerp(hoveredGraphic.color, targetColor, colorLerpT);
+                hoveredGraphic.color = resolvedColor;
+                hoveredAppliedColor = resolvedColor;
                 hasHoveredAppliedColor = true;
             }
 
@@ -237,16 +248,22 @@ namespace CombatSystem.UI
             }
 
             var scaleFactor = isPressed
-                ? Mathf.Clamp(pressScaleMultiplier, 0.85f, 1f)
-                : Mathf.Max(1f, hoverScaleMultiplier);
+                ? ResolvePressScaleMultiplier()
+                : ResolveHoverScaleMultiplier();
+
+            var pulseScale = 1f;
+            if (enableClickPulse && clickPulseRemaining > 0f)
+            {
+                var pulseDuration = ResolveClickPulseDuration();
+                var normalized = 1f - Mathf.Clamp01(clickPulseRemaining / Mathf.Max(0.001f, pulseDuration));
+                pulseScale = Mathf.Lerp(1f, ResolveClickPulseScale(), Mathf.Sin(normalized * Mathf.PI));
+                clickPulseRemaining = Mathf.Max(0f, clickPulseRemaining - delta);
+            }
+
             var targetScale = hoveredBaseScale * scaleFactor;
-            hoveredRect.localScale = Vector3.SmoothDamp(
-                hoveredRect.localScale,
-                targetScale,
-                ref scaleVelocity,
-                Mathf.Clamp(scaleAnimationDuration, 0.06f, 0.2f),
-                Mathf.Infinity,
-                Time.unscaledDeltaTime);
+            targetScale *= pulseScale;
+            var scaleLerpT = 1f - Mathf.Exp(-ResolveScaleSmoothing() * delta);
+            hoveredRect.localScale = Vector3.Lerp(hoveredRect.localScale, targetScale, scaleLerpT);
         }
 
         private void ClearHoverVisuals()
@@ -265,7 +282,7 @@ namespace CombatSystem.UI
                 hoveredRect.localScale = hoveredBaseScale;
             }
 
-            scaleVelocity = Vector3.zero;
+            clickPulseRemaining = 0f;
             hoveredSelectable = null;
             hoveredGraphic = null;
             hoveredRect = null;
@@ -345,6 +362,66 @@ namespace CombatSystem.UI
             var screenArea = Mathf.Max(1f, (float)(Screen.width * Screen.height));
             var areaRatio = area / screenArea;
             return areaRatio >= Mathf.Clamp01(maxHoverAreaRatio);
+        }
+
+        private float ResolveHoverScaleMultiplier()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Max(1f, hoverScaleMultiplier);
+            }
+
+            return Mathf.Max(1f, UIStyleKit.InteractionHoverScale);
+        }
+
+        private float ResolvePressScaleMultiplier()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Clamp(pressScaleMultiplier, 0.85f, 1f);
+            }
+
+            return Mathf.Clamp(UIStyleKit.InteractionPressScale, 0.85f, 1f);
+        }
+
+        private float ResolveColorSmoothing()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Max(2f, colorAnimationSmoothing);
+            }
+
+            return Mathf.Max(2f, UIStyleKit.InteractionHoverColorSmoothing);
+        }
+
+        private float ResolveScaleSmoothing()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Max(2f, scaleAnimationSmoothing);
+            }
+
+            return Mathf.Max(2f, UIStyleKit.InteractionHoverScaleSmoothing);
+        }
+
+        private float ResolveClickPulseScale()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Max(1f, clickPulseScale);
+            }
+
+            return Mathf.Max(1f, UIStyleKit.InteractionClickPulseScale);
+        }
+
+        private float ResolveClickPulseDuration()
+        {
+            if (!useThemeMotion)
+            {
+                return Mathf.Max(0.04f, clickPulseDuration);
+            }
+
+            return Mathf.Max(0.04f, UIStyleKit.InteractionClickPulseDuration);
         }
 
         private void EnsureAudioSource()
