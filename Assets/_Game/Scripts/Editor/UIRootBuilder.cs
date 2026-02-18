@@ -50,6 +50,8 @@ namespace CombatSystem.Editor
             var uiRoot = root.AddComponent<UIRoot>();
             var uiManager = root.AddComponent<UIManager>();
             var themeController = root.AddComponent<UIThemeController>();
+            var focusVisualController = root.AddComponent<UIFocusVisualController>();
+            var hoverVisualController = root.AddComponent<UIHoverVisualController>();
             var pauseHotkey = root.AddComponent<PauseMenuHotkey>();
             var inventoryHotkey = root.AddComponent<InventoryHotkey>();
             var gameplayMenuHotkey = root.AddComponent<GameplayMenuHotkey>();
@@ -91,6 +93,8 @@ namespace CombatSystem.Editor
             SetSerialized(uiRoot, "dontDestroyOnLoad", true);
             SetSerialized(uiRoot, "uiManager", uiManager);
             SetSerialized(uiRoot, "themeController", themeController);
+            SetSerialized(uiRoot, "focusVisualController", focusVisualController);
+            SetSerialized(uiRoot, "hoverVisualController", hoverVisualController);
 
             var defaultTheme = EnsureDefaultThemeAsset();
             if (defaultTheme != null)
@@ -147,6 +151,8 @@ namespace CombatSystem.Editor
 
             SetSerialized(gameplayMenuHotkey, "uiManager", uiManager);
             SetSerialized(gameplayMenuHotkey, "defaultMenuScreen", inventoryScreen);
+            SetSerialized(focusVisualController, "uiManager", uiManager);
+            SetSerialized(hoverVisualController, "uiManager", uiManager);
 
             SetSerialized(eventSystemBootstrapper, "actionsAsset",
                 AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/_Game/Input/CombatInputActions.inputactions"));
@@ -171,9 +177,21 @@ namespace CombatSystem.Editor
 
             var uiManager = root.Manager != null ? root.Manager : root.GetComponentInChildren<UIManager>(true);
             var themeController = root.ThemeController != null ? root.ThemeController : root.GetComponentInChildren<UIThemeController>(true);
+            var focusVisualController = root.FocusVisualController != null ? root.FocusVisualController : root.GetComponentInChildren<UIFocusVisualController>(true);
+            var hoverVisualController = root.HoverVisualController != null ? root.HoverVisualController : root.GetComponentInChildren<UIHoverVisualController>(true);
             if (themeController == null)
             {
                 themeController = root.gameObject.AddComponent<UIThemeController>();
+            }
+
+            if (focusVisualController == null)
+            {
+                focusVisualController = root.gameObject.AddComponent<UIFocusVisualController>();
+            }
+
+            if (hoverVisualController == null)
+            {
+                hoverVisualController = root.gameObject.AddComponent<UIHoverVisualController>();
             }
 
             var defaultTheme = EnsureDefaultThemeAsset();
@@ -183,6 +201,8 @@ namespace CombatSystem.Editor
             }
             SetSerialized(themeController, "applyOnEnable", true);
             SetSerialized(root, "themeController", themeController);
+            SetSerialized(root, "focusVisualController", focusVisualController);
+            SetSerialized(root, "hoverVisualController", hoverVisualController);
 
             if (uiManager == null)
             {
@@ -259,6 +279,16 @@ namespace CombatSystem.Editor
             if (eventSystemBootstrapper == null)
             {
                 eventSystemBootstrapper = root.gameObject.AddComponent<UIEventSystemBootstrapper>();
+            }
+
+            if (focusVisualController != null)
+            {
+                SetSerialized(focusVisualController, "uiManager", uiManager);
+            }
+
+            if (hoverVisualController != null)
+            {
+                SetSerialized(hoverVisualController, "uiManager", uiManager);
             }
 
             var sprite = GetDefaultUISprite();
@@ -2852,17 +2882,17 @@ namespace CombatSystem.Editor
             inventoryInfoElement.flexibleWidth = 1f;
 
             var capacityGo = CreateUIElement("CapacityText", inventoryInfoRow.transform);
-            capacityText = CreateText(capacityGo, "容量 0/0", font, 18, TextAnchor.MiddleLeft);
-            capacityText.color = new Color(0.8f, 0.88f, 0.98f, 1f);
+            capacityText = CreateText(capacityGo, "容量 0/0", font, 20, TextAnchor.MiddleLeft);
+            capacityText.color = new Color(0.9f, 0.95f, 1f, 1f);
             var capacityElement = capacityGo.AddComponent<LayoutElement>();
             capacityElement.flexibleWidth = 1f;
             capacityElement.preferredHeight = 30f;
             capacityElement.minWidth = 0f;
 
             var dragHintGo = CreateUIElement("DragHint", inventoryInfoRow.transform);
-            var dragHintText = CreateText(dragHintGo, "拖拽交换 | 双击装备", font, 14, TextAnchor.MiddleRight);
-            dragHintText.color = new Color(0.76f, 0.8f, 0.86f, 1f);
-            AddLayoutElement(dragHintGo, 30f, 280f);
+            var dragHintText = CreateText(dragHintGo, "拖拽交换 | 双击装备", font, 15, TextAnchor.MiddleRight);
+            dragHintText.color = new Color(0.83f, 0.88f, 0.94f, 1f);
+            AddLayoutElement(dragHintGo, 30f, 320f);
 
             var inventoryFiltersRow = CreateUIElement("InventorySecondaryTabs", inventoryPanel.transform);
             var inventoryFiltersImage = inventoryFiltersRow.AddComponent<Image>();
@@ -2912,7 +2942,7 @@ namespace CombatSystem.Editor
             var inventoryToolsElement = inventoryToolsRow.GetComponent<LayoutElement>();
             inventoryToolsElement.flexibleWidth = 1f;
 
-            searchInputField = CreateInputField(inventoryToolsRow.transform, sprite, font, "搜索物品...", 300f);
+            searchInputField = CreateInputField(inventoryToolsRow.transform, sprite, font, "搜索物品...", 320f);
             searchInputField.name = "InventorySearchInput";
             ConfigureInventorySearchInput(searchInputField, sprite, font);
 
@@ -3114,18 +3144,19 @@ namespace CombatSystem.Editor
             AddLayoutElement(infoRoot, 74f, 0f);
 
             var nameGo = CreateUIElement("Name", infoRoot.transform);
-            var nameText = CreateText(nameGo, "物品名称", font, 22, TextAnchor.MiddleLeft);
+            var nameText = CreateText(nameGo, "物品名称", font, 24, TextAnchor.MiddleLeft);
             nameText.color = Color.white;
             AddLayoutElement(nameGo, 30f);
 
             var slotGo = CreateUIElement("Slot", infoRoot.transform);
-            var slotText = CreateText(slotGo, "类型", font, 15, TextAnchor.MiddleLeft);
-            slotText.color = new Color(0.75f, 0.75f, 0.75f, 1f);
+            var slotText = CreateText(slotGo, "类型", font, 16, TextAnchor.MiddleLeft);
+            slotText.color = new Color(0.84f, 0.87f, 0.92f, 1f);
             AddLayoutElement(slotGo, 22f);
 
             var descriptionGo = CreateUIElement("Description", detailsSection.transform);
-            var descriptionText = CreateText(descriptionGo, string.Empty, font, 15, TextAnchor.UpperLeft);
-            descriptionText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            var descriptionText = CreateText(descriptionGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            descriptionText.color = new Color(0.88f, 0.9f, 0.94f, 1f);
+            descriptionText.lineSpacing = 1.15f;
             descriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
             descriptionText.verticalOverflow = VerticalWrapMode.Overflow;
             AddLayoutElement(descriptionGo, 78f);
@@ -3143,8 +3174,8 @@ namespace CombatSystem.Editor
             statsElement.flexibleWidth = 1f;
 
             var statTemplateGo = CreateUIElement("StatLine", statsRoot.transform);
-            var statTemplate = CreateText(statTemplateGo, "属性 +0", font, 15, TextAnchor.MiddleLeft);
-            statTemplate.color = Color.white;
+            var statTemplate = CreateText(statTemplateGo, "属性 +0", font, 16, TextAnchor.MiddleLeft);
+            statTemplate.color = new Color(0.93f, 0.95f, 0.99f, 1f);
             AddLayoutElement(statTemplateGo, 22f);
             statTemplateGo.SetActive(false);
 
@@ -3160,12 +3191,12 @@ namespace CombatSystem.Editor
 
             var equipButton = CreateButton(buttonsRow.transform, "装备", sprite, font);
             var unequipButton = CreateButton(buttonsRow.transform, "卸下", sprite, font);
-            SetLayoutSize(equipButton.gameObject, 42f, 180f);
-            SetLayoutSize(unequipButton.gameObject, 42f, 180f);
+            SetLayoutSize(equipButton.gameObject, 44f, 180f);
+            SetLayoutSize(unequipButton.gameObject, 44f, 180f);
 
             var actionHintGo = CreateUIElement("ActionHint", detailsSection.transform);
-            var actionHintText = CreateText(actionHintGo, "选择背包或装备中的物品", font, 14, TextAnchor.MiddleLeft);
-            actionHintText.color = new Color(0.75f, 0.8f, 0.9f, 1f);
+            var actionHintText = CreateText(actionHintGo, "选择背包或装备中的物品", font, 15, TextAnchor.MiddleLeft);
+            actionHintText.color = new Color(0.84f, 0.89f, 0.96f, 1f);
             AddLayoutElement(actionHintGo, 26f);
 
             var comparePanel = detailsSection.AddComponent<ItemComparePanelUI>();
@@ -3419,7 +3450,7 @@ namespace CombatSystem.Editor
                     continue;
                 }
 
-                label.fontSize = 17;
+                label.fontSize = 18;
                 label.color = GameplayMenuTabInactiveTextColor;
             }
         }
@@ -3438,7 +3469,7 @@ namespace CombatSystem.Editor
             }
 
             layout.preferredHeight = 38f;
-            layout.preferredWidth = 300f;
+            layout.preferredWidth = 320f;
             layout.flexibleWidth = 0f;
             layout.minWidth = 0f;
 
@@ -3454,7 +3485,7 @@ namespace CombatSystem.Editor
             if (input.textComponent != null)
             {
                 input.textComponent.font = font;
-                input.textComponent.fontSize = 16;
+                input.textComponent.fontSize = 17;
                 input.textComponent.color = GameplayMenuTabActiveTextColor;
             }
 
@@ -3462,8 +3493,12 @@ namespace CombatSystem.Editor
             if (placeholder != null)
             {
                 placeholder.font = font;
-                placeholder.fontSize = 15;
-                placeholder.color = GameplayMenuTabInactiveTextColor;
+                placeholder.fontSize = 16;
+                placeholder.color = new Color(
+                    GameplayMenuTabInactiveTextColor.r,
+                    GameplayMenuTabInactiveTextColor.g,
+                    GameplayMenuTabInactiveTextColor.b,
+                    0.82f);
             }
         }
 
@@ -3490,7 +3525,7 @@ namespace CombatSystem.Editor
             }
 
             layout.preferredHeight = 38f;
-            layout.preferredWidth = 220f;
+            layout.preferredWidth = 230f;
             layout.flexibleWidth = 0f;
             layout.minWidth = 0f;
 
@@ -3518,7 +3553,7 @@ namespace CombatSystem.Editor
             if (caption != null)
             {
                 caption.font = font;
-                caption.fontSize = 16;
+                caption.fontSize = 17;
                 caption.color = GameplayMenuTabActiveTextColor;
                 caption.alignment = TextAnchor.MiddleLeft;
             }
@@ -3561,7 +3596,7 @@ namespace CombatSystem.Editor
             if (itemText != null)
             {
                 itemText.font = font;
-                itemText.fontSize = 15;
+                itemText.fontSize = 16;
                 itemText.color = GameplayMenuTabActiveTextColor;
             }
 
@@ -3634,7 +3669,7 @@ namespace CombatSystem.Editor
                     if (itemLabelText != null)
                     {
                         itemLabelText.font = font;
-                        itemLabelText.fontSize = 15;
+                        itemLabelText.fontSize = 16;
                         itemLabelText.color = GameplayMenuTabActiveTextColor;
                     }
                 }
@@ -4496,12 +4531,13 @@ namespace CombatSystem.Editor
             var frame = frameGo.AddComponent<Image>();
             frame.sprite = sprite;
             frame.type = Image.Type.Sliced;
-            frame.color = new Color(0.72f, 0.8f, 0.95f, 0.08f);
+            frame.color = new Color(0.72f, 0.8f, 0.95f, 0.12f);
             frame.raycastTarget = false;
             StretchRect(frameGo.GetComponent<RectTransform>());
 
             var iconGo = CreateUIElement("Icon", root.transform);
             var icon = iconGo.AddComponent<Image>();
+            icon.preserveAspect = true;
             icon.raycastTarget = false;
             var iconRect = iconGo.GetComponent<RectTransform>();
             iconRect.anchorMin = Vector2.zero;
@@ -4510,13 +4546,18 @@ namespace CombatSystem.Editor
             iconRect.offsetMax = new Vector2(-8f, -8f);
 
             var stackGo = CreateUIElement("StackText", root.transform);
-            var stackText = CreateText(stackGo, string.Empty, font, 15, TextAnchor.LowerRight);
-            stackText.color = Color.white;
+            var stackText = CreateText(stackGo, string.Empty, font, 18, TextAnchor.LowerRight);
+            stackText.color = new Color(0.98f, 0.99f, 1f, 1f);
+            stackText.supportRichText = false;
             var stackRect = stackGo.GetComponent<RectTransform>();
             stackRect.anchorMin = Vector2.zero;
             stackRect.anchorMax = Vector2.one;
             stackRect.offsetMin = new Vector2(8f, 8f);
             stackRect.offsetMax = new Vector2(-8f, -8f);
+            var stackOutline = stackGo.AddComponent<Outline>();
+            stackOutline.effectColor = new Color(0f, 0f, 0f, 0.62f);
+            stackOutline.effectDistance = new Vector2(1f, 1f);
+            stackOutline.useGraphicAlpha = true;
 
             var selectionGo = CreateUIElement("Selection", root.transform);
             var selection = selectionGo.AddComponent<Image>();
@@ -4558,7 +4599,7 @@ namespace CombatSystem.Editor
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
-            AddLayoutElement(root, 72f);
+            AddLayoutElement(root, 74f);
 
             var iconGo = CreateUIElement("Icon", root.transform);
             var icon = iconGo.AddComponent<Image>();
@@ -4577,15 +4618,15 @@ namespace CombatSystem.Editor
             AddLayoutElement(labelsRoot, 52f, 0f);
 
             var slotLabelGo = CreateUIElement("SlotLabel", labelsRoot.transform);
-            var slotLabel = CreateText(slotLabelGo, "槽位", font, 15, TextAnchor.MiddleLeft);
-            slotLabel.color = new Color(0.9f, 0.9f, 0.9f, 1f);
+            var slotLabel = CreateText(slotLabelGo, "槽位", font, 16, TextAnchor.MiddleLeft);
+            slotLabel.color = new Color(0.94f, 0.95f, 0.98f, 1f);
             slotLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             slotLabel.verticalOverflow = VerticalWrapMode.Truncate;
             AddLayoutElement(slotLabelGo, 24f);
 
             var itemLabelGo = CreateUIElement("ItemLabel", labelsRoot.transform);
-            var itemLabel = CreateText(itemLabelGo, "空", font, 14, TextAnchor.MiddleLeft);
-            itemLabel.color = new Color(0.75f, 0.75f, 0.75f, 1f);
+            var itemLabel = CreateText(itemLabelGo, "空", font, 15, TextAnchor.MiddleLeft);
+            itemLabel.color = new Color(0.82f, 0.85f, 0.9f, 1f);
             itemLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             itemLabel.verticalOverflow = VerticalWrapMode.Truncate;
             AddLayoutElement(itemLabelGo, 22f);

@@ -19,6 +19,15 @@ namespace CombatSystem.UI
         private static readonly Color DefaultTabInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
         private static readonly Color DefaultFooterHintBackgroundColor = new Color(0.05f, 0.08f, 0.12f, 0.92f);
         private static readonly Color DefaultFooterHintTextColor = new Color(0.74f, 0.79f, 0.86f, 1f);
+        private static readonly Color DefaultFocusOutlineColor = new Color(0.62f, 0.78f, 1f, 0.95f);
+
+        private const float DefaultInteractionHoverBoost = 0.1f;
+        private const float DefaultInteractionPressDepth = 0.18f;
+        private const float DefaultInteractionSelectedBoost = 0.08f;
+        private const float DefaultInteractionDisabledDepth = 0.52f;
+        private const float DefaultInteractionFadeDuration = 0.08f;
+        private const float DefaultFocusOutlineWidth = 1.8f;
+        private const float DefaultFocusScaleMultiplier = 1.02f;
         private static Font fallbackFont;
 
         public static Color GameplayOverlayColor => UIThemeRuntime.ActiveTheme != null
@@ -61,6 +70,38 @@ namespace CombatSystem.UI
             ? UIThemeRuntime.ActiveTheme.FooterHintTextColor
             : DefaultFooterHintTextColor;
 
+        public static float InteractionHoverBoost => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionHoverBoost)
+            : DefaultInteractionHoverBoost;
+
+        public static float InteractionPressDepth => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionPressDepth)
+            : DefaultInteractionPressDepth;
+
+        public static float InteractionSelectedBoost => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionSelectedBoost)
+            : DefaultInteractionSelectedBoost;
+
+        public static float InteractionDisabledDepth => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionDisabledDepth)
+            : DefaultInteractionDisabledDepth;
+
+        public static float InteractionFadeDuration => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.InteractionFadeDuration)
+            : DefaultInteractionFadeDuration;
+
+        public static Color FocusOutlineColor => UIThemeRuntime.ActiveTheme != null
+            ? UIThemeRuntime.ActiveTheme.FocusOutlineColor
+            : DefaultFocusOutlineColor;
+
+        public static float FocusOutlineWidth => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(0f, UIThemeRuntime.ActiveTheme.FocusOutlineWidth)
+            : DefaultFocusOutlineWidth;
+
+        public static float FocusScaleMultiplier => UIThemeRuntime.ActiveTheme != null
+            ? Mathf.Max(1f, UIThemeRuntime.ActiveTheme.FocusScaleMultiplier)
+            : DefaultFocusScaleMultiplier;
+
         public static Font ThemeFont
         {
             get
@@ -86,32 +127,40 @@ namespace CombatSystem.UI
         public static void ApplyButtonStateColors(
             Button button,
             Color normalColor,
-            float hoverBoost = 0.1f,
-            float pressDepth = 0.16f,
-            float disabledDepth = 0.5f,
-            float fadeDuration = 0.08f)
+            float hoverBoost = -1f,
+            float pressDepth = -1f,
+            float disabledDepth = -1f,
+            float fadeDuration = -1f,
+            float selectedBoost = -1f)
         {
-            ApplySelectableStateColors(button, normalColor, hoverBoost, pressDepth, disabledDepth, fadeDuration);
+            ApplySelectableStateColors(button, normalColor, hoverBoost, pressDepth, disabledDepth, fadeDuration, selectedBoost);
         }
 
         public static void ApplySelectableStateColors(
             Selectable selectable,
             Color normalColor,
-            float hoverBoost = 0.1f,
-            float pressDepth = 0.16f,
-            float disabledDepth = 0.5f,
-            float fadeDuration = 0.08f)
+            float hoverBoost = -1f,
+            float pressDepth = -1f,
+            float disabledDepth = -1f,
+            float fadeDuration = -1f,
+            float selectedBoost = -1f)
         {
             if (selectable == null)
             {
                 return;
             }
 
+            hoverBoost = hoverBoost < 0f ? InteractionHoverBoost : hoverBoost;
+            pressDepth = pressDepth < 0f ? InteractionPressDepth : pressDepth;
+            disabledDepth = disabledDepth < 0f ? InteractionDisabledDepth : disabledDepth;
+            fadeDuration = fadeDuration < 0f ? InteractionFadeDuration : fadeDuration;
+            selectedBoost = selectedBoost < 0f ? InteractionSelectedBoost : selectedBoost;
+
             var colors = selectable.colors;
             colors.normalColor = normalColor;
             colors.highlightedColor = Lift(normalColor, hoverBoost);
             colors.pressedColor = Shade(normalColor, pressDepth);
-            colors.selectedColor = Lift(normalColor, hoverBoost * 0.65f);
+            colors.selectedColor = Lift(normalColor, selectedBoost);
             colors.disabledColor = Muted(normalColor, disabledDepth);
             colors.colorMultiplier = 1f;
             colors.fadeDuration = Mathf.Max(0f, fadeDuration);

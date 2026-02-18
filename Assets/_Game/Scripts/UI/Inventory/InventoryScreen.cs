@@ -73,6 +73,8 @@ namespace CombatSystem.UI
         private bool dragActive;
         private Image dragIcon;
         private Canvas dragCanvas;
+        private InventorySlotUI currentDragInventoryTarget;
+        private EquipmentSlotUI currentDragEquipmentTarget;
 
         private enum InventoryFilter
         {
@@ -163,6 +165,11 @@ namespace CombatSystem.UI
 
         private void Update()
         {
+            if (UnityEngine.Input.GetKeyDown(KeyCode.R) && !IsTextInputFocused())
+            {
+                HandleOrganizeClicked();
+            }
+
             if (sortPickerPanel == null || !sortPickerPanel.gameObject.activeSelf)
             {
                 return;
@@ -624,6 +631,7 @@ namespace CombatSystem.UI
         private void HandleInventoryDragging(InventorySlotUI slot, PointerEventData eventData)
         {
             UpdateDragIcon(eventData);
+            UpdateDragTargetHover(eventData);
         }
 
         private void HandleInventoryDragEnded(InventorySlotUI slot, PointerEventData eventData)
@@ -663,6 +671,7 @@ namespace CombatSystem.UI
         private void HandleEquipmentDragging(EquipmentSlotUI slot, PointerEventData eventData)
         {
             UpdateDragIcon(eventData);
+            UpdateDragTargetHover(eventData);
         }
 
         private void HandleEquipmentDragEnded(EquipmentSlotUI slot, PointerEventData eventData)
@@ -889,6 +898,31 @@ namespace CombatSystem.UI
             }
 
             return true;
+        }
+
+        private void HandleOrganizeClicked()
+        {
+            if (inventory == null)
+            {
+                return;
+            }
+
+            HideSortPicker();
+            EndDrag();
+            selectedInventoryIndex = -1;
+            selectedEquipmentIndex = -1;
+            inventory.TryAutoOrganize(CompareOrganizeItems, true);
+        }
+
+        private static bool IsTextInputFocused()
+        {
+            var current = EventSystem.current;
+            if (current == null || current.currentSelectedGameObject == null)
+            {
+                return false;
+            }
+
+            return current.currentSelectedGameObject.GetComponentInParent<InputField>() != null;
         }
 
         private bool DropSelectedInventory(int amount)
@@ -1556,6 +1590,92 @@ namespace CombatSystem.UI
             return leftIndex.CompareTo(rightIndex);
         }
 
+        private int CompareOrganizeItems(ItemInstance left, ItemInstance right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return 0;
+            }
+
+            if (left == null)
+            {
+                return 1;
+            }
+
+            if (right == null)
+            {
+                return -1;
+            }
+
+            var leftDefinition = left.Definition;
+            var rightDefinition = right.Definition;
+            if (leftDefinition == null && rightDefinition == null)
+            {
+                return 0;
+            }
+
+            if (leftDefinition == null)
+            {
+                return 1;
+            }
+
+            if (rightDefinition == null)
+            {
+                return -1;
+            }
+
+            var result = 0;
+            switch (activeSortMode)
+            {
+                case InventorySortMode.NameAscending:
+                    result = string.Compare(
+                        ResolveDisplayName(left),
+                        ResolveDisplayName(right),
+                        StringComparison.OrdinalIgnoreCase);
+                    break;
+                case InventorySortMode.RarityDescending:
+                    result = ((int)rightDefinition.Rarity).CompareTo((int)leftDefinition.Rarity);
+                    break;
+                case InventorySortMode.PriceDescending:
+                    result = rightDefinition.BasePrice.CompareTo(leftDefinition.BasePrice);
+                    break;
+                case InventorySortMode.Category:
+                    result = ((int)leftDefinition.Category).CompareTo((int)rightDefinition.Category);
+                    break;
+                default:
+                    result = ((int)leftDefinition.Category).CompareTo((int)rightDefinition.Category);
+                    if (result != 0)
+                    {
+                        break;
+                    }
+
+                    result = ((int)rightDefinition.Rarity).CompareTo((int)leftDefinition.Rarity);
+                    break;
+            }
+
+            if (result != 0)
+            {
+                return result;
+            }
+
+            result = string.Compare(
+                ResolveDisplayName(left),
+                ResolveDisplayName(right),
+                StringComparison.OrdinalIgnoreCase);
+            if (result != 0)
+            {
+                return result;
+            }
+
+            result = rightDefinition.BasePrice.CompareTo(leftDefinition.BasePrice);
+            if (result != 0)
+            {
+                return result;
+            }
+
+            return right.Stack.CompareTo(left.Stack);
+        }
+
         private bool MatchesCurrentQuery(ItemInstance item)
         {
             return MatchesCurrentFilter(item) &&
@@ -1780,6 +1900,8 @@ namespace CombatSystem.UI
             }
 
             UpdateDragIcon(eventData);
+            ClearDragTargetStates();
+            UpdateDragTargetHover(eventData);
         }
 
         private void EndDrag()
@@ -1797,6 +1919,10 @@ namespace CombatSystem.UI
             {
                 dragIcon.enabled = false;
             }
+
+            ClearDragTargetStates();
+            currentDragInventoryTarget = null;
+            currentDragEquipmentTarget = null;
         }
 
         private void UpdateDragIcon(PointerEventData eventData)
@@ -1872,6 +1998,170 @@ namespace CombatSystem.UI
             dragIcon = root.GetComponent<Image>();
             dragIcon.raycastTarget = false;
             dragIcon.enabled = false;
+        }
+
+        private void UpdateDragTargetHover(PointerEventData eventData)
+        {
+            if (!dragActive || eventData == null)
+            {
+                return;
+            }
+
+            var inventoryTarget = eventData.pointerEnter != null
+                ? eventData.pointerEnter.GetComponentInParent<InventorySlotUI>()
+                : null;
+            var equipmentTarget = eventData.pointerEnter != null
+                ? eventData.pointerEnter.GetComponentInParent<EquipmentSlotUI>()
+                : null;
+
+            if (inventoryTarget == currentDragInventoryTarget &&
+                equipmentTarget == currentDragEquipmentTarget)
+            {
+                return;
+            }
+
+            ClearDragTargetStates();
+            currentDragInventoryTarget = inventoryTarget;
+            currentDragEquipmentTarget = equipmentTarget;
+
+            if (currentDragInventoryTarget != null && inventoryGrid != null)
+            {
+                var isValid = CanDropOnInventorySlot(currentDragInventoryTarget.SlotIndex);
+                inventoryGrid.SetDragTargetState(currentDragInventoryTarget.SlotIndex, isValid);
+                return;
+            }
+
+            if (currentDragEquipmentTarget != null && equipmentPanel != null)
+            {
+                var isValid = CanDropOnEquipmentSlot(currentDragEquipmentTarget.SlotIndex);
+                equipmentPanel.SetDragTargetState(currentDragEquipmentTarget.SlotIndex, isValid);
+            }
+        }
+
+        private void ClearDragTargetStates()
+        {
+            if (inventoryGrid != null)
+            {
+                inventoryGrid.ClearDragTargetStates();
+            }
+
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.ClearDragTargetStates();
+            }
+        }
+
+        private bool CanDropOnInventorySlot(int targetIndex)
+        {
+            if (!dragActive || inventory == null || targetIndex < 0 || targetIndex >= inventory.Capacity)
+            {
+                return false;
+            }
+
+            if (dragPayload.Source == DragSource.Inventory)
+            {
+                if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= inventory.Items.Count)
+                {
+                    return false;
+                }
+
+                if (dragPayload.SourceIndex == targetIndex)
+                {
+                    return false;
+                }
+
+                return dragPayload.Item != null;
+            }
+
+            if (dragPayload.Source == DragSource.Equipment)
+            {
+                if (equipment == null || dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= equipment.Slots.Count)
+                {
+                    return false;
+                }
+
+                if (targetIndex >= inventory.Items.Count)
+                {
+                    return false;
+                }
+
+                var sourceSlot = equipment.Slots[dragPayload.SourceIndex];
+                if (sourceSlot == null || sourceSlot.Item == null)
+                {
+                    return false;
+                }
+
+                var targetItem = inventory.Items[targetIndex];
+                if (targetItem == null)
+                {
+                    return true;
+                }
+
+                return targetItem.Definition != null &&
+                       targetItem.Definition.IsEquippable &&
+                       targetItem.Definition.Slot == sourceSlot.Slot;
+            }
+
+            return false;
+        }
+
+        private bool CanDropOnEquipmentSlot(int targetIndex)
+        {
+            if (!dragActive || equipment == null || targetIndex < 0 || targetIndex >= equipment.Slots.Count)
+            {
+                return false;
+            }
+
+            if (dragPayload.Source == DragSource.Inventory)
+            {
+                if (inventory == null || dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= inventory.Items.Count)
+                {
+                    return false;
+                }
+
+                var sourceItem = inventory.Items[dragPayload.SourceIndex];
+                if (sourceItem == null || sourceItem.Definition == null || !sourceItem.Definition.IsEquippable)
+                {
+                    return false;
+                }
+
+                var targetSlot = equipment.Slots[targetIndex];
+                if (targetSlot == null || sourceItem.Definition.Slot != targetSlot.Slot)
+                {
+                    return false;
+                }
+
+                if (targetSlot.Item != null && !inventory.CanAddItem(targetSlot.Item))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (dragPayload.Source == DragSource.Equipment)
+            {
+                if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= equipment.Slots.Count)
+                {
+                    return false;
+                }
+
+                if (dragPayload.SourceIndex == targetIndex)
+                {
+                    return false;
+                }
+
+                var sourceSlot = equipment.Slots[dragPayload.SourceIndex];
+                var targetSlot = equipment.Slots[targetIndex];
+                if (sourceSlot == null || targetSlot == null)
+                {
+                    return false;
+                }
+
+                return sourceSlot.Slot == targetSlot.Slot;
+            }
+
+            return false;
         }
 
         private void HandleInventoryToInventory(int targetIndex)
@@ -2043,7 +2333,7 @@ namespace CombatSystem.UI
 
         public override string GetFooterHintText()
         {
-            return "{MENU_CLOSE} 关闭菜单    {BACK} 返回游戏    {TAB_SWITCH} 切换页签    拖拽交换 / 双击装备";
+            return "{MENU_CLOSE} 关闭菜单    {BACK} 返回游戏    {TAB_SWITCH} 切换页签    R 整理背包    拖拽交换 / 双击装备";
         }
     }
 

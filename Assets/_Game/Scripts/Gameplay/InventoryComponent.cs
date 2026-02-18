@@ -408,6 +408,57 @@ namespace CombatSystem.Gameplay
             return true;
         }
 
+        /// <summary>
+        /// 一键整理背包：可选自动合并堆叠，并将空槽位压缩到末尾。
+        /// 默认排序规则：分类 -> 稀有度(降序) -> 名称 -> 价格(降序)。
+        /// </summary>
+        /// <param name="comparison">自定义排序比较器；为空时使用默认规则。</param>
+        /// <param name="mergeStacks">是否先自动合并可堆叠物品。</param>
+        /// <returns>执行了整理返回 true；背包为空返回 false。</returns>
+        public bool TryAutoOrganize(Comparison<ItemInstance> comparison = null, bool mergeStacks = true)
+        {
+            EnsureSlots();
+            if (items.Count == 0)
+            {
+                return false;
+            }
+
+            var occupied = new List<ItemInstance>(items.Count);
+            for (int i = 0; i < items.Count; i++)
+            {
+                var entry = items[i];
+                if (entry != null && entry.Definition != null)
+                {
+                    occupied.Add(entry);
+                }
+            }
+
+            if (occupied.Count == 0)
+            {
+                return false;
+            }
+
+            List<ItemInstance> normalized;
+            if (mergeStacks)
+            {
+                normalized = BuildMergedStacks(occupied);
+            }
+            else
+            {
+                normalized = occupied;
+            }
+
+            normalized.Sort(comparison ?? CompareByDefaultOrganizeRule);
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                items[i] = i < normalized.Count ? normalized[i] : null;
+            }
+
+            InventoryChanged?.Invoke();
+            return true;
+        }
+
         private void EnsureSlots()
         {
             var target = Capacity;
@@ -442,6 +493,172 @@ namespace CombatSystem.Gameplay
             }
 
             return -1;
+        }
+
+        private static List<ItemInstance> BuildMergedStacks(List<ItemInstance> source)
+        {
+            var merged = new List<ItemInstance>(source != null ? source.Count : 0);
+            if (source == null || source.Count == 0)
+            {
+                return merged;
+            }
+
+            var stackBuckets = new Dictionary<ItemDefinition, StackBucket>(16);
+            var bucketOrder = new List<StackBucket>(16);
+            for (int i = 0; i < source.Count; i++)
+            {
+                var item = source[i];
+                if (item == null || item.Definition == null)
+                {
+                    continue;
+                }
+
+                if (!item.IsStackable)
+                {
+                    merged.Add(item);
+                    continue;
+                }
+
+                var key = item.Definition;
+                if (!stackBuckets.TryGetValue(key, out var bucket))
+                {
+                    bucket = new StackBucket(item);
+                    stackBuckets.Add(key, bucket);
+                    bucketOrder.Add(bucket);
+                }
+
+                bucket.TotalStack += Mathf.Max(1, item.Stack);
+            }
+
+            for (int i = 0; i < bucketOrder.Count; i++)
+            {
+                var bucket = bucketOrder[i];
+                var remaining = bucket.TotalStack;
+                var maxStack = Mathf.Max(1, bucket.Prototype.MaxStack);
+                while (remaining > 0)
+                {
+                    var take = Mathf.Min(maxStack, remaining);
+                    merged.Add(bucket.Prototype.CloneWithStack(take));
+                    remaining -= take;
+                }
+            }
+
+            return merged;
+        }
+
+        private static int CompareByDefaultOrganizeRule(ItemInstance left, ItemInstance right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return 0;
+            }
+
+            if (left == null)
+            {
+                return 1;
+            }
+
+            if (right == null)
+            {
+                return -1;
+            }
+
+            var leftDef = left.Definition;
+            var rightDef = right.Definition;
+            if (leftDef == null && rightDef == null)
+            {
+                return 0;
+            }
+
+            if (leftDef == null)
+            {
+                return 1;
+            }
+
+            if (rightDef == null)
+            {
+                return -1;
+            }
+
+            var categoryCompare = GetCategoryOrder(leftDef.Category).CompareTo(GetCategoryOrder(rightDef.Category));
+            if (categoryCompare != 0)
+            {
+                return categoryCompare;
+            }
+
+            var rarityCompare = ((int)right.Rarity).CompareTo((int)left.Rarity);
+            if (rarityCompare != 0)
+            {
+                return rarityCompare;
+            }
+
+            var nameCompare = string.Compare(ResolveDisplayName(leftDef), ResolveDisplayName(rightDef), StringComparison.OrdinalIgnoreCase);
+            if (nameCompare != 0)
+            {
+                return nameCompare;
+            }
+
+            var priceCompare = rightDef.BasePrice.CompareTo(leftDef.BasePrice);
+            if (priceCompare != 0)
+            {
+                return priceCompare;
+            }
+
+            return right.Stack.CompareTo(left.Stack);
+        }
+
+        private static int GetCategoryOrder(ItemCategory category)
+        {
+            switch (category)
+            {
+                case ItemCategory.Weapon:
+                    return 0;
+                case ItemCategory.Armor:
+                    return 1;
+                case ItemCategory.Accessory:
+                    return 2;
+                case ItemCategory.Consumable:
+                    return 3;
+                case ItemCategory.Material:
+                    return 4;
+                case ItemCategory.Quest:
+                    return 5;
+                case ItemCategory.General:
+                default:
+                    return 6;
+            }
+        }
+
+        private static string ResolveDisplayName(ItemDefinition definition)
+        {
+            if (definition == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(definition.DisplayName))
+            {
+                return definition.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(definition.name))
+            {
+                return definition.name;
+            }
+
+            return definition.Id ?? string.Empty;
+        }
+
+        private sealed class StackBucket
+        {
+            public readonly ItemInstance Prototype;
+            public int TotalStack;
+
+            public StackBucket(ItemInstance prototype)
+            {
+                Prototype = prototype;
+                TotalStack = 0;
+            }
         }
 
         private void AddStartingItems()

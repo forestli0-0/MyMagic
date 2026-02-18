@@ -69,6 +69,32 @@ namespace CombatSystem.UI
             }
         }
 
+        public void SetDragTargetState(int inventoryIndex, bool valid)
+        {
+            var slot = ResolveSlotByInventoryIndex(inventoryIndex);
+            if (slot == null)
+            {
+                return;
+            }
+
+            slot.SetDragTargetState(valid
+                ? InventorySlotUI.DragTargetVisualState.Valid
+                : InventorySlotUI.DragTargetVisualState.Invalid);
+        }
+
+        public void ClearDragTargetStates()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] == null || !slots[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                slots[i].ClearDragTargetState();
+            }
+        }
+
         private void Unbind()
         {
             if (inventory != null)
@@ -135,6 +161,18 @@ namespace CombatSystem.UI
             for (int i = 0; i < slots.Count; i++)
             {
                 var slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                // Defensive reset: clear any residual scale feedback so all cells stay visually aligned.
+                var slotRect = slot.transform as RectTransform;
+                if (slotRect != null && slotRect.localScale != Vector3.one)
+                {
+                    slotRect.localScale = Vector3.one;
+                }
+
                 var inventoryIndex = ResolveInventoryIndexForDisplaySlot(i);
                 slot.SetSlotIndex(inventoryIndex);
 
@@ -260,6 +298,25 @@ namespace CombatSystem.UI
             }
         }
 
+        private InventorySlotUI ResolveSlotByInventoryIndex(int inventoryIndex)
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || !slot.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (slot.SlotIndex == inventoryIndex)
+                {
+                    return slot;
+                }
+            }
+
+            return null;
+        }
+
         private void RefreshGridCellSize()
         {
             if (!autoFitCellSize || slotsRoot == null)
@@ -297,6 +354,10 @@ namespace CombatSystem.UI
             {
                 size = Mathf.Clamp(target, min, maxCellSize);
             }
+
+            // Snap to integer pixel size to avoid subtle visual mismatch caused by sub-pixel layout.
+            size = Mathf.Max(min, Mathf.Round(size));
+
             var cell = grid.cellSize;
             if (Mathf.Abs(cell.x - size) < 0.1f && Mathf.Abs(cell.y - size) < 0.1f)
             {

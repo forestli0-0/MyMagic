@@ -60,5 +60,20 @@ namespace CombatSystem.UI
                    selectable.IsActive() &&
                    selectable.IsInteractable();
         }
+
+        /// <summary>
+        /// 某些网格型控件（背包格/装备格）不适合做全局缩放反馈，
+        /// 否则会出现肉眼可见的格子尺寸不一致。
+        /// </summary>
+        public static bool ShouldSuppressScaleFeedback(Selectable selectable)
+        {
+            if (selectable == null)
+            {
+                return true;
+            }
+
+            return selectable.GetComponentInParent<InventorySlotUI>() != null ||
+                   selectable.GetComponentInParent<EquipmentSlotUI>() != null;
+        }
     }
 }

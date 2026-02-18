@@ -6252,6 +6252,7 @@ MonoBehaviour:
   canvasGroup: {fileID: 232741156}
   closeOnBackground: 1
   pauseGameplay: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   npcNameText: {fileID: 810497568}
   descriptionText: {fileID: 1597487124}
@@ -8389,7 +8390,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 44
     m_Alignment: 3
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -12024,6 +12025,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 480304306}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   inventory: {fileID: 0}
   equipment: {fileID: 0}
@@ -13588,6 +13590,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 544048247}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   questTracker: {fileID: 0}
   database: {fileID: 0}
@@ -17451,6 +17454,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 705574036}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   backScreen: {fileID: 1348950005}
   masterVolume: {fileID: 1748814261}
@@ -17715,6 +17719,7 @@ MonoBehaviour:
   canvasGroup: {fileID: 710397911}
   closeOnBackground: 1
   pauseGameplay: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   debugRaycastOnClick: 0
   titleText: {fileID: 1672308631}
@@ -20428,6 +20433,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 813507503}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   playerUnit: {fileID: 0}
   progression: {fileID: 0}
@@ -26224,7 +26230,12 @@ MonoBehaviour:
   canvasGroup: {fileID: 1076227393}
   closeOnBackground: 1
   pauseGameplay: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
+  resumeButton: {fileID: 0}
+  saveButton: {fileID: 0}
+  settingsButton: {fileID: 0}
+  mainMenuButton: {fileID: 0}
   mainMenuScreen: {fileID: 1348950005}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 705574034}
@@ -26316,6 +26327,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1076857021}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   mainMenuScreen: {fileID: 1348950005}
   inGameScreen: {fileID: 1177605593}
@@ -28853,6 +28865,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1177605594}
   inputMode: 0
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
 --- !u!225 &1177605594
 CanvasGroup:
@@ -31255,6 +31268,8 @@ MonoBehaviour:
   hideAllScreensOnStart: 1
   hideHudOnStart: 1
   pauseGameplayOnUiScreens: 1
+  recoverFocusInUiMode: 1
+  focusRecoveryInterval: 0.12
   screensRoot: {fileID: 0}
   hudRoot: {fileID: 0}
   modalRoot: {fileID: 0}
@@ -31278,6 +31293,8 @@ MonoBehaviour:
   dontDestroyOnLoad: 1
   uiManager: {fileID: 1246380866}
   themeController: {fileID: 1246380872}
+  focusVisualController: {fileID: 0}
+  hoverVisualController: {fileID: 0}
 --- !u!4 &1246380868
 Transform:
   m_ObjectHideFlags: 0
@@ -31353,6 +31370,9 @@ MonoBehaviour:
   onlyWhenGameplayScreen: 1
   closeIfMenuAlreadyOpen: 1
   allowArrowTabSwitch: 1
+  allowGamepadToggle: 1
+  allowGamepadTabSwitch: 1
+  allowGamepadClose: 1
 --- !u!114 &1246380872
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -33693,6 +33713,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1348950004}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 1246380866}
   saveSelectScreen: {fileID: 1076857020}
   settingsScreen: {fileID: 705574034}
@@ -52985,6 +53006,8 @@ MonoBehaviour:
   showGameplayHint: 0
   gameplayHint: "WASD/\u53F3\u952E \u79FB\u52A8   E \u4EA4\u4E92   TAB \u6253\u5F00\u83DC\u5355  
     ESC \u6682\u505C"
+  autoSwitchPromptByDevice: 1
+  forcedDeviceFamily: 0
 --- !u!114 &2114592128
 MonoBehaviour:
   m_ObjectHideFlags: 0

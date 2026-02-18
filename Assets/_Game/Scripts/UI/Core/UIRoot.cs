@@ -17,6 +17,8 @@ namespace CombatSystem.UI
         [Header("Manager")]
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIThemeController themeController;
+        [SerializeField] private UIFocusVisualController focusVisualController;
+        [SerializeField] private UIHoverVisualController hoverVisualController;
 
         private static UIRoot instance;
 
@@ -27,6 +29,8 @@ namespace CombatSystem.UI
         public Canvas OverlayCanvas => overlayCanvas;
         public UIManager Manager => uiManager;
         public UIThemeController ThemeController => themeController;
+        public UIFocusVisualController FocusVisualController => focusVisualController;
+        public UIHoverVisualController HoverVisualController => hoverVisualController;
         public static bool IsGameplayInputAllowed()
         {
             if (instance == null || instance.uiManager == null)
@@ -69,6 +73,8 @@ namespace CombatSystem.UI
             uiManager.Initialize(this);
             EnsureQuestJournalHotkey();
             EnsureGameplayMenuHotkey();
+            EnsureFocusVisualController();
+            EnsureHoverVisualController();
         }
 
         private void MergeUniqueUiFrom(UIRoot incoming)
@@ -85,6 +91,8 @@ namespace CombatSystem.UI
             EnsureThemeController();
             EnsureQuestJournalHotkey();
             EnsureGameplayMenuHotkey();
+            EnsureFocusVisualController();
+            EnsureHoverVisualController();
             EnsureCanvasTransforms();
         }
 
@@ -240,6 +248,42 @@ namespace CombatSystem.UI
             }
 
             themeController.ApplyTheme();
+        }
+
+        private void EnsureFocusVisualController()
+        {
+            if (focusVisualController == null)
+            {
+                focusVisualController = GetComponent<UIFocusVisualController>();
+            }
+
+            if (focusVisualController == null)
+            {
+                focusVisualController = gameObject.AddComponent<UIFocusVisualController>();
+            }
+
+            if (uiManager != null)
+            {
+                focusVisualController.SetUIManager(uiManager);
+            }
+        }
+
+        private void EnsureHoverVisualController()
+        {
+            if (hoverVisualController == null)
+            {
+                hoverVisualController = GetComponent<UIHoverVisualController>();
+            }
+
+            if (hoverVisualController == null)
+            {
+                hoverVisualController = gameObject.AddComponent<UIHoverVisualController>();
+            }
+
+            if (uiManager != null)
+            {
+                hoverVisualController.SetUIManager(uiManager);
+            }
         }
     }
 }

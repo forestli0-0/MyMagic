@@ -63,6 +63,32 @@ namespace CombatSystem.UI
             }
         }
 
+        public void SetDragTargetState(int slotIndex, bool valid)
+        {
+            var slot = ResolveSlotByIndex(slotIndex);
+            if (slot == null)
+            {
+                return;
+            }
+
+            slot.SetDragTargetState(valid
+                ? EquipmentSlotUI.DragTargetVisualState.Valid
+                : EquipmentSlotUI.DragTargetVisualState.Invalid);
+        }
+
+        public void ClearDragTargetStates()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] == null || !slots[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                slots[i].ClearDragTargetState();
+            }
+        }
+
         private void Unbind()
         {
             if (equipment != null)
@@ -186,6 +212,30 @@ namespace CombatSystem.UI
                 slots[i].DragEnded -= HandleSlotDragEnded;
                 slots[i].Dropped -= HandleSlotDropped;
             }
+        }
+
+        private EquipmentSlotUI ResolveSlotByIndex(int slotIndex)
+        {
+            if (slotIndex < 0)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || !slot.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (slot.SlotIndex == slotIndex)
+                {
+                    return slot;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -23,6 +23,18 @@ namespace CombatSystem.UI
         [SerializeField] private Color footerHintBackgroundColor = new Color(0.05f, 0.08f, 0.12f, 0.92f);
         [SerializeField] private Color footerHintTextColor = new Color(0.74f, 0.79f, 0.86f, 1f);
 
+        [Header("Interaction States")]
+        [SerializeField] private float interactionHoverBoost = 0.1f;
+        [SerializeField] private float interactionPressDepth = 0.18f;
+        [SerializeField] private float interactionSelectedBoost = 0.08f;
+        [SerializeField] private float interactionDisabledDepth = 0.52f;
+        [SerializeField] private float interactionFadeDuration = 0.08f;
+
+        [Header("Focus Highlight")]
+        [SerializeField] private Color focusOutlineColor = new Color(0.62f, 0.78f, 1f, 0.95f);
+        [SerializeField] private float focusOutlineWidth = 1.8f;
+        [SerializeField] private float focusScaleMultiplier = 1.02f;
+
         public Font DefaultFont => defaultFont;
         public Sprite DefaultSprite => defaultSprite;
 
@@ -37,6 +49,16 @@ namespace CombatSystem.UI
 
         public Color FooterHintBackgroundColor => footerHintBackgroundColor;
         public Color FooterHintTextColor => footerHintTextColor;
+
+        public float InteractionHoverBoost => interactionHoverBoost;
+        public float InteractionPressDepth => interactionPressDepth;
+        public float InteractionSelectedBoost => interactionSelectedBoost;
+        public float InteractionDisabledDepth => interactionDisabledDepth;
+        public float InteractionFadeDuration => interactionFadeDuration;
+
+        public Color FocusOutlineColor => focusOutlineColor;
+        public float FocusOutlineWidth => focusOutlineWidth;
+        public float FocusScaleMultiplier => focusScaleMultiplier;
 
         public void EnsureFallbackAssets(Font fallbackFont, Sprite fallbackSprite)
         {

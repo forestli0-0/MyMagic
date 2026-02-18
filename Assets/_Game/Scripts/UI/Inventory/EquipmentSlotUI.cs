@@ -17,6 +17,13 @@ namespace CombatSystem.UI
     /// </remarks>
     public class EquipmentSlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
     {
+        public enum DragTargetVisualState
+        {
+            None = 0,
+            Valid = 1,
+            Invalid = 2
+        }
+
         [SerializeField] private Button button;
         [SerializeField] private Image background;
         [SerializeField] private Image icon;
@@ -27,6 +34,8 @@ namespace CombatSystem.UI
         private int slotIndex = -1;
         private ItemSlot slotType = ItemSlot.None;
         private ItemInstance item;
+        private bool selected;
+        private DragTargetVisualState dragTargetVisualState;
 
         public int SlotIndex => slotIndex;
         public ItemSlot SlotType => slotType;
@@ -44,6 +53,8 @@ namespace CombatSystem.UI
             {
                 button.onClick.AddListener(HandleClicked);
             }
+
+            RefreshVisualState();
         }
 
         private void OnDestroy()
@@ -85,24 +96,31 @@ namespace CombatSystem.UI
                 }
                 else
                 {
-                    itemLabel.text = "Empty";
+                    itemLabel.text = "空";
                 }
             }
         }
 
         public void SetSelected(bool selected)
         {
-            if (selection != null)
+            this.selected = selected;
+            RefreshVisualState();
+        }
+
+        public void SetDragTargetState(DragTargetVisualState state)
+        {
+            if (dragTargetVisualState == state)
             {
-                selection.enabled = selected;
+                return;
             }
 
-            if (background != null)
-            {
-                background.color = selected
-                    ? new Color(0.23f, 0.31f, 0.46f, 1f)
-                    : new Color(0.14f, 0.16f, 0.2f, 1f);
-            }
+            dragTargetVisualState = state;
+            RefreshVisualState();
+        }
+
+        public void ClearDragTargetState()
+        {
+            SetDragTargetState(DragTargetVisualState.None);
         }
 
         private void HandleClicked()
@@ -138,6 +156,55 @@ namespace CombatSystem.UI
         public void OnDrop(PointerEventData eventData)
         {
             Dropped?.Invoke(this, eventData);
+        }
+
+        private void RefreshVisualState()
+        {
+            var baseColor = new Color(0.14f, 0.16f, 0.2f, 1f);
+            var selectedColor = new Color(0.23f, 0.31f, 0.46f, 1f);
+            var dragValidColor = new Color(0.19f, 0.38f, 0.28f, 1f);
+            var dragInvalidColor = new Color(0.4f, 0.2f, 0.22f, 1f);
+
+            var selectionSelectedColor = new Color(0.35f, 0.52f, 0.86f, 0.24f);
+            var selectionDragValidColor = new Color(0.42f, 0.9f, 0.65f, 0.24f);
+            var selectionDragInvalidColor = new Color(0.95f, 0.45f, 0.48f, 0.24f);
+
+            var hasDragState = dragTargetVisualState != DragTargetVisualState.None;
+            if (selection != null)
+            {
+                selection.enabled = selected || hasDragState;
+                if (dragTargetVisualState == DragTargetVisualState.Valid)
+                {
+                    selection.color = selectionDragValidColor;
+                }
+                else if (dragTargetVisualState == DragTargetVisualState.Invalid)
+                {
+                    selection.color = selectionDragInvalidColor;
+                }
+                else
+                {
+                    selection.color = selectionSelectedColor;
+                }
+            }
+
+            if (background == null)
+            {
+                return;
+            }
+
+            if (dragTargetVisualState == DragTargetVisualState.Valid)
+            {
+                background.color = dragValidColor;
+                return;
+            }
+
+            if (dragTargetVisualState == DragTargetVisualState.Invalid)
+            {
+                background.color = dragInvalidColor;
+                return;
+            }
+
+            background.color = selected ? selectedColor : baseColor;
         }
     }
 }
