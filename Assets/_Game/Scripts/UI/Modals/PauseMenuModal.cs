@@ -170,5 +170,10 @@ namespace CombatSystem.UI
             }
 #endif
         }
+
+        public override string GetFooterHintText()
+        {
+            return "ESC 继续游戏    鼠标左键 / Enter 选择";
+        }
     }
 }

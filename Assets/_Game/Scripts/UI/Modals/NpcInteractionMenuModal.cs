@@ -40,6 +40,8 @@ namespace CombatSystem.UI
         private readonly List<Action> optionActions = new List<Action>(8);
         private readonly List<NpcInteractionTrigger.InteractionOptionView> optionViews = new List<NpcInteractionTrigger.InteractionOptionView>(8);
 
+        public override bool HideGlobalFooterHint => true;
+
         public void Bind(NpcInteractionTrigger trigger)
         {
             source = trigger;

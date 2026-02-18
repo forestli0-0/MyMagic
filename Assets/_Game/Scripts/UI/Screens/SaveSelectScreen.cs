@@ -153,5 +153,10 @@ namespace CombatSystem.UI
                 entries.Add(instance);
             }
         }
+
+        public override string GetFooterHintText()
+        {
+            return "ESC 返回主菜单    鼠标左键 / Enter 读取存档    输入存档名后可新建";
+        }
     }
 }

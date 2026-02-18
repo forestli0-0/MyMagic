@@ -112,6 +112,7 @@ namespace CombatSystem.UI
 
         public override void OnEnter()
         {
+            ApplyThemeColors();
             EnsureReferences();
             Subscribe();
             RefreshAll();
@@ -135,6 +136,7 @@ namespace CombatSystem.UI
 
         private void OnDestroy()
         {
+            UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
             if (dragIcon != null)
             {
                 Destroy(dragIcon.gameObject);
@@ -146,6 +148,17 @@ namespace CombatSystem.UI
         public override void OnFocus()
         {
             RefreshAll();
+        }
+
+        private void OnEnable()
+        {
+            UIThemeRuntime.ThemeChanged += HandleThemeChanged;
+            ApplyThemeColors();
+        }
+
+        private void OnDisable()
+        {
+            UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
         }
 
         private void Update()
@@ -1714,6 +1727,20 @@ namespace CombatSystem.UI
             }
         }
 
+        private void HandleThemeChanged(UIThemeConfig theme)
+        {
+            ApplyThemeColors();
+            RefreshFilterButtonStates();
+        }
+
+        private void ApplyThemeColors()
+        {
+            filterActiveColor = UIStyleKit.TabActiveColor;
+            filterInactiveColor = UIStyleKit.TabInactiveColor;
+            filterActiveTextColor = UIStyleKit.TabActiveTextColor;
+            filterInactiveTextColor = UIStyleKit.TabInactiveTextColor;
+        }
+
         private ItemInstance FindEquippedForSlot(ItemInstance item)
         {
             if (equipment == null || item == null || item.Definition == null || !item.Definition.IsEquippable)
@@ -2012,6 +2039,11 @@ namespace CombatSystem.UI
                 SourceIndex = sourceIndex;
                 Item = item;
             }
+        }
+
+        public override string GetFooterHintText()
+        {
+            return "TAB 关闭菜单    ESC 返回游戏    ←/→ 切换页签    拖拽交换 / 双击装备";
         }
     }
 

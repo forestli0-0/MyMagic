@@ -29,6 +29,7 @@ namespace CombatSystem.UI
         public virtual void OnExit() { }
         public virtual void OnFocus() { }
         public virtual void OnBlur() { }
+        public virtual string GetFooterHintText() => string.Empty;
 
         private CanvasGroup EnsureCanvasGroup()
         {

@@ -73,8 +73,20 @@ namespace CombatSystem.UI
             EnsureInitialized();
         }
 
+        private void OnEnable()
+        {
+            UIThemeRuntime.ThemeChanged += HandleThemeChanged;
+            ApplyThemeColors();
+        }
+
+        private void OnDisable()
+        {
+            UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
+        }
+
         public override void OnEnter()
         {
+            ApplyThemeColors();
             EnsureInitialized();
             var data = SettingsService.LoadOrCreate();
             ApplyToUI(data);
@@ -483,6 +495,25 @@ namespace CombatSystem.UI
 
                 label.color = active ? activeCategoryTextColor : inactiveCategoryTextColor;
             }
+        }
+
+        public override string GetFooterHintText()
+        {
+            return "ESC 返回上一页    鼠标左键 调整选项    点击应用保存设置";
+        }
+
+        private void HandleThemeChanged(UIThemeConfig theme)
+        {
+            ApplyThemeColors();
+            ApplyCategory(activeCategory);
+        }
+
+        private void ApplyThemeColors()
+        {
+            activeCategoryColor = UIStyleKit.TabActiveColor;
+            inactiveCategoryColor = UIStyleKit.TabInactiveColor;
+            activeCategoryTextColor = UIStyleKit.TabActiveTextColor;
+            inactiveCategoryTextColor = UIStyleKit.TabInactiveTextColor;
         }
     }
 }

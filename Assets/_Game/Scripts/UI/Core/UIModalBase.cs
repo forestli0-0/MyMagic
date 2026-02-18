@@ -12,6 +12,7 @@ namespace CombatSystem.UI
 
         public bool CloseOnBackground => closeOnBackground;
         public bool PauseGameplay => pauseGameplay;
+        public virtual bool HideGlobalFooterHint => false;
 
         public event Action<UIModalBase> CloseRequested;
 
@@ -47,6 +48,7 @@ namespace CombatSystem.UI
         public virtual void OnExit() { }
         public virtual void OnFocus() { }
         public virtual void OnBlur() { }
+        public virtual string GetFooterHintText() => string.Empty;
 
         private CanvasGroup EnsureCanvasGroup()
         {

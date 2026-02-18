@@ -92,6 +92,8 @@ namespace CombatSystem.UI
 
         private void OnEnable()
         {
+            UIThemeRuntime.ThemeChanged += HandleThemeChanged;
+            SyncThemeColors();
             ResolveReferences();
             SyncActiveStateFromOwner();
             CollectTabs();
@@ -101,6 +103,7 @@ namespace CombatSystem.UI
 
         private void OnDisable()
         {
+            UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
             UnbindButtons();
         }
 
@@ -497,6 +500,20 @@ namespace CombatSystem.UI
                 default:
                     return "Inventory";
             }
+        }
+
+        private void SyncThemeColors()
+        {
+            activeColor = UIStyleKit.TabActiveColor;
+            inactiveColor = UIStyleKit.TabInactiveColor;
+            activeTextColor = UIStyleKit.TabActiveTextColor;
+            inactiveTextColor = UIStyleKit.TabInactiveTextColor;
+        }
+
+        private void HandleThemeChanged(UIThemeConfig theme)
+        {
+            SyncThemeColors();
+            RefreshVisualState();
         }
     }
 }

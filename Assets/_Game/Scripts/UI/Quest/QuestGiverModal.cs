@@ -47,6 +47,8 @@ namespace CombatSystem.UI
         private readonly System.Collections.Generic.List<RaycastResult> raycastResults = new System.Collections.Generic.List<RaycastResult>(16);
 #endif
 
+        public override bool HideGlobalFooterHint => true;
+
         public void Bind(QuestGiverTrigger trigger)
         {
             source = trigger;

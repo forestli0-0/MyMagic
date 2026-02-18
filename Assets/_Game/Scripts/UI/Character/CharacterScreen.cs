@@ -1068,5 +1068,10 @@ namespace CombatSystem.UI
             stats.ModifyValue(statDefinition, deltaPoints * deltaPerPoint);
             appliedPoints = safeTargetPoints;
         }
+
+        public override string GetFooterHintText()
+        {
+            return "TAB 关闭菜单    ESC 返回游戏    ←/→ 切换页签    鼠标左键 分配属性";
+        }
     }
 }

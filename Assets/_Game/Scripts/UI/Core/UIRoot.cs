@@ -16,6 +16,7 @@ namespace CombatSystem.UI
 
         [Header("Manager")]
         [SerializeField] private UIManager uiManager;
+        [SerializeField] private UIThemeController themeController;
 
         private static UIRoot instance;
 
@@ -25,6 +26,7 @@ namespace CombatSystem.UI
         public Canvas ModalCanvas => modalCanvas;
         public Canvas OverlayCanvas => overlayCanvas;
         public UIManager Manager => uiManager;
+        public UIThemeController ThemeController => themeController;
         public static bool IsGameplayInputAllowed()
         {
             if (instance == null || instance.uiManager == null)
@@ -52,6 +54,7 @@ namespace CombatSystem.UI
                 DontDestroyOnLoad(gameObject);
             }
 
+            EnsureThemeController();
             EnsureCanvasTransforms();
 
             if (uiManager == null)
@@ -79,6 +82,7 @@ namespace CombatSystem.UI
             MoveUniqueChildrenByComponentType<UIModalBase>(incoming.modalCanvas, modalCanvas);
             MoveUniqueChildrenByComponentType<UIOverlayBase>(incoming.overlayCanvas, overlayCanvas);
             MoveMissingDirectChildrenByName(incoming.hudCanvas, hudCanvas);
+            EnsureThemeController();
             EnsureQuestJournalHotkey();
             EnsureGameplayMenuHotkey();
             EnsureCanvasTransforms();
@@ -221,6 +225,21 @@ namespace CombatSystem.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        private void EnsureThemeController()
+        {
+            if (themeController == null)
+            {
+                themeController = GetComponent<UIThemeController>();
+            }
+
+            if (themeController == null)
+            {
+                themeController = gameObject.AddComponent<UIThemeController>();
+            }
+
+            themeController.ApplyTheme();
         }
     }
 }

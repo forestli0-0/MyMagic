@@ -535,5 +535,10 @@ namespace CombatSystem.UI
 
             return builder.ToString();
         }
+
+        public override string GetFooterHintText()
+        {
+            return "TAB 关闭菜单    ESC 返回游戏    ←/→ 切换页签    鼠标左键 查看任务";
+        }
     }
 }

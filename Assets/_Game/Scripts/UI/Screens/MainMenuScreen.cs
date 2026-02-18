@@ -103,5 +103,10 @@ namespace CombatSystem.UI
             Application.Quit();
 #endif
         }
+
+        public override string GetFooterHintText()
+        {
+            return "鼠标左键 / Enter 选择    ESC 返回上一页";
+        }
     }
 }

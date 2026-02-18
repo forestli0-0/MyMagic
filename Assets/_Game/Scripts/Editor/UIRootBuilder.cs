@@ -21,18 +21,19 @@ namespace CombatSystem.Editor
     public static class UIRootBuilder
     {
         private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
+        private const string DefaultThemeAssetPath = "Assets/_Game/ScriptableObjects/UI/UITheme_Default.asset";
         private const float CanvasReferenceWidth = 1920f;
         private const float CanvasReferenceHeight = 1080f;
 
         // Gameplay menu style tokens
-        private static readonly Color GameplayMenuOverlayColor = UIStyleKit.GameplayOverlayColor;
-        private static readonly Color GameplayMenuHeaderColor = UIStyleKit.GameplayHeaderColor;
-        private static readonly Color GameplayMenuPanelColor = UIStyleKit.GameplayPanelColor;
-        private static readonly Color GameplayMenuPanelAltColor = UIStyleKit.GameplayPanelAltColor;
-        private static readonly Color GameplayMenuTabActiveColor = UIStyleKit.TabActiveColor;
-        private static readonly Color GameplayMenuTabInactiveColor = UIStyleKit.TabInactiveColor;
-        private static readonly Color GameplayMenuTabActiveTextColor = UIStyleKit.TabActiveTextColor;
-        private static readonly Color GameplayMenuTabInactiveTextColor = UIStyleKit.TabInactiveTextColor;
+        private static Color GameplayMenuOverlayColor => UIStyleKit.GameplayOverlayColor;
+        private static Color GameplayMenuHeaderColor => UIStyleKit.GameplayHeaderColor;
+        private static Color GameplayMenuPanelColor => UIStyleKit.GameplayPanelColor;
+        private static Color GameplayMenuPanelAltColor => UIStyleKit.GameplayPanelAltColor;
+        private static Color GameplayMenuTabActiveColor => UIStyleKit.TabActiveColor;
+        private static Color GameplayMenuTabInactiveColor => UIStyleKit.TabInactiveColor;
+        private static Color GameplayMenuTabActiveTextColor => UIStyleKit.TabActiveTextColor;
+        private static Color GameplayMenuTabInactiveTextColor => UIStyleKit.TabInactiveTextColor;
 
         [MenuItem("Combat/UI/Create UIRoot")]
         public static void CreateUIRoot()
@@ -48,6 +49,7 @@ namespace CombatSystem.Editor
 
             var uiRoot = root.AddComponent<UIRoot>();
             var uiManager = root.AddComponent<UIManager>();
+            var themeController = root.AddComponent<UIThemeController>();
             var pauseHotkey = root.AddComponent<PauseMenuHotkey>();
             var inventoryHotkey = root.AddComponent<InventoryHotkey>();
             var gameplayMenuHotkey = root.AddComponent<GameplayMenuHotkey>();
@@ -88,6 +90,14 @@ namespace CombatSystem.Editor
             SetSerialized(uiRoot, "overlayCanvas", overlayCanvas);
             SetSerialized(uiRoot, "dontDestroyOnLoad", true);
             SetSerialized(uiRoot, "uiManager", uiManager);
+            SetSerialized(uiRoot, "themeController", themeController);
+
+            var defaultTheme = EnsureDefaultThemeAsset();
+            if (defaultTheme != null)
+            {
+                SetSerialized(themeController, "theme", defaultTheme);
+            }
+            SetSerialized(themeController, "applyOnEnable", true);
 
             SetSerialized(uiManager, "initialScreen", mainMenu);
             SetSerialized(uiManager, "hideAllScreensOnStart", true);
@@ -160,6 +170,20 @@ namespace CombatSystem.Editor
             NormalizeCanvasTransforms(root);
 
             var uiManager = root.Manager != null ? root.Manager : root.GetComponentInChildren<UIManager>(true);
+            var themeController = root.ThemeController != null ? root.ThemeController : root.GetComponentInChildren<UIThemeController>(true);
+            if (themeController == null)
+            {
+                themeController = root.gameObject.AddComponent<UIThemeController>();
+            }
+
+            var defaultTheme = EnsureDefaultThemeAsset();
+            if (defaultTheme != null)
+            {
+                SetSerialized(themeController, "theme", defaultTheme);
+            }
+            SetSerialized(themeController, "applyOnEnable", true);
+            SetSerialized(root, "themeController", themeController);
+
             if (uiManager == null)
             {
                 Debug.LogWarning("[UIRootBuilder] UIManager not found under UIRoot.");
@@ -348,6 +372,8 @@ namespace CombatSystem.Editor
                 BuildUnitHealthBars(root.HudCanvas);
                 BuildCombatHUD(root.HudCanvas, sprite, font);
             }
+
+            BuildGlobalFooterHintBar(root, sprite, font, uiManager);
 
             LinkQuestGiverTriggers(uiManager, questGiverModal);
             LinkNpcInteractionTriggers(uiManager, npcInteractionModal);
@@ -3321,6 +3347,7 @@ namespace CombatSystem.Editor
             var footerHintsTextElement = footerHintsTextGo.AddComponent<LayoutElement>();
             footerHintsTextElement.flexibleWidth = 1f;
             footerHintsTextElement.minWidth = 0f;
+            footerHints.SetActive(false);
 
             ConfigureGameplayMenuTabsComponent(screen, characterButton, inventoryButton, questButton, characterScreen, inventoryScreen, questJournalScreen, activeTab);
 
@@ -4575,6 +4602,86 @@ namespace CombatSystem.Editor
             return slot;
         }
 
+        private static void BuildGlobalFooterHintBar(UIRoot root, Sprite sprite, Font font, UIManager uiManager)
+        {
+            if (root == null || root.OverlayCanvas == null)
+            {
+                return;
+            }
+
+            var overlayRoot = root.OverlayCanvas.transform;
+            var barGo = FindOrCreateChild(overlayRoot, "GlobalFooterHintBar");
+            var barRect = barGo.GetComponent<RectTransform>();
+            if (barRect == null)
+            {
+                barRect = barGo.AddComponent<RectTransform>();
+            }
+
+            barRect.anchorMin = new Vector2(0f, 0f);
+            barRect.anchorMax = new Vector2(1f, 0f);
+            barRect.pivot = new Vector2(0.5f, 0f);
+            barRect.offsetMin = new Vector2(24f, 12f);
+            barRect.offsetMax = new Vector2(-24f, 48f);
+
+            var canvasGroup = barGo.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = barGo.AddComponent<CanvasGroup>();
+            }
+
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+
+            var background = barGo.GetComponent<Image>();
+            if (background == null)
+            {
+                background = barGo.AddComponent<Image>();
+            }
+
+            background.sprite = sprite;
+            background.type = Image.Type.Sliced;
+            background.color = UIStyleKit.FooterHintBackgroundColor;
+            background.raycastTarget = false;
+
+            var textGo = FindOrCreateChild(barGo.transform, "HintText");
+            var textRect = textGo.GetComponent<RectTransform>();
+            if (textRect == null)
+            {
+                textRect = textGo.AddComponent<RectTransform>();
+            }
+
+            StretchRect(textRect);
+            textRect.offsetMin = new Vector2(14f, 0f);
+            textRect.offsetMax = new Vector2(-14f, 0f);
+
+            var hintText = textGo.GetComponent<Text>();
+            if (hintText == null)
+            {
+                hintText = textGo.AddComponent<Text>();
+            }
+
+            hintText.font = font;
+            hintText.fontSize = 14;
+            hintText.alignment = TextAnchor.MiddleLeft;
+            hintText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            hintText.verticalOverflow = VerticalWrapMode.Truncate;
+            hintText.color = UIStyleKit.FooterHintTextColor;
+            hintText.raycastTarget = false;
+            hintText.text = "TAB 打开菜单   ESC 暂停";
+
+            var hintBar = barGo.GetComponent<UIFooterHintBar>();
+            if (hintBar == null)
+            {
+                hintBar = barGo.AddComponent<UIFooterHintBar>();
+            }
+
+            SetSerialized(hintBar, "uiManager", uiManager);
+            SetSerialized(hintBar, "canvasGroup", canvasGroup);
+            SetSerialized(hintBar, "backgroundImage", background);
+            SetSerialized(hintBar, "hintText", hintText);
+            SetSerialized(hintBar, "showGameplayHint", false);
+        }
+
         private static DefaultControls.Resources GetDefaultResources(Sprite sprite)
         {
             return new DefaultControls.Resources
@@ -4697,12 +4804,86 @@ namespace CombatSystem.Editor
 
         internal static Sprite GetDefaultUISprite()
         {
+            var themed = UIStyleKit.ThemeSprite;
+            if (themed != null)
+            {
+                return themed;
+            }
+
+            var theme = EnsureDefaultThemeAsset();
+            if (theme != null && theme.DefaultSprite != null)
+            {
+                return theme.DefaultSprite;
+            }
+
             return AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
         }
 
         internal static Font GetDefaultFont()
         {
+            var themed = UIStyleKit.ThemeFont;
+            if (themed != null)
+            {
+                return themed;
+            }
+
+            var theme = EnsureDefaultThemeAsset();
+            if (theme != null && theme.DefaultFont != null)
+            {
+                return theme.DefaultFont;
+            }
+
             return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
+        private static UIThemeConfig EnsureDefaultThemeAsset()
+        {
+            var theme = AssetDatabase.LoadAssetAtPath<UIThemeConfig>(DefaultThemeAssetPath);
+            var fallbackFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var fallbackSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+            if (theme == null)
+            {
+                var folderPath = System.IO.Path.GetDirectoryName(DefaultThemeAssetPath);
+                if (!string.IsNullOrWhiteSpace(folderPath) && !AssetDatabase.IsValidFolder(folderPath))
+                {
+                    EnsureFolder(folderPath);
+                }
+
+                theme = ScriptableObject.CreateInstance<UIThemeConfig>();
+                theme.name = "UITheme_Default";
+                theme.EnsureFallbackAssets(fallbackFont, fallbackSprite);
+                AssetDatabase.CreateAsset(theme, DefaultThemeAssetPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                return AssetDatabase.LoadAssetAtPath<UIThemeConfig>(DefaultThemeAssetPath);
+            }
+
+            theme.EnsureFallbackAssets(fallbackFont, fallbackSprite);
+            EditorUtility.SetDirty(theme);
+            return theme;
+        }
+
+        private static void EnsureFolder(string folderPath)
+        {
+            var normalized = folderPath.Replace("\\", "/");
+            var segments = normalized.Split('/');
+            if (segments.Length <= 1)
+            {
+                return;
+            }
+
+            var current = segments[0];
+            for (int i = 1; i < segments.Length; i++)
+            {
+                var next = current + "/" + segments[i];
+                if (!AssetDatabase.IsValidFolder(next))
+                {
+                    AssetDatabase.CreateFolder(current, segments[i]);
+                }
+
+                current = next;
+            }
         }
     }
 }
