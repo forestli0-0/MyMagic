@@ -20,7 +20,8 @@ namespace CombatSystem.UI
 
             if (titleText != null)
             {
-                titleText.text = string.IsNullOrWhiteSpace(info.displayName) ? info.slotId : info.displayName;
+                var fallbackTitle = !string.IsNullOrWhiteSpace(info.slotId) ? info.slotId : "未命名存档";
+                titleText.text = string.IsNullOrWhiteSpace(info.displayName) ? fallbackTitle : info.displayName;
             }
 
             if (detailText != null)
@@ -57,8 +58,8 @@ namespace CombatSystem.UI
             var time = info.lastSavedUtcTicks > 0
                 ? new DateTime(info.lastSavedUtcTicks, DateTimeKind.Utc).ToLocalTime()
                 : DateTime.MinValue;
-            var timeText = time == DateTime.MinValue ? "Unknown Time" : time.ToString("yyyy-MM-dd HH:mm");
-            var sceneText = string.IsNullOrEmpty(info.sceneName) ? "Unknown Scene" : info.sceneName;
+            var timeText = time == DateTime.MinValue ? "未知时间" : time.ToString("yyyy-MM-dd HH:mm");
+            var sceneText = string.IsNullOrEmpty(info.sceneName) ? "未知场景" : info.sceneName;
             return $"{sceneText} | {timeText}";
         }
     }

@@ -30,9 +30,19 @@ namespace CombatSystem.UI
         [SerializeField] private Text primaryButtonText;
         [SerializeField] private Button tradeButton;
         [SerializeField] private Button closeButton;
+        [SerializeField] private RectTransform dialogPanel;
+
+        [Header("Anchor")]
+        [SerializeField] private bool followNpcAnchor = true;
+        [SerializeField] private Vector3 worldAnchorOffset = Vector3.zero;
+        [SerializeField] private Vector2 popupScreenOffset = new Vector2(36f, 18f);
+        [SerializeField] private float popupEdgePadding = 18f;
 
         private QuestGiverTrigger source;
         private bool subscribed;
+        private RectTransform modalRootRect;
+        private Camera cachedPresentationCamera;
+        private float nextCameraResolveTime;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private readonly System.Collections.Generic.List<RaycastResult> raycastResults = new System.Collections.Generic.List<RaycastResult>(16);
 #endif
@@ -41,14 +51,18 @@ namespace CombatSystem.UI
         {
             source = trigger;
             RefreshFromSource();
+            UpdateDialogAnchor(true);
         }
 
         public override void OnEnter()
         {
             EnsureEventSystemInputReady();
+            CacheLayoutReferences();
             EnsureTradeButton();
             Subscribe();
             RefreshFromSource();
+            UpdateDialogAnchor(true);
+            FocusDefaultOption();
         }
 
         public override void OnExit()
@@ -61,10 +75,19 @@ namespace CombatSystem.UI
         {
             EnsureEventSystemInputReady();
             RefreshFromSource();
+            UpdateDialogAnchor(true);
+            FocusDefaultOption();
+        }
+
+        private void LateUpdate()
+        {
+            UpdateDialogAnchor(false);
         }
 
         private void Update()
         {
+            HandleKeyboardShortcuts();
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (!debugRaycastOnClick || !gameObject.activeInHierarchy)
             {
@@ -95,6 +118,82 @@ namespace CombatSystem.UI
                 LogUiRaycast(pointer);
             }
 #endif
+        }
+
+        private void HandleKeyboardShortcuts()
+        {
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
+            if (uiManager != null && uiManager.CurrentModal != this)
+            {
+                return;
+            }
+
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                RequestClose();
+                return;
+            }
+
+            if (keyboard.digit1Key.wasPressedThisFrame && TryInvokeButton(primaryButton))
+            {
+                return;
+            }
+
+            if (keyboard.digit2Key.wasPressedThisFrame && TryInvokeButton(tradeButton))
+            {
+                return;
+            }
+
+            if (keyboard.digit3Key.wasPressedThisFrame && TryInvokeButton(closeButton))
+            {
+                return;
+            }
+
+            if (!keyboard.eKey.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            var eventSystem = EventSystem.current;
+            if (eventSystem != null)
+            {
+                var selected = eventSystem.currentSelectedGameObject;
+                if (selected != null)
+                {
+                    var selectedButton = selected.GetComponent<Button>();
+                    if (selectedButton == null)
+                    {
+                        selectedButton = selected.GetComponentInParent<Button>();
+                    }
+
+                    if (TryInvokeButton(selectedButton))
+                    {
+                        return;
+                    }
+                }
+            }
+
+            if (TryInvokeButton(primaryButton))
+            {
+                return;
+            }
+
+            if (TryInvokeButton(tradeButton))
+            {
+                return;
+            }
+
+            TryInvokeButton(closeButton);
         }
 
         public void RefreshFromSource()
@@ -149,19 +248,23 @@ namespace CombatSystem.UI
             if (primaryButton != null)
             {
                 primaryButton.interactable = primaryInteractable;
+                primaryButton.gameObject.SetActive(primaryInteractable);
             }
 
             if (primaryButtonText != null)
             {
-                primaryButtonText.text = primaryInteractable ? primaryLabel : "关闭";
+                primaryButtonText.text = primaryLabel;
             }
 
             if (tradeButton != null)
             {
-                tradeButton.interactable = CanOpenVendor();
+                var canTrade = CanOpenVendor();
+                tradeButton.interactable = canTrade;
+                tradeButton.gameObject.SetActive(canTrade);
             }
 
             SetButtonLabel(closeButton, state == null || state.Status == QuestStatus.NotAccepted ? "稍后再说" : "关闭");
+            FocusDefaultOption();
         }
 
         private void HandlePrimaryClicked()
@@ -307,11 +410,13 @@ namespace CombatSystem.UI
             if (primaryButton != null)
             {
                 primaryButton.interactable = false;
+                primaryButton.gameObject.SetActive(false);
             }
 
             if (tradeButton != null)
             {
                 tradeButton.interactable = false;
+                tradeButton.gameObject.SetActive(false);
             }
 
             SetButtonLabel(closeButton, "关闭");
@@ -455,6 +560,133 @@ namespace CombatSystem.UI
             TryEnableAction(module.scrollWheel);
         }
 
+        private void CacheLayoutReferences()
+        {
+            if (modalRootRect == null)
+            {
+                modalRootRect = transform as RectTransform;
+            }
+
+            if (dialogPanel == null)
+            {
+                var panel = transform.Find("Panel");
+                if (panel != null)
+                {
+                    dialogPanel = panel as RectTransform;
+                }
+            }
+        }
+
+        private void UpdateDialogAnchor(bool force)
+        {
+            if (!followNpcAnchor || source == null)
+            {
+                return;
+            }
+
+            CacheLayoutReferences();
+            if (dialogPanel == null || modalRootRect == null)
+            {
+                return;
+            }
+
+            var camera = ResolvePresentationCamera(force);
+            if (camera == null)
+            {
+                return;
+            }
+
+            var worldAnchor = source.DialogAnchorWorldPosition + worldAnchorOffset;
+            var viewportPoint = camera.WorldToViewportPoint(worldAnchor);
+            if (viewportPoint.z <= 0f)
+            {
+                return;
+            }
+
+            var screenPoint = RectTransformUtility.WorldToScreenPoint(camera, worldAnchor);
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(modalRootRect, screenPoint, null, out var localAnchor))
+            {
+                return;
+            }
+
+            var panelSize = dialogPanel.rect.size;
+            if (panelSize.x <= 1f || panelSize.y <= 1f)
+            {
+                Canvas.ForceUpdateCanvases();
+                panelSize = dialogPanel.rect.size;
+            }
+
+            var placeLeft = screenPoint.x > Screen.width * 0.56f;
+            var horizontalOffset = Mathf.Abs(popupScreenOffset.x);
+            var targetX = localAnchor.x + (placeLeft ? -panelSize.x - horizontalOffset : horizontalOffset);
+            var targetY = localAnchor.y + popupScreenOffset.y;
+
+            var halfWidth = modalRootRect.rect.width * 0.5f;
+            var halfHeight = modalRootRect.rect.height * 0.5f;
+
+            var minX = -halfWidth + popupEdgePadding;
+            var maxX = halfWidth - popupEdgePadding - panelSize.x;
+            var minY = -halfHeight + popupEdgePadding + panelSize.y;
+            var maxY = halfHeight - popupEdgePadding;
+
+            targetX = Mathf.Clamp(targetX, minX, maxX);
+            targetY = Mathf.Clamp(targetY, minY, maxY);
+
+            dialogPanel.anchorMin = new Vector2(0.5f, 0.5f);
+            dialogPanel.anchorMax = new Vector2(0.5f, 0.5f);
+            dialogPanel.pivot = new Vector2(0f, 1f);
+            dialogPanel.anchoredPosition = new Vector2(targetX, targetY);
+        }
+
+        private Camera ResolvePresentationCamera(bool forceRefresh)
+        {
+            if (!forceRefresh && cachedPresentationCamera != null && cachedPresentationCamera.isActiveAndEnabled)
+            {
+                return cachedPresentationCamera;
+            }
+
+            if (!forceRefresh && Time.unscaledTime < nextCameraResolveTime)
+            {
+                return cachedPresentationCamera;
+            }
+
+            nextCameraResolveTime = Time.unscaledTime + 0.3f;
+            cachedPresentationCamera = Camera.main;
+            if (cachedPresentationCamera == null)
+            {
+                cachedPresentationCamera = FindFirstObjectByType<Camera>();
+            }
+
+            return cachedPresentationCamera;
+        }
+
+        private void FocusDefaultOption()
+        {
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return;
+            }
+
+            if (primaryButton != null && primaryButton.gameObject.activeInHierarchy && primaryButton.interactable)
+            {
+                eventSystem.SetSelectedGameObject(primaryButton.gameObject);
+                return;
+            }
+
+            if (tradeButton != null && tradeButton.gameObject.activeInHierarchy && tradeButton.interactable)
+            {
+                eventSystem.SetSelectedGameObject(tradeButton.gameObject);
+                return;
+            }
+
+            if (closeButton != null && closeButton.gameObject.activeInHierarchy && closeButton.interactable)
+            {
+                eventSystem.SetSelectedGameObject(closeButton.gameObject);
+            }
+        }
+
         private static void TryEnableAction(InputActionReference reference)
         {
             var action = reference != null ? reference.action : null;
@@ -462,6 +694,17 @@ namespace CombatSystem.UI
             {
                 action.Enable();
             }
+        }
+
+        private static bool TryInvokeButton(Button button)
+        {
+            if (button == null || !button.gameObject.activeInHierarchy || !button.interactable)
+            {
+                return false;
+            }
+
+            button.onClick?.Invoke();
+            return true;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -593,7 +836,7 @@ namespace CombatSystem.UI
             backdropRect.SetParent(modalGo.transform, false);
             StretchRect(backdropRect);
             var backdropImage = backdrop.GetComponent<Image>();
-            backdropImage.color = new Color(0f, 0f, 0f, 0.72f);
+            backdropImage.color = new Color(0f, 0f, 0f, 0.12f);
             var backdropButton = backdrop.GetComponent<Button>();
             backdropButton.targetGraphic = backdropImage;
             backdropButton.onClick.AddListener(modal.HandleBackgroundClick);
@@ -603,54 +846,78 @@ namespace CombatSystem.UI
             var panelRect = panel.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(760f, 560f);
+            panelRect.pivot = new Vector2(0f, 1f);
+            panelRect.anchoredPosition = new Vector2(-220f, 120f);
+            panelRect.sizeDelta = new Vector2(440f, 500f);
 
             var panelImage = panel.GetComponent<Image>();
-            panelImage.color = new Color(0.09f, 0.11f, 0.16f, 0.97f);
+            panelImage.color = new Color(0.11f, 0.14f, 0.2f, 0.96f);
 
             var panelLayout = panel.GetComponent<VerticalLayoutGroup>();
-            panelLayout.padding = new RectOffset(16, 16, 16, 16);
-            panelLayout.spacing = 10f;
+            panelLayout.padding = new RectOffset(14, 14, 14, 14);
+            panelLayout.spacing = 8f;
             panelLayout.childAlignment = TextAnchor.UpperLeft;
             panelLayout.childControlWidth = true;
             panelLayout.childControlHeight = true;
             panelLayout.childForceExpandHeight = false;
             panelLayout.childForceExpandWidth = true;
 
-            var titleText = CreateRuntimeText(panel.transform, "Title", "任务", font, 28, TextAnchor.MiddleLeft, Color.white, 42f);
-            var summaryText = CreateRuntimeText(panel.transform, "Summary", string.Empty, font, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.9f, 0.92f, 1f), 72f);
+            var header = new GameObject("Header", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            header.transform.SetParent(panel.transform, false);
+            var headerImage = header.GetComponent<Image>();
+            headerImage.color = new Color(0.08f, 0.12f, 0.2f, 0.92f);
+            var headerLayout = header.GetComponent<VerticalLayoutGroup>();
+            headerLayout.padding = new RectOffset(12, 12, 10, 8);
+            headerLayout.spacing = 2f;
+            headerLayout.childAlignment = TextAnchor.UpperLeft;
+            headerLayout.childControlHeight = true;
+            headerLayout.childControlWidth = true;
+            headerLayout.childForceExpandHeight = false;
+            headerLayout.childForceExpandWidth = true;
+            var headerElement = header.GetComponent<LayoutElement>();
+            headerElement.preferredHeight = 86f;
+
+            var titleText = CreateRuntimeText(header.transform, "Title", "交互", font, 32, TextAnchor.MiddleLeft, Color.white, 46f);
+            CreateRuntimeText(header.transform, "Subtitle", "按选项继续", font, 15, TextAnchor.MiddleLeft, new Color(0.74f, 0.79f, 0.86f, 1f), 24f);
+
+            var summaryText = CreateRuntimeText(panel.transform, "Summary", string.Empty, font, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.9f, 0.92f, 1f), 70f);
             summaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
             summaryText.verticalOverflow = VerticalWrapMode.Overflow;
 
-            var statusText = CreateRuntimeText(panel.transform, "Status", string.Empty, font, 16, TextAnchor.MiddleLeft, new Color(0.95f, 0.83f, 0.45f, 1f), 30f);
+            var statusText = CreateRuntimeText(panel.transform, "Status", string.Empty, font, 15, TextAnchor.MiddleLeft, new Color(0.95f, 0.83f, 0.45f, 1f), 24f);
 
-            var objectivesText = CreateRuntimeText(panel.transform, "Objectives", string.Empty, font, 16, TextAnchor.UpperLeft, Color.white, 220f);
+            var objectivesText = CreateRuntimeText(panel.transform, "Objectives", string.Empty, font, 14, TextAnchor.UpperLeft, Color.white, 90f);
             objectivesText.horizontalOverflow = HorizontalWrapMode.Wrap;
             objectivesText.verticalOverflow = VerticalWrapMode.Overflow;
             var objectivesLayout = objectivesText.GetComponent<LayoutElement>();
             objectivesLayout.flexibleHeight = 1f;
 
-            var rewardText = CreateRuntimeText(panel.transform, "Reward", string.Empty, font, 15, TextAnchor.MiddleLeft, new Color(0.72f, 0.95f, 0.78f, 1f), 30f);
-            var feedbackText = CreateRuntimeText(panel.transform, "Feedback", string.Empty, font, 15, TextAnchor.MiddleLeft, new Color(0.8f, 0.85f, 0.95f, 1f), 28f);
+            var rewardText = CreateRuntimeText(panel.transform, "Reward", string.Empty, font, 14, TextAnchor.MiddleLeft, new Color(0.72f, 0.95f, 0.78f, 1f), 22f);
+            var feedbackText = CreateRuntimeText(panel.transform, "Feedback", string.Empty, font, 14, TextAnchor.MiddleLeft, new Color(0.8f, 0.85f, 0.95f, 1f), 22f);
 
-            var buttonsRow = new GameObject("Buttons", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            buttonsRow.transform.SetParent(panel.transform, false);
-            var rowLayout = buttonsRow.GetComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 10f;
-            rowLayout.childAlignment = TextAnchor.MiddleRight;
-            rowLayout.childControlHeight = true;
-            rowLayout.childControlWidth = false;
-            rowLayout.childForceExpandHeight = false;
-            rowLayout.childForceExpandWidth = false;
-            var rowElement = buttonsRow.GetComponent<LayoutElement>();
-            rowElement.preferredHeight = 56f;
+            CreateRuntimeText(panel.transform, "OptionsTitle", "可选操作", font, 15, TextAnchor.MiddleLeft, new Color(0.74f, 0.79f, 0.86f, 1f), 22f);
 
-            var primaryButton = CreateRuntimeButton(buttonsRow.transform, "Button_Primary", "接取任务", font, 220f);
+            var buttonsPanel = new GameObject("ButtonsPanel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            buttonsPanel.transform.SetParent(panel.transform, false);
+            var buttonsPanelImage = buttonsPanel.GetComponent<Image>();
+            buttonsPanelImage.color = new Color(0.08f, 0.12f, 0.2f, 0.92f);
+            var buttonsLayout = buttonsPanel.GetComponent<VerticalLayoutGroup>();
+            buttonsLayout.padding = new RectOffset(10, 10, 10, 10);
+            buttonsLayout.spacing = 8f;
+            buttonsLayout.childAlignment = TextAnchor.UpperCenter;
+            buttonsLayout.childControlHeight = true;
+            buttonsLayout.childControlWidth = true;
+            buttonsLayout.childForceExpandHeight = false;
+            buttonsLayout.childForceExpandWidth = true;
+            var buttonsElement = buttonsPanel.GetComponent<LayoutElement>();
+            buttonsElement.preferredHeight = 176f;
+
+            var primaryButton = CreateRuntimeButton(buttonsPanel.transform, "Button_Primary", "接取任务", font, -1f);
             var primaryButtonText = primaryButton.GetComponentInChildren<Text>(true);
-            var tradeButton = CreateRuntimeButton(buttonsRow.transform, "Button_Trade", "交易", font, 180f);
-            var closeButton = CreateRuntimeButton(buttonsRow.transform, "Button_Close", "暂不接取", font, 180f);
+            var tradeButton = CreateRuntimeButton(buttonsPanel.transform, "Button_Trade", "交易", font, -1f);
+            var closeButton = CreateRuntimeButton(buttonsPanel.transform, "Button_Close", "离开", font, -1f);
+
+            CreateRuntimeText(panel.transform, "FooterHint", "E 选择  1/2/3 快捷选项  ESC 关闭", font, 13, TextAnchor.MiddleLeft, new Color(0.74f, 0.79f, 0.86f, 1f), 20f);
 
             modal.titleText = titleText;
             modal.summaryText = summaryText;
@@ -662,6 +929,7 @@ namespace CombatSystem.UI
             modal.primaryButtonText = primaryButtonText;
             modal.tradeButton = tradeButton;
             modal.closeButton = closeButton;
+            modal.dialogPanel = panelRect;
 
             modalGo.SetActive(false);
             return modal;
@@ -708,9 +976,17 @@ namespace CombatSystem.UI
             button.targetGraphic = image;
 
             var layout = go.GetComponent<LayoutElement>();
-            layout.preferredWidth = preferredWidth;
-            layout.minWidth = Mathf.Max(120f, preferredWidth - 20f);
-            layout.preferredHeight = 48f;
+            if (preferredWidth > 0f)
+            {
+                layout.preferredWidth = preferredWidth;
+                layout.minWidth = Mathf.Max(120f, preferredWidth - 20f);
+            }
+            else
+            {
+                layout.flexibleWidth = 1f;
+                layout.minWidth = 0f;
+            }
+            layout.preferredHeight = 46f;
 
             var labelGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
             var labelRect = labelGo.GetComponent<RectTransform>();

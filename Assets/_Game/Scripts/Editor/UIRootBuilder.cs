@@ -69,6 +69,7 @@ namespace CombatSystem.Editor
             var questJournalScreen = CreateScreen<QuestJournalScreen>("QuestJournalScreen", screensCanvas.transform);
             var pauseModal = CreateModal<PauseMenuModal>("PauseMenuModal", modalCanvas.transform);
             var questGiverModal = CreateModal<QuestGiverModal>("QuestGiverModal", modalCanvas.transform);
+            var npcInteractionModal = CreateModal<NpcInteractionMenuModal>("NpcInteractionMenuModal", modalCanvas.transform);
 
             mainMenu.gameObject.SetActive(true);
             saveSelect.gameObject.SetActive(false);
@@ -79,6 +80,7 @@ namespace CombatSystem.Editor
             questJournalScreen.gameObject.SetActive(false);
             pauseModal.gameObject.SetActive(false);
             questGiverModal.gameObject.SetActive(false);
+            npcInteractionModal.gameObject.SetActive(false);
 
             SetSerialized(uiRoot, "screensCanvas", screensCanvas);
             SetSerialized(uiRoot, "hudCanvas", hudCanvas);
@@ -125,6 +127,7 @@ namespace CombatSystem.Editor
             SetSerialized(pauseModal, "saveManager", saveManager);
 
             SetSerialized(questGiverModal, "uiManager", uiManager);
+            SetSerialized(npcInteractionModal, "uiManager", uiManager);
 
             SetSerialized(pauseHotkey, "uiManager", uiManager);
             SetSerialized(pauseHotkey, "pauseModal", pauseModal);
@@ -172,6 +175,7 @@ namespace CombatSystem.Editor
             var questJournalScreen = root.GetComponentInChildren<QuestJournalScreen>(true);
             var pauseModal = root.GetComponentInChildren<PauseMenuModal>(true);
             var questGiverModal = root.GetComponentInChildren<QuestGiverModal>(true);
+            var npcInteractionModal = root.GetComponentInChildren<NpcInteractionMenuModal>(true);
             var pauseHotkey = root.GetComponentInChildren<PauseMenuHotkey>(true);
             var inventoryHotkey = root.GetComponentInChildren<InventoryHotkey>(true);
             var gameplayMenuHotkey = root.GetComponentInChildren<GameplayMenuHotkey>(true);
@@ -210,6 +214,12 @@ namespace CombatSystem.Editor
             {
                 questGiverModal = CreateModal<QuestGiverModal>("QuestGiverModal", root.ModalCanvas.transform);
                 questGiverModal.gameObject.SetActive(false);
+            }
+
+            if (npcInteractionModal == null && root.ModalCanvas != null)
+            {
+                npcInteractionModal = CreateModal<NpcInteractionMenuModal>("NpcInteractionMenuModal", root.ModalCanvas.transform);
+                npcInteractionModal.gameObject.SetActive(false);
             }
 
             if (inventoryHotkey == null)
@@ -302,6 +312,13 @@ namespace CombatSystem.Editor
                 SetSerialized(questGiverModal, "uiManager", uiManager);
             }
 
+            if (npcInteractionModal != null)
+            {
+                EnsureCanvasGroup(npcInteractionModal);
+                BuildNpcInteractionModalUI(npcInteractionModal, sprite, font);
+                SetSerialized(npcInteractionModal, "uiManager", uiManager);
+            }
+
             if (pauseHotkey != null)
             {
                 SetSerialized(pauseHotkey, "uiManager", uiManager);
@@ -333,6 +350,7 @@ namespace CombatSystem.Editor
             }
 
             LinkQuestGiverTriggers(uiManager, questGiverModal);
+            LinkNpcInteractionTriggers(uiManager, npcInteractionModal);
 
             if (uiManager != null)
             {
@@ -1415,31 +1433,184 @@ namespace CombatSystem.Editor
 
         private static void BuildSaveSelectUI(SaveSelectScreen screen, Sprite sprite, Font font, SaveGameManager saveManager)
         {
-            if (screen.transform.childCount > 0)
+            if (screen == null)
             {
-                Debug.LogWarning("[UIRootBuilder] SaveSelectScreen already has children. Skipping.");
                 return;
             }
 
-            CreateBackground(screen.transform, sprite, new Color(0f, 0f, 0f, 0.65f));
-            var panel = CreatePanel(screen.transform, sprite, new Color(0.08f, 0.08f, 0.08f, 0.9f), new Vector2(620f, 580f));
-            ConfigureVerticalLayout(panel, 24, 12, TextAnchor.MiddleCenter);
+            ClearTransformChildren(screen.transform);
+            CreateBackground(screen.transform, sprite, GameplayMenuOverlayColor);
 
-            CreateTitle(panel, "SELECT SAVE", font, 32);
+            var root = CreateUIElement("SaveSelectLayout", screen.transform);
+            var rootRect = root.GetComponent<RectTransform>();
+            StretchRect(rootRect);
 
-            var inputField = CreateInputField(panel, sprite, font, "Save Name (optional)", 400f);
+            var rootLayout = root.AddComponent<VerticalLayoutGroup>();
+            rootLayout.padding = new RectOffset(18, 18, 18, 18);
+            rootLayout.spacing = 0f;
+            rootLayout.childAlignment = TextAnchor.UpperCenter;
+            rootLayout.childControlHeight = true;
+            rootLayout.childControlWidth = true;
+            rootLayout.childForceExpandHeight = true;
+            rootLayout.childForceExpandWidth = true;
 
-            var slotsRoot = CreateSlotContainer(panel);
-            var emptyLabel = CreateLabel(slotsRoot, "No saves found.", font, 16);
-            emptyLabel.color = new Color(0.75f, 0.75f, 0.75f, 1f);
+            var frame = CreateUIElement("Frame", root.transform);
+            var frameImage = frame.AddComponent<Image>();
+            frameImage.sprite = sprite;
+            frameImage.type = Image.Type.Sliced;
+            frameImage.color = GameplayMenuPanelAltColor;
+            frameImage.raycastTarget = true;
+
+            var frameLayout = frame.AddComponent<VerticalLayoutGroup>();
+            frameLayout.padding = new RectOffset(14, 14, 12, 12);
+            frameLayout.spacing = 10f;
+            frameLayout.childAlignment = TextAnchor.UpperCenter;
+            frameLayout.childControlHeight = true;
+            frameLayout.childControlWidth = true;
+            frameLayout.childForceExpandHeight = false;
+            frameLayout.childForceExpandWidth = true;
+
+            var frameElement = frame.AddComponent<LayoutElement>();
+            frameElement.flexibleHeight = 1f;
+            frameElement.flexibleWidth = 1f;
+
+            var titleBar = CreateUIElement("TitleBar", frame.transform);
+            var titleBarImage = titleBar.AddComponent<Image>();
+            titleBarImage.sprite = sprite;
+            titleBarImage.type = Image.Type.Sliced;
+            titleBarImage.color = GameplayMenuHeaderColor;
+            titleBarImage.raycastTarget = true;
+            var titleBarLayout = titleBar.AddComponent<HorizontalLayoutGroup>();
+            titleBarLayout.padding = new RectOffset(16, 16, 10, 8);
+            titleBarLayout.spacing = 14f;
+            titleBarLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleBarLayout.childControlHeight = true;
+            titleBarLayout.childControlWidth = true;
+            titleBarLayout.childForceExpandHeight = false;
+            titleBarLayout.childForceExpandWidth = false;
+            AddLayoutElement(titleBar, 92f);
+
+            var titleBlock = CreateUIElement("TitleBlock", titleBar.transform);
+            var titleBlockLayout = titleBlock.AddComponent<VerticalLayoutGroup>();
+            titleBlockLayout.spacing = 2f;
+            titleBlockLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleBlockLayout.childControlHeight = true;
+            titleBlockLayout.childControlWidth = true;
+            titleBlockLayout.childForceExpandHeight = false;
+            titleBlockLayout.childForceExpandWidth = true;
+            var titleBlockElement = titleBlock.AddComponent<LayoutElement>();
+            titleBlockElement.flexibleWidth = 1f;
+            titleBlockElement.minWidth = 0f;
+
+            var title = CreateText(CreateUIElement("Title", titleBlock.transform), "读取存档", font, 34, TextAnchor.MiddleLeft);
+            title.color = Color.white;
+            AddLayoutElement(title.gameObject, 50f);
+
+            var subtitle = CreateText(CreateUIElement("Subtitle", titleBlock.transform), "选择存档继续游戏，或创建新存档开始冒险。", font, 16, TextAnchor.MiddleLeft);
+            subtitle.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(subtitle.gameObject, 24f);
+
+            var body = CreateUIElement("Body", frame.transform);
+            var bodyLayout = body.AddComponent<HorizontalLayoutGroup>();
+            bodyLayout.spacing = 12f;
+            bodyLayout.childAlignment = TextAnchor.UpperLeft;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childForceExpandHeight = true;
+            bodyLayout.childForceExpandWidth = true;
+            var bodyElement = body.AddComponent<LayoutElement>();
+            bodyElement.flexibleWidth = 1f;
+            bodyElement.flexibleHeight = 1f;
+
+            var listPanel = CreateUIElement("ListPanel", body.transform);
+            var listPanelImage = listPanel.AddComponent<Image>();
+            listPanelImage.sprite = sprite;
+            listPanelImage.type = Image.Type.Sliced;
+            listPanelImage.color = GameplayMenuPanelColor;
+            listPanelImage.raycastTarget = true;
+            var listPanelLayout = listPanel.AddComponent<VerticalLayoutGroup>();
+            listPanelLayout.padding = new RectOffset(14, 14, 14, 14);
+            listPanelLayout.spacing = 10f;
+            listPanelLayout.childAlignment = TextAnchor.UpperLeft;
+            listPanelLayout.childControlHeight = true;
+            listPanelLayout.childControlWidth = true;
+            listPanelLayout.childForceExpandHeight = false;
+            listPanelLayout.childForceExpandWidth = true;
+            var listPanelElement = listPanel.AddComponent<LayoutElement>();
+            listPanelElement.flexibleWidth = 1.6f;
+            listPanelElement.flexibleHeight = 1f;
+            listPanelElement.minWidth = 760f;
+
+            var listTitle = CreateText(CreateUIElement("ListTitle", listPanel.transform), "存档列表", font, 24, TextAnchor.MiddleLeft);
+            listTitle.color = Color.white;
+            AddLayoutElement(listTitle.gameObject, 38f);
+
+            var emptyLabel = CreateText(CreateUIElement("EmptyLabel", listPanel.transform), "暂无存档。", font, 16, TextAnchor.MiddleLeft);
+            emptyLabel.color = new Color(0.79f, 0.82f, 0.88f, 1f);
+            AddLayoutElement(emptyLabel.gameObject, 28f);
+
+            var slotsRootGo = CreateUIElement("SlotContainer", listPanel.transform);
+            var slotsRoot = slotsRootGo.GetComponent<RectTransform>();
+            var slotsLayout = slotsRootGo.AddComponent<VerticalLayoutGroup>();
+            slotsLayout.spacing = 8f;
+            slotsLayout.childAlignment = TextAnchor.UpperLeft;
+            slotsLayout.childControlHeight = true;
+            slotsLayout.childControlWidth = true;
+            slotsLayout.childForceExpandHeight = false;
+            slotsLayout.childForceExpandWidth = true;
+            var slotsElement = slotsRootGo.AddComponent<LayoutElement>();
+            slotsElement.flexibleHeight = 1f;
+            slotsElement.flexibleWidth = 1f;
+            slotsElement.minHeight = 300f;
 
             var slotTemplate = CreateSaveSlotEntryTemplate(slotsRoot, sprite, font);
             slotTemplate.gameObject.SetActive(false);
 
-            var newSaveButton = CreateButton(panel, "New Save", sprite, font);
+            var actionPanel = CreateUIElement("ActionPanel", body.transform);
+            var actionPanelImage = actionPanel.AddComponent<Image>();
+            actionPanelImage.sprite = sprite;
+            actionPanelImage.type = Image.Type.Sliced;
+            actionPanelImage.color = GameplayMenuPanelColor;
+            actionPanelImage.raycastTarget = true;
+            var actionPanelLayout = actionPanel.AddComponent<VerticalLayoutGroup>();
+            actionPanelLayout.padding = new RectOffset(14, 14, 14, 14);
+            actionPanelLayout.spacing = 10f;
+            actionPanelLayout.childAlignment = TextAnchor.UpperLeft;
+            actionPanelLayout.childControlHeight = true;
+            actionPanelLayout.childControlWidth = true;
+            actionPanelLayout.childForceExpandHeight = false;
+            actionPanelLayout.childForceExpandWidth = true;
+            var actionPanelElement = actionPanel.AddComponent<LayoutElement>();
+            actionPanelElement.preferredWidth = 420f;
+            actionPanelElement.flexibleWidth = 0.9f;
+            actionPanelElement.flexibleHeight = 1f;
+
+            var actionTitle = CreateText(CreateUIElement("ActionTitle", actionPanel.transform), "创建新存档", font, 24, TextAnchor.MiddleLeft);
+            actionTitle.color = Color.white;
+            AddLayoutElement(actionTitle.gameObject, 38f);
+
+            var inputField = CreateInputField(actionPanel.transform, sprite, font, "输入存档名（可选）", 360f);
+
+            var createHint = CreateText(
+                CreateUIElement("CreateHint", actionPanel.transform),
+                "留空时将自动使用默认名称。",
+                font,
+                14,
+                TextAnchor.MiddleLeft);
+            createHint.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(createHint.gameObject, 24f);
+
+            var spacer = CreateUIElement("Spacer", actionPanel.transform);
+            var spacerElement = spacer.AddComponent<LayoutElement>();
+            spacerElement.flexibleHeight = 1f;
+            spacerElement.minHeight = 0f;
+
+            var newSaveButton = CreateButton(actionPanel.transform, "创建并开始游戏", sprite, font);
+            ConfigureMainMenuActionButton(newSaveButton, true);
             UnityEventTools.AddPersistentListener(newSaveButton.onClick, screen.CreateNewSave);
 
-            var backButton = CreateButton(panel, "Back", sprite, font);
+            var backButton = CreateButton(actionPanel.transform, "返回主菜单", sprite, font);
+            ConfigureMainMenuActionButton(backButton, false);
             UnityEventTools.AddPersistentListener(backButton.onClick, screen.BackToMenu);
 
             SetSerialized(screen, "saveManager", saveManager);
@@ -1842,74 +2013,125 @@ namespace CombatSystem.Editor
 
         private static void BuildQuestGiverModalUI(QuestGiverModal modal, Sprite sprite, Font font)
         {
-            if (modal.transform.childCount > 0)
+            if (modal == null)
             {
                 return;
             }
 
-            var background = CreateBackground(modal.transform, sprite, new Color(0f, 0f, 0f, 0.72f));
+            // Always rebuild to keep quest dialog style in sync with current UI tokens.
+            ClearTransformChildren(modal.transform);
+
+            var backdropColor = GameplayMenuOverlayColor;
+            backdropColor.a = 0.12f;
+            var background = CreateBackground(modal.transform, sprite, backdropColor);
             var backgroundButton = background.gameObject.AddComponent<Button>();
             backgroundButton.targetGraphic = background;
+            UIStyleKit.ApplyButtonStateColors(backgroundButton, backdropColor, 0f, 0f, 0f, 0f);
             UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
 
-            var panel = CreatePanel(modal.transform, sprite, new Color(0.09f, 0.11f, 0.16f, 0.97f), new Vector2(760f, 560f));
-            ConfigureVerticalLayout(panel, 16, 10, TextAnchor.UpperLeft);
+            var panel = CreatePanel(modal.transform, sprite, GameplayMenuPanelAltColor, new Vector2(440f, 500f));
+            panel.pivot = new Vector2(0f, 1f);
+            panel.anchorMin = new Vector2(0.5f, 0.5f);
+            panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = new Vector2(-220f, 120f);
+            ConfigureVerticalLayout(panel, 14, 8f, TextAnchor.UpperLeft);
 
-            var titleGo = CreateUIElement("Title", panel.transform);
-            var titleText = CreateText(titleGo, "任务", font, 28, TextAnchor.MiddleLeft);
+            var header = CreateUIElement("Header", panel.transform);
+            var headerImage = header.AddComponent<Image>();
+            headerImage.sprite = sprite;
+            headerImage.type = Image.Type.Sliced;
+            headerImage.color = GameplayMenuHeaderColor;
+            headerImage.raycastTarget = false;
+            AddLayoutElement(header, 86f);
+
+            var headerLayout = header.AddComponent<VerticalLayoutGroup>();
+            headerLayout.padding = new RectOffset(12, 12, 10, 8);
+            headerLayout.spacing = 2f;
+            headerLayout.childAlignment = TextAnchor.UpperLeft;
+            headerLayout.childControlHeight = true;
+            headerLayout.childControlWidth = true;
+            headerLayout.childForceExpandHeight = false;
+            headerLayout.childForceExpandWidth = true;
+
+            var titleGo = CreateUIElement("Title", header.transform);
+            var titleText = CreateText(titleGo, "交互", font, 32, TextAnchor.MiddleLeft);
             titleText.color = Color.white;
-            AddLayoutElement(titleGo, 42f);
+            AddLayoutElement(titleGo, 46f);
+
+            var subtitleGo = CreateUIElement("Subtitle", header.transform);
+            var subtitleText = CreateText(subtitleGo, "按选项继续", font, 15, TextAnchor.MiddleLeft);
+            subtitleText.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(subtitleGo, 24f);
 
             var summaryGo = CreateUIElement("Summary", panel.transform);
             var summaryText = CreateText(summaryGo, string.Empty, font, 16, TextAnchor.UpperLeft);
             summaryText.color = new Color(0.9f, 0.9f, 0.92f, 1f);
             summaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
             summaryText.verticalOverflow = VerticalWrapMode.Overflow;
-            AddLayoutElement(summaryGo, 72f);
+            AddLayoutElement(summaryGo, 70f);
 
             var statusGo = CreateUIElement("Status", panel.transform);
-            var statusText = CreateText(statusGo, string.Empty, font, 16, TextAnchor.MiddleLeft);
+            var statusText = CreateText(statusGo, string.Empty, font, 15, TextAnchor.MiddleLeft);
             statusText.color = new Color(0.95f, 0.83f, 0.45f, 1f);
-            AddLayoutElement(statusGo, 30f);
+            AddLayoutElement(statusGo, 24f);
 
             var objectivesGo = CreateUIElement("Objectives", panel.transform);
-            var objectivesText = CreateText(objectivesGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            var objectivesText = CreateText(objectivesGo, string.Empty, font, 14, TextAnchor.UpperLeft);
             objectivesText.color = Color.white;
             objectivesText.horizontalOverflow = HorizontalWrapMode.Wrap;
             objectivesText.verticalOverflow = VerticalWrapMode.Overflow;
             var objectivesLayout = objectivesGo.AddComponent<LayoutElement>();
             objectivesLayout.flexibleHeight = 1f;
-            objectivesLayout.preferredHeight = 220f;
+            objectivesLayout.preferredHeight = 90f;
 
             var rewardGo = CreateUIElement("Reward", panel.transform);
-            var rewardText = CreateText(rewardGo, string.Empty, font, 15, TextAnchor.MiddleLeft);
+            var rewardText = CreateText(rewardGo, string.Empty, font, 14, TextAnchor.MiddleLeft);
             rewardText.color = new Color(0.72f, 0.95f, 0.78f, 1f);
-            AddLayoutElement(rewardGo, 30f);
+            AddLayoutElement(rewardGo, 22f);
 
             var feedbackGo = CreateUIElement("Feedback", panel.transform);
-            var feedbackText = CreateText(feedbackGo, string.Empty, font, 15, TextAnchor.MiddleLeft);
+            var feedbackText = CreateText(feedbackGo, string.Empty, font, 14, TextAnchor.MiddleLeft);
             feedbackText.color = new Color(0.8f, 0.85f, 0.95f, 1f);
-            AddLayoutElement(feedbackGo, 28f);
+            AddLayoutElement(feedbackGo, 22f);
 
-            var buttonsRow = CreateUIElement("Buttons", panel.transform);
-            var buttonsLayout = buttonsRow.AddComponent<HorizontalLayoutGroup>();
-            buttonsLayout.spacing = 10f;
-            buttonsLayout.childAlignment = TextAnchor.MiddleRight;
+            var optionsTitleGo = CreateUIElement("OptionsTitle", panel.transform);
+            var optionsTitle = CreateText(optionsTitleGo, "可选操作", font, 15, TextAnchor.MiddleLeft);
+            optionsTitle.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(optionsTitleGo, 22f);
+
+            var buttonsPanel = CreateUIElement("ButtonsPanel", panel.transform);
+            var buttonsPanelImage = buttonsPanel.AddComponent<Image>();
+            buttonsPanelImage.sprite = sprite;
+            buttonsPanelImage.type = Image.Type.Sliced;
+            buttonsPanelImage.color = GameplayMenuHeaderColor;
+            buttonsPanelImage.raycastTarget = true;
+            var buttonsLayout = buttonsPanel.AddComponent<VerticalLayoutGroup>();
+            buttonsLayout.padding = new RectOffset(10, 10, 10, 10);
+            buttonsLayout.spacing = 8f;
+            buttonsLayout.childAlignment = TextAnchor.UpperCenter;
             buttonsLayout.childControlHeight = true;
-            buttonsLayout.childControlWidth = false;
+            buttonsLayout.childControlWidth = true;
             buttonsLayout.childForceExpandHeight = false;
-            buttonsLayout.childForceExpandWidth = false;
-            AddLayoutElement(buttonsRow, 56f);
+            buttonsLayout.childForceExpandWidth = true;
+            AddLayoutElement(buttonsPanel, 176f);
 
-            var primaryButton = CreateButton(buttonsRow.transform, "继续", sprite, font);
-            var primaryButtonText = primaryButton.GetComponentInChildren<Text>();
-            SetLayoutSize(primaryButton.gameObject, 48f, 220f);
+            var primaryButton = CreateButton(buttonsPanel.transform, "接取任务", sprite, font);
+            ConfigureMainMenuActionButton(primaryButton, true);
+            SetLayoutSize(primaryButton.gameObject, 46f, -1f);
+            var primaryButtonText = primaryButton.GetComponentInChildren<Text>(true);
 
-            var tradeButton = CreateButton(buttonsRow.transform, "交易", sprite, font);
-            SetLayoutSize(tradeButton.gameObject, 48f, 180f);
+            var tradeButton = CreateButton(buttonsPanel.transform, "交易", sprite, font);
+            ConfigureMainMenuActionButton(tradeButton, false);
+            SetLayoutSize(tradeButton.gameObject, 46f, -1f);
 
-            var closeButton = CreateButton(buttonsRow.transform, "关闭", sprite, font);
-            SetLayoutSize(closeButton.gameObject, 48f, 180f);
+            var closeButton = CreateButton(buttonsPanel.transform, "离开", sprite, font);
+            ConfigureMainMenuActionButton(closeButton, false);
+            SetLayoutSize(closeButton.gameObject, 46f, -1f);
+
+            var footerGo = CreateUIElement("FooterHint", panel.transform);
+            var footerText = CreateText(footerGo, "E 选择  1/2/3 快捷选项  ESC 关闭", font, 13, TextAnchor.MiddleLeft);
+            footerText.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(footerGo, 20f);
 
             SetSerialized(modal, "titleText", titleText);
             SetSerialized(modal, "summaryText", summaryText);
@@ -1921,6 +2143,105 @@ namespace CombatSystem.Editor
             SetSerialized(modal, "primaryButtonText", primaryButtonText);
             SetSerialized(modal, "tradeButton", tradeButton);
             SetSerialized(modal, "closeButton", closeButton);
+            SetSerialized(modal, "dialogPanel", panel);
+            SetSerialized(modal, "followNpcAnchor", true);
+        }
+
+        private static void BuildNpcInteractionModalUI(NpcInteractionMenuModal modal, Sprite sprite, Font font)
+        {
+            if (modal == null)
+            {
+                return;
+            }
+
+            ClearTransformChildren(modal.transform);
+
+            var backdropColor = GameplayMenuOverlayColor;
+            backdropColor.a = 0.12f;
+            var background = CreateBackground(modal.transform, sprite, backdropColor);
+            var backgroundButton = background.gameObject.AddComponent<Button>();
+            backgroundButton.targetGraphic = background;
+            UIStyleKit.ApplyButtonStateColors(backgroundButton, backdropColor, 0f, 0f, 0f, 0f);
+            UnityEventTools.AddPersistentListener(backgroundButton.onClick, modal.HandleBackgroundClick);
+
+            var panel = CreatePanel(modal.transform, sprite, GameplayMenuPanelAltColor, new Vector2(420f, 430f));
+            panel.pivot = new Vector2(0f, 1f);
+            panel.anchorMin = new Vector2(0.5f, 0.5f);
+            panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = new Vector2(-220f, 120f);
+            ConfigureVerticalLayout(panel, 14, 8f, TextAnchor.UpperLeft);
+
+            var header = CreateUIElement("Header", panel.transform);
+            var headerImage = header.AddComponent<Image>();
+            headerImage.sprite = sprite;
+            headerImage.type = Image.Type.Sliced;
+            headerImage.color = GameplayMenuHeaderColor;
+            headerImage.raycastTarget = false;
+            AddLayoutElement(header, 76f);
+
+            var headerLayout = header.AddComponent<VerticalLayoutGroup>();
+            headerLayout.padding = new RectOffset(12, 12, 10, 10);
+            headerLayout.spacing = 2f;
+            headerLayout.childAlignment = TextAnchor.UpperLeft;
+            headerLayout.childControlHeight = true;
+            headerLayout.childControlWidth = true;
+            headerLayout.childForceExpandHeight = false;
+            headerLayout.childForceExpandWidth = true;
+
+            var nameGo = CreateUIElement("NpcName", header.transform);
+            var nameText = CreateText(nameGo, "NPC", font, 30, TextAnchor.MiddleLeft);
+            nameText.color = Color.white;
+            AddLayoutElement(nameGo, 44f);
+
+            var descGo = CreateUIElement("Description", panel.transform);
+            var descriptionText = CreateText(descGo, "你好，想聊点什么？", font, 16, TextAnchor.UpperLeft);
+            descriptionText.color = Color.white;
+            descriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            descriptionText.verticalOverflow = VerticalWrapMode.Overflow;
+            AddLayoutElement(descGo, 112f);
+
+            var optionsPanel = CreateUIElement("OptionsPanel", panel.transform);
+            var optionsImage = optionsPanel.AddComponent<Image>();
+            optionsImage.sprite = sprite;
+            optionsImage.type = Image.Type.Sliced;
+            optionsImage.color = GameplayMenuHeaderColor;
+            optionsImage.raycastTarget = true;
+
+            var optionsLayout = optionsPanel.AddComponent<VerticalLayoutGroup>();
+            optionsLayout.padding = new RectOffset(10, 10, 10, 10);
+            optionsLayout.spacing = 8f;
+            optionsLayout.childAlignment = TextAnchor.UpperCenter;
+            optionsLayout.childControlHeight = true;
+            optionsLayout.childControlWidth = true;
+            optionsLayout.childForceExpandHeight = false;
+            optionsLayout.childForceExpandWidth = true;
+            var optionsElement = optionsPanel.AddComponent<LayoutElement>();
+            optionsElement.preferredHeight = 194f;
+            optionsElement.flexibleHeight = 1f;
+
+            var optionTemplate = CreateButton(optionsPanel.transform, "1. 对话", sprite, font);
+            ConfigureMainMenuActionButton(optionTemplate, false);
+            SetLayoutSize(optionTemplate.gameObject, 44f, -1f);
+            optionTemplate.gameObject.name = "OptionTemplate";
+            optionTemplate.gameObject.SetActive(false);
+
+            var closeButton = CreateButton(panel.transform, "离开", sprite, font);
+            ConfigureMainMenuActionButton(closeButton, false);
+            SetLayoutSize(closeButton.gameObject, 44f, -1f);
+            closeButton.gameObject.name = "CloseButton";
+
+            var footerGo = CreateUIElement("FooterHint", panel.transform);
+            var footerText = CreateText(footerGo, "E 选择  1-9 快捷选项  ESC 关闭", font, 13, TextAnchor.MiddleLeft);
+            footerText.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(footerGo, 20f);
+
+            SetSerialized(modal, "npcNameText", nameText);
+            SetSerialized(modal, "descriptionText", descriptionText);
+            SetSerialized(modal, "optionsRoot", optionsPanel.GetComponent<RectTransform>());
+            SetSerialized(modal, "optionTemplate", optionTemplate);
+            SetSerialized(modal, "closeButton", closeButton);
+            SetSerialized(modal, "dialogPanel", panel);
+            SetSerialized(modal, "followNpcAnchor", true);
         }
 
         private static void LinkQuestGiverTriggers(UIManager uiManager, QuestGiverModal questGiverModal)
@@ -1950,6 +2271,90 @@ namespace CombatSystem.Editor
             }
         }
 
+        private static void LinkNpcInteractionTriggers(UIManager uiManager, NpcInteractionMenuModal npcInteractionModal)
+        {
+            if (uiManager == null || npcInteractionModal == null)
+            {
+                return;
+            }
+
+            var questTriggers = Object.FindObjectsByType<QuestGiverTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var vendorTriggers = Object.FindObjectsByType<VendorTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var processed = new HashSet<GameObject>();
+
+            if (questTriggers != null)
+            {
+                for (int i = 0; i < questTriggers.Length; i++)
+                {
+                    var questTrigger = questTriggers[i];
+                    if (questTrigger == null)
+                    {
+                        continue;
+                    }
+
+                    var owner = questTrigger.gameObject;
+                    if (owner == null || processed.Contains(owner))
+                    {
+                        continue;
+                    }
+
+                    var npcTrigger = owner.GetComponent<NpcInteractionTrigger>();
+                    if (npcTrigger == null)
+                    {
+                        npcTrigger = owner.AddComponent<NpcInteractionTrigger>();
+                    }
+
+                    SetSerialized(npcTrigger, "uiManager", uiManager);
+                    SetSerialized(npcTrigger, "interactionModal", npcInteractionModal);
+                    SetSerialized(npcTrigger, "questGiver", questTrigger);
+
+                    var vendorOnSameObject = owner.GetComponent<VendorTrigger>();
+                    if (vendorOnSameObject != null)
+                    {
+                        SetSerialized(npcTrigger, "vendorTrigger", vendorOnSameObject);
+                    }
+
+                    processed.Add(owner);
+                }
+            }
+
+            if (vendorTriggers != null)
+            {
+                for (int i = 0; i < vendorTriggers.Length; i++)
+                {
+                    var vendorTrigger = vendorTriggers[i];
+                    if (vendorTrigger == null)
+                    {
+                        continue;
+                    }
+
+                    var owner = vendorTrigger.gameObject;
+                    if (owner == null || processed.Contains(owner))
+                    {
+                        continue;
+                    }
+
+                    var npcTrigger = owner.GetComponent<NpcInteractionTrigger>();
+                    if (npcTrigger == null)
+                    {
+                        npcTrigger = owner.AddComponent<NpcInteractionTrigger>();
+                    }
+
+                    SetSerialized(npcTrigger, "uiManager", uiManager);
+                    SetSerialized(npcTrigger, "interactionModal", npcInteractionModal);
+                    SetSerialized(npcTrigger, "vendorTrigger", vendorTrigger);
+
+                    var questOnSameObject = owner.GetComponent<QuestGiverTrigger>();
+                    if (questOnSameObject != null)
+                    {
+                        SetSerialized(npcTrigger, "questGiver", questOnSameObject);
+                    }
+
+                    processed.Add(owner);
+                }
+            }
+        }
+
         private struct GameplayMenuShell
         {
             public RectTransform Root;
@@ -1964,7 +2369,7 @@ namespace CombatSystem.Editor
                 sprite,
                 font,
                 "CharacterLayout",
-                "CHARACTER",
+                "角色",
                 screen,
                 inventoryScreen,
                 questJournalScreen,
@@ -2003,7 +2408,7 @@ namespace CombatSystem.Editor
             rightColumnElement.flexibleHeight = 1f;
 
             var profileBody = CreateCharacterCard(leftColumn.transform, "ProfileCard", sprite, font, "角色概览", 210f, 0f);
-            var nameText = CreateCharacterLine(profileBody, "Player", font, 34, Color.white, 44f);
+            var nameText = CreateCharacterLine(profileBody, "玩家", font, 34, Color.white, 44f);
             nameText.color = Color.white;
             var levelText = CreateCharacterLine(profileBody, "等级: -", font, 19, new Color(0.95f, 0.95f, 0.95f, 1f));
             var pointsText = CreateCharacterLine(profileBody, "未分配属性点: -", font, 18, new Color(0.81f, 0.93f, 0.67f, 1f));
@@ -2204,13 +2609,13 @@ namespace CombatSystem.Editor
                 sprite,
                 font,
                 "JournalLayout",
-                "QUEST",
+                "任务",
                 characterScreen,
                 inventoryScreen,
                 screen,
                 GameplayMenuTab.Quest);
 
-            var backButton = CreateButton(shell.Root, "Back", sprite, font);
+            var backButton = CreateButton(shell.Root, "返回", sprite, font);
             backButton.gameObject.SetActive(false);
 
             var contentLayout = shell.Content.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -2333,7 +2738,7 @@ namespace CombatSystem.Editor
                 sprite,
                 font,
                 "MenuLayout",
-                "INVENTORY",
+                "背包",
                 characterScreen,
                 screen,
                 questJournalScreen,
@@ -2788,9 +3193,9 @@ namespace CombatSystem.Editor
             var rowElement = row.GetComponent<LayoutElement>();
             rowElement.flexibleWidth = 1f;
 
-            characterButton = CreateButton(row.transform, "Character", sprite, font);
-            inventoryButton = CreateButton(row.transform, "Inventory", sprite, font);
-            questButton = CreateButton(row.transform, "Quest", sprite, font);
+            characterButton = CreateButton(row.transform, "角色", sprite, font);
+            inventoryButton = CreateButton(row.transform, "背包", sprite, font);
+            questButton = CreateButton(row.transform, "任务", sprite, font);
 
             ConfigureTabButtonLayout(characterButton);
             ConfigureTabButtonLayout(inventoryButton);
@@ -3914,7 +4319,7 @@ namespace CombatSystem.Editor
             textElement.preferredHeight = 48f;
 
             var titleGo = CreateUIElement("Title", textRoot.transform);
-            var title = CreateText(titleGo, "Quest", font, 18, TextAnchor.MiddleLeft);
+            var title = CreateText(titleGo, "任务", font, 18, TextAnchor.MiddleLeft);
             title.color = Color.white;
             AddLayoutElement(titleGo, 26f);
 
@@ -3940,55 +4345,95 @@ namespace CombatSystem.Editor
             var rootImage = root.GetComponent<Image>();
             rootImage.sprite = sprite;
             rootImage.type = Image.Type.Sliced;
-            rootImage.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+            rootImage.color = GameplayMenuHeaderColor;
             rootImage.raycastTarget = true;
 
             var layout = root.GetComponent<HorizontalLayoutGroup>();
-            layout.spacing = 10f;
+            layout.padding = new RectOffset(12, 12, 10, 10);
+            layout.spacing = 12f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = false;
+            layout.childForceExpandWidth = true;
 
-            AddLayoutElement(root, 56f, 520f);
+            AddLayoutElement(root, 90f);
+            var rootElement = root.GetComponent<LayoutElement>();
+            if (rootElement != null)
+            {
+                rootElement.flexibleWidth = 1f;
+                rootElement.minWidth = 0f;
+            }
 
             var infoRoot = new GameObject("Info", typeof(RectTransform), typeof(VerticalLayoutGroup));
             infoRoot.transform.SetParent(root.transform, false);
             var infoLayout = infoRoot.GetComponent<VerticalLayoutGroup>();
-            infoLayout.spacing = 2f;
+            infoLayout.spacing = 4f;
             infoLayout.childAlignment = TextAnchor.MiddleLeft;
             infoLayout.childControlHeight = true;
             infoLayout.childControlWidth = true;
             infoLayout.childForceExpandHeight = false;
             infoLayout.childForceExpandWidth = true;
-            AddLayoutElement(infoRoot, 56f, 320f);
+            var infoElement = infoRoot.AddComponent<LayoutElement>();
+            infoElement.flexibleWidth = 1f;
+            infoElement.minWidth = 0f;
+            infoElement.preferredHeight = 70f;
 
             var titleGo = CreateUIElement("Title", infoRoot.transform);
-            var titleText = CreateText(titleGo, "Save Slot", font, 18, TextAnchor.MiddleLeft);
+            var titleText = CreateText(titleGo, "未命名存档", font, 22, TextAnchor.MiddleLeft);
             titleText.color = Color.white;
-            AddLayoutElement(titleGo, 26f);
+            AddLayoutElement(titleGo, 34f);
 
             var detailGo = CreateUIElement("Detail", infoRoot.transform);
-            var detailText = CreateText(detailGo, "Scene | Time", font, 12, TextAnchor.MiddleLeft);
-            detailText.color = new Color(0.7f, 0.7f, 0.7f, 1f);
-            AddLayoutElement(detailGo, 20f);
+            var detailText = CreateText(detailGo, "未知场景 | 未知时间", font, 14, TextAnchor.MiddleLeft);
+            detailText.color = GameplayMenuTabInactiveTextColor;
+            AddLayoutElement(detailGo, 24f);
 
             var buttonsRoot = new GameObject("Buttons", typeof(RectTransform), typeof(VerticalLayoutGroup));
             buttonsRoot.transform.SetParent(root.transform, false);
             var buttonsLayout = buttonsRoot.GetComponent<VerticalLayoutGroup>();
-            buttonsLayout.spacing = 4f;
+            buttonsLayout.spacing = 6f;
             buttonsLayout.childAlignment = TextAnchor.MiddleCenter;
             buttonsLayout.childControlHeight = true;
             buttonsLayout.childControlWidth = true;
             buttonsLayout.childForceExpandHeight = false;
             buttonsLayout.childForceExpandWidth = true;
-            AddLayoutElement(buttonsRoot, 56f, 140f);
+            AddLayoutElement(buttonsRoot, 70f, 152f);
 
-            var loadButton = CreateButton(buttonsRoot.transform, "Load", sprite, font);
-            var deleteButton = CreateButton(buttonsRoot.transform, "Delete", sprite, font);
-            SetLayoutSize(loadButton.gameObject, 32f, 120f);
-            SetLayoutSize(deleteButton.gameObject, 32f, 120f);
+            var loadButton = CreateButton(buttonsRoot.transform, "读取", sprite, font);
+            var deleteButton = CreateButton(buttonsRoot.transform, "删除", sprite, font);
+            SetLayoutSize(loadButton.gameObject, 32f, 132f);
+            SetLayoutSize(deleteButton.gameObject, 32f, 132f);
+
+            var loadButtonImage = loadButton.targetGraphic as Image;
+            if (loadButtonImage != null)
+            {
+                loadButtonImage.color = GameplayMenuTabActiveColor;
+            }
+            UIStyleKit.ApplyButtonStateColors(loadButton, GameplayMenuTabActiveColor, 0.06f, 0.16f, 0.52f, 0.08f);
+
+            var deleteButtonImage = deleteButton.targetGraphic as Image;
+            if (deleteButtonImage != null)
+            {
+                deleteButtonImage.color = GameplayMenuTabInactiveColor;
+            }
+            UIStyleKit.ApplyButtonStateColors(deleteButton, GameplayMenuTabInactiveColor, 0.1f, 0.16f, 0.52f, 0.08f);
+
+            var loadButtonLabel = loadButton.GetComponentInChildren<Text>(true);
+            if (loadButtonLabel != null)
+            {
+                loadButtonLabel.alignment = TextAnchor.MiddleCenter;
+                loadButtonLabel.fontSize = 18;
+                loadButtonLabel.color = GameplayMenuTabActiveTextColor;
+            }
+
+            var deleteButtonLabel = deleteButton.GetComponentInChildren<Text>(true);
+            if (deleteButtonLabel != null)
+            {
+                deleteButtonLabel.alignment = TextAnchor.MiddleCenter;
+                deleteButtonLabel.fontSize = 18;
+                deleteButtonLabel.color = GameplayMenuTabInactiveTextColor;
+            }
 
             var entry = root.AddComponent<SaveSlotEntry>();
             SetSerialized(entry, "loadButton", loadButton);
@@ -4099,14 +4544,14 @@ namespace CombatSystem.Editor
             AddLayoutElement(labelsRoot, 52f, 0f);
 
             var slotLabelGo = CreateUIElement("SlotLabel", labelsRoot.transform);
-            var slotLabel = CreateText(slotLabelGo, "Slot", font, 15, TextAnchor.MiddleLeft);
+            var slotLabel = CreateText(slotLabelGo, "槽位", font, 15, TextAnchor.MiddleLeft);
             slotLabel.color = new Color(0.9f, 0.9f, 0.9f, 1f);
             slotLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             slotLabel.verticalOverflow = VerticalWrapMode.Truncate;
             AddLayoutElement(slotLabelGo, 24f);
 
             var itemLabelGo = CreateUIElement("ItemLabel", labelsRoot.transform);
-            var itemLabel = CreateText(itemLabelGo, "Empty", font, 14, TextAnchor.MiddleLeft);
+            var itemLabel = CreateText(itemLabelGo, "空", font, 14, TextAnchor.MiddleLeft);
             itemLabel.color = new Color(0.75f, 0.75f, 0.75f, 1f);
             itemLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             itemLabel.verticalOverflow = VerticalWrapMode.Truncate;

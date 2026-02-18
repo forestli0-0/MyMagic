@@ -10466,6 +10466,7 @@ MonoBehaviour:
   closeOnBackground: 1
   pauseGameplay: 1
   uiManager: {fileID: 1246380866}
+  debugRaycastOnClick: 0
   titleText: {fileID: 1091549057}
   summaryText: {fileID: 76226760}
   statusText: {fileID: 1000039455}
@@ -10476,6 +10477,11 @@ MonoBehaviour:
   primaryButtonText: {fileID: 1625480890}
   tradeButton: {fileID: 1550466589}
   closeButton: {fileID: 1455502625}
+  dialogPanel: {fileID: 0}
+  followNpcAnchor: 1
+  worldAnchorOffset: {x: 0, y: 0, z: 0}
+  popupScreenOffset: {x: 36, y: 18}
+  popupEdgePadding: 18
 --- !u!224 &590025589
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12367,12 +12373,30 @@ MonoBehaviour:
   uiManager: {fileID: 1246380866}
   backScreen: {fileID: 1348950005}
   masterVolume: {fileID: 815160350}
+  cameraZoomSlider: {fileID: 0}
   fullscreenToggle: {fileID: 953398750}
   vSyncToggle: {fileID: 399779485}
   qualityDropdown: {fileID: 172384000}
   fpsDropdown: {fileID: 480912354}
+  movementModeDropdown: {fileID: 0}
+  cameraModeDropdown: {fileID: 0}
+  edgePanToggle: {fileID: 0}
   applyButton: {fileID: 2058937528}
-  pauseGameplay: 0
+  gameplayCategoryButton: {fileID: 0}
+  controlCategoryButton: {fileID: 0}
+  audioCategoryButton: {fileID: 0}
+  videoCategoryButton: {fileID: 0}
+  graphicsCategoryButton: {fileID: 0}
+  gameplayCategoryPanel: {fileID: 0}
+  controlCategoryPanel: {fileID: 0}
+  audioCategoryPanel: {fileID: 0}
+  videoCategoryPanel: {fileID: 0}
+  graphicsCategoryPanel: {fileID: 0}
+  activeCategoryColor: {r: 0.26, g: 0.38, b: 0.56, a: 1}
+  inactiveCategoryColor: {r: 0.2, g: 0.22, b: 0.26, a: 1}
+  activeCategoryTextColor: {r: 0.97, g: 0.98, b: 1, a: 1}
+  inactiveCategoryTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+  pauseMenuModal: {fileID: 0}
 --- !u!224 &705574035
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14205,6 +14229,7 @@ MonoBehaviour:
   playerTag: Player
   allowInteractKey: 1
   interactKey: 19
+  autoUseUnifiedNpcMenu: 1
   useDialogUi: 1
   closeDialogOnExit: 1
   uiManager: {fileID: 1246380866}
@@ -14212,6 +14237,15 @@ MonoBehaviour:
   advanceObjectiveOnInteract: 1
   objectiveType: 1
   objectiveTargetId: vendor_talk
+  showStateIndicator: 1
+  showInteractHintInIndicator: 1
+  billboardIndicatorToCamera: 1
+  stateIndicatorOffset: {x: 0, y: 2.2, z: 0}
+  notAcceptedColor: {r: 1, g: 0.9, b: 0.2, a: 1}
+  inProgressColor: {r: 0.65, g: 0.85, b: 1, a: 1}
+  readyToTurnInColor: {r: 0.45, g: 1, b: 0.45, a: 1}
+  completedColor: {r: 0.72, g: 0.72, b: 0.72, a: 1}
+  indicatorRefreshInterval: 0.25
   debugLogging: 0
 --- !u!114 &886062693
 MonoBehaviour:
@@ -14229,6 +14263,7 @@ MonoBehaviour:
   uiManager: {fileID: 0}
   vendorScreen: {fileID: 1571016693}
   autoOpenOnEnter: 0
+  autoUseUnifiedNpcMenu: 1
   allowInteractKeyOpen: 0
   interactKey: 19
   closeOnExit: 0
@@ -14262,7 +14297,7 @@ Transform:
   m_GameObject: {fileID: 886062691}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -6.92, y: -1.229, z: 3.822}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -17237,7 +17272,6 @@ MonoBehaviour:
   mainMenuScreen: {fileID: 1348950005}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 705574034}
-  questJournalScreen: {fileID: 554149808}
   mainMenuSceneName: MainMenu
   saveManager: {fileID: 1246380864}
 --- !u!225 &1076227393
@@ -18994,8 +19028,26 @@ MonoBehaviour:
   inventoryGrid: {fileID: 1321739102}
   equipmentPanel: {fileID: 848885818}
   comparePanel: {fileID: 1893865318}
+  allFilterButton: {fileID: 0}
+  equipmentFilterButton: {fileID: 0}
+  consumableFilterButton: {fileID: 0}
+  questFilterButton: {fileID: 0}
+  searchInputField: {fileID: 0}
+  sortDropdown: {fileID: 0}
+  rarityAllButton: {fileID: 0}
+  rarityCommonButton: {fileID: 0}
+  rarityMagicButton: {fileID: 0}
+  rarityRareButton: {fileID: 0}
+  rarityEpicButton: {fileID: 0}
+  rarityLegendaryButton: {fileID: 0}
+  capacityText: {fileID: 0}
   equipButton: {fileID: 1051713681}
   unequipButton: {fileID: 1308384417}
+  actionHintText: {fileID: 0}
+  filterActiveColor: {r: 0.26, g: 0.38, b: 0.56, a: 1}
+  filterInactiveColor: {r: 0.2, g: 0.22, b: 0.26, a: 1}
+  filterActiveTextColor: {r: 0.97, g: 0.98, b: 1, a: 1}
+  filterInactiveTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
 --- !u!224 &1221749210
 RectTransform:
   m_ObjectHideFlags: 0
@@ -19428,6 +19480,8 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   autoFindInputReader: 1
   onlyWhenGameplayScreen: 1
+  suppressAfterUiPauseSeconds: 0.12
+  suppressAfterInputModeSwitchSeconds: 0.12
 --- !u!114 &1246380866
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19501,6 +19555,8 @@ MonoBehaviour:
   actionsAsset: {fileID: -944628639613478452, guid: 959188057e83cfd48803f392c338429a,
     type: 3}
   autoFindInputReader: 1
+  isolateEventSystemActionsAtRuntime: 1
+  forceDynamicInputUpdateForUi: 1
 --- !u!114 &1246380870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21139,6 +21195,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotsRoot: {fileID: 1321739099}
   slotTemplate: {fileID: 1382085869}
+  autoFitCellSize: 1
+  minCellSize: 88
+  maxCellSize: 130
 --- !u!1 &1323528877
 GameObject:
   m_ObjectHideFlags: 0
@@ -33981,6 +34040,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotsRoot: {fileID: 2122685014}
   slotTemplate: {fileID: 527058741}
+  autoFitCellSize: 1
+  minCellSize: 88
+  maxCellSize: 130
 --- !u!114 &2122685016
 MonoBehaviour:
   m_ObjectHideFlags: 0

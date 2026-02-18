@@ -22,6 +22,7 @@ namespace CombatSystem.Gameplay
         [SerializeField] private string playerTag = "Player";
         [SerializeField] private bool allowInteractKey = true;
         [SerializeField] private Key interactKey = Key.E;
+        [SerializeField] private bool autoUseUnifiedNpcMenu = true;
         [SerializeField] private bool useDialogUi = true;
         [SerializeField] private bool closeDialogOnExit = true;
         [SerializeField] private UIManager uiManager;
@@ -55,6 +56,7 @@ namespace CombatSystem.Gameplay
 
         private void OnEnable()
         {
+            EnsureUnifiedInteractionController();
             ResolveQuestTracker();
             RebindTrackerEvents();
             RefreshStatePresentation(true);
@@ -106,7 +108,7 @@ namespace CombatSystem.Gameplay
 
         private void Update()
         {
-            if (allowInteractKey && playerInRange)
+            if (!HasExternalInteractionController() && allowInteractKey && playerInRange)
             {
                 var keyboard = Keyboard.current;
                 if (keyboard != null)
@@ -153,6 +155,12 @@ namespace CombatSystem.Gameplay
         }
 
         public QuestDefinition QuestDefinition => quest;
+        public Vector3 DialogAnchorWorldPosition => transform.position + stateIndicatorOffset;
+
+        public bool TryOpenDialogUi()
+        {
+            return TryOpenDialog();
+        }
 
         public QuestRuntimeState GetQuestState()
         {
@@ -324,6 +332,29 @@ namespace CombatSystem.Gameplay
 
             uiManager.PushModal(questModal);
             return true;
+        }
+
+        private bool HasExternalInteractionController()
+        {
+            var interactionTrigger = GetComponent<NpcInteractionTrigger>();
+            return interactionTrigger != null && interactionTrigger.enabled && interactionTrigger.HandlesInteractKey;
+        }
+
+        private void EnsureUnifiedInteractionController()
+        {
+            if (!autoUseUnifiedNpcMenu)
+            {
+                return;
+            }
+
+            var interactionTrigger = GetComponent<NpcInteractionTrigger>();
+            if (interactionTrigger == null)
+            {
+                interactionTrigger = gameObject.AddComponent<NpcInteractionTrigger>();
+            }
+
+            interactionTrigger.AssignQuestGiver(this);
+            interactionTrigger.AssignUiManager(uiManager);
         }
 
         private void ResolveUiReferences()

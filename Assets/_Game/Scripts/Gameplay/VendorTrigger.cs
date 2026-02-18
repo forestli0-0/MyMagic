@@ -10,11 +10,17 @@ namespace CombatSystem.Gameplay
         [SerializeField] private UIManager uiManager;
         [SerializeField] private VendorScreen vendorScreen;
         [SerializeField] private bool autoOpenOnEnter;
+        [SerializeField] private bool autoUseUnifiedNpcMenu = true;
         [SerializeField] private bool allowInteractKeyOpen = true;
         [SerializeField] private Key interactKey = Key.E;
         [SerializeField] private bool closeOnExit;
 
         private bool playerInRange;
+
+        private void OnEnable()
+        {
+            EnsureUnifiedInteractionController();
+        }
 
         private void OnTriggerEnter(Collider other)
         {
@@ -46,6 +52,11 @@ namespace CombatSystem.Gameplay
 
         private void Update()
         {
+            if (HasExternalInteractionController())
+            {
+                return;
+            }
+
             if (!allowInteractKeyOpen || !playerInRange)
             {
                 return;
@@ -131,6 +142,29 @@ namespace CombatSystem.Gameplay
             {
                 uiManager.PopScreen();
             }
+        }
+
+        private bool HasExternalInteractionController()
+        {
+            var interactionTrigger = GetComponent<NpcInteractionTrigger>();
+            return interactionTrigger != null && interactionTrigger.enabled && interactionTrigger.HandlesInteractKey;
+        }
+
+        private void EnsureUnifiedInteractionController()
+        {
+            if (!autoUseUnifiedNpcMenu)
+            {
+                return;
+            }
+
+            var interactionTrigger = GetComponent<NpcInteractionTrigger>();
+            if (interactionTrigger == null)
+            {
+                interactionTrigger = gameObject.AddComponent<NpcInteractionTrigger>();
+            }
+
+            interactionTrigger.AssignVendorTrigger(this);
+            interactionTrigger.AssignUiManager(uiManager);
         }
     }
 }
