@@ -515,6 +515,265 @@ namespace CombatSystem.UI
             inactiveCategoryColor = UIStyleKit.TabInactiveColor;
             activeCategoryTextColor = UIStyleKit.TabActiveTextColor;
             inactiveCategoryTextColor = UIStyleKit.TabInactiveTextColor;
+            ApplyValueControlTheme();
+        }
+
+        private void ApplyValueControlTheme()
+        {
+            ApplyDropdownTheme(qualityDropdown);
+            ApplyDropdownTheme(fpsDropdown);
+            ApplyDropdownTheme(movementModeDropdown);
+            ApplyDropdownTheme(cameraModeDropdown);
+
+            ApplyToggleTheme(fullscreenToggle);
+            ApplyToggleTheme(vSyncToggle);
+            ApplyToggleTheme(edgePanToggle);
+
+            ApplySliderTheme(masterVolume);
+            ApplySliderTheme(cameraZoomSlider);
+        }
+
+        private static void ApplyDropdownTheme(Dropdown dropdown)
+        {
+            if (dropdown == null)
+            {
+                return;
+            }
+
+            UIStyleKit.ApplySelectableStateColors(dropdown, UIStyleKit.TabInactiveColor, 0.1f, 0.16f, 0.5f, 0.08f);
+
+            if (dropdown.targetGraphic is Image background)
+            {
+                background.color = UIStyleKit.TabInactiveColor;
+            }
+
+            if (dropdown.captionText != null)
+            {
+                dropdown.captionText.color = UIStyleKit.TabActiveTextColor;
+            }
+
+            var fallbackLabel = dropdown.transform.Find("Label") != null
+                ? dropdown.transform.Find("Label").GetComponent<Text>()
+                : null;
+            if (fallbackLabel != null)
+            {
+                fallbackLabel.color = UIStyleKit.TabActiveTextColor;
+            }
+
+            var arrow = dropdown.transform.Find("Arrow") != null
+                ? dropdown.transform.Find("Arrow").GetComponent<Image>()
+                : null;
+            if (arrow != null)
+            {
+                // DefaultControls uses an image placeholder for Arrow.
+                // In this project the placeholder sprite is square, so hide it
+                // and use a text caret for a clear dropdown affordance.
+                arrow.enabled = false;
+                arrow.raycastTarget = false;
+            }
+            EnsureDropdownArrowGlyph(dropdown);
+
+            var template = dropdown.template;
+            if (template != null)
+            {
+                var templateImage = template.GetComponent<Image>();
+                if (templateImage != null)
+                {
+                    templateImage.color = UIStyleKit.GameplayPanelAltColor;
+                }
+
+                var viewportImage = template.Find("Viewport") != null
+                    ? template.Find("Viewport").GetComponent<Image>()
+                    : null;
+                if (viewportImage != null)
+                {
+                    viewportImage.color = UIStyleKit.GameplayPanelColor;
+                }
+
+                var itemToggle = template.Find("Viewport/Content/Item") != null
+                    ? template.Find("Viewport/Content/Item").GetComponent<Toggle>()
+                    : null;
+                if (itemToggle != null)
+                {
+                    UIStyleKit.ApplySelectableStateColors(
+                        itemToggle,
+                        UIStyleKit.TabInactiveColor,
+                        0.12f,
+                        0.18f,
+                        0.52f,
+                        0.08f,
+                        0.08f);
+                }
+
+                var itemBackground = template.Find("Viewport/Content/Item/Item Background") != null
+                    ? template.Find("Viewport/Content/Item/Item Background").GetComponent<Image>()
+                    : null;
+                if (itemBackground != null)
+                {
+                    itemBackground.color = UIStyleKit.TabInactiveColor;
+                }
+
+                var itemTexts = template.GetComponentsInChildren<Text>(true);
+                for (int i = 0; i < itemTexts.Length; i++)
+                {
+                    var text = itemTexts[i];
+                    if (text == null)
+                    {
+                        continue;
+                    }
+
+                    text.color = UIStyleKit.TabActiveTextColor;
+                }
+
+                var checkmarks = template.GetComponentsInChildren<Image>(true);
+                for (int i = 0; i < checkmarks.Length; i++)
+                {
+                    var image = checkmarks[i];
+                    if (image == null)
+                    {
+                        continue;
+                    }
+
+                    if (image.gameObject.name != "Checkmark")
+                    {
+                        continue;
+                    }
+
+                    image.color = UIStyleKit.TabActiveTextColor;
+                }
+            }
+
+            ApplyDropdownListTheme(dropdown);
+            dropdown.RefreshShownValue();
+        }
+
+        private static void EnsureDropdownArrowGlyph(Dropdown dropdown)
+        {
+            if (dropdown == null)
+            {
+                return;
+            }
+
+            var existing = dropdown.transform.Find("ArrowGlyph");
+            Text glyphText;
+            if (existing == null)
+            {
+                var go = new GameObject("ArrowGlyph", typeof(RectTransform), typeof(Text));
+                go.transform.SetParent(dropdown.transform, false);
+                glyphText = go.GetComponent<Text>();
+
+                var rect = go.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(1f, 0.5f);
+                rect.anchorMax = new Vector2(1f, 0.5f);
+                rect.pivot = new Vector2(1f, 0.5f);
+                rect.sizeDelta = new Vector2(22f, 22f);
+                rect.anchoredPosition = new Vector2(-10f, 0f);
+            }
+            else
+            {
+                glyphText = existing.GetComponent<Text>();
+            }
+
+            if (glyphText == null)
+            {
+                return;
+            }
+
+            glyphText.text = "▼";
+            glyphText.font = UIStyleKit.ThemeFont;
+            glyphText.fontSize = 16;
+            glyphText.alignment = TextAnchor.MiddleCenter;
+            glyphText.raycastTarget = false;
+            glyphText.color = UIStyleKit.TabActiveTextColor;
+        }
+
+        private static void ApplyDropdownListTheme(Dropdown dropdown)
+        {
+            if (dropdown == null)
+            {
+                return;
+            }
+
+            // Runtime instantiated list is named "Dropdown List".
+            var listRoot = dropdown.transform.Find("Dropdown List");
+            if (listRoot == null)
+            {
+                return;
+            }
+
+            var listImage = listRoot.GetComponent<Image>();
+            if (listImage != null)
+            {
+                listImage.color = UIStyleKit.GameplayPanelAltColor;
+            }
+
+            var listTexts = listRoot.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < listTexts.Length; i++)
+            {
+                var text = listTexts[i];
+                if (text == null)
+                {
+                    continue;
+                }
+
+                text.color = UIStyleKit.TabActiveTextColor;
+            }
+
+            var listToggles = listRoot.GetComponentsInChildren<Toggle>(true);
+            for (int i = 0; i < listToggles.Length; i++)
+            {
+                var toggle = listToggles[i];
+                if (toggle == null)
+                {
+                    continue;
+                }
+
+                UIStyleKit.ApplySelectableStateColors(
+                    toggle,
+                    UIStyleKit.TabInactiveColor,
+                    0.12f,
+                    0.18f,
+                    0.52f,
+                    0.08f,
+                    0.08f);
+            }
+        }
+
+        private static void ApplyToggleTheme(Toggle toggle)
+        {
+            if (toggle == null)
+            {
+                return;
+            }
+
+            UIStyleKit.ApplySelectableStateColors(toggle, UIStyleKit.TabInactiveColor, 0.1f, 0.16f, 0.5f, 0.08f);
+
+            var toggleImage = toggle.targetGraphic as Image;
+            if (toggleImage != null)
+            {
+                toggleImage.color = UIStyleKit.TabInactiveColor;
+            }
+
+            if (toggle.graphic is Image checkmark)
+            {
+                checkmark.color = UIStyleKit.TabActiveTextColor;
+            }
+        }
+
+        private static void ApplySliderTheme(Slider slider)
+        {
+            if (slider == null)
+            {
+                return;
+            }
+
+            UIStyleKit.ApplySelectableStateColors(slider, UIStyleKit.TabInactiveColor, 0.1f, 0.16f, 0.5f, 0.08f);
+
+            var handle = slider.handleRect != null ? slider.handleRect.GetComponent<Image>() : null;
+            if (handle != null)
+            {
+                handle.color = UIStyleKit.TabActiveTextColor;
+            }
         }
     }
 }
