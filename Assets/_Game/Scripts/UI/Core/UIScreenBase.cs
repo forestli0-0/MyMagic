@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
@@ -7,8 +8,11 @@ namespace CombatSystem.UI
         [Header("Display")]
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] protected UIInputMode inputMode = UIInputMode.UI;
+        [Header("Navigation")]
+        [SerializeField] private Selectable defaultSelectable;
 
         public UIInputMode InputMode => inputMode;
+        public Selectable DefaultSelectable => defaultSelectable;
 
         private void Awake()
         {
@@ -30,6 +34,10 @@ namespace CombatSystem.UI
         public virtual void OnFocus() { }
         public virtual void OnBlur() { }
         public virtual string GetFooterHintText() => string.Empty;
+        public virtual bool FocusDefaultSelectable()
+        {
+            return UIFocusUtility.FocusDefault(defaultSelectable, this);
+        }
 
         private CanvasGroup EnsureCanvasGroup()
         {

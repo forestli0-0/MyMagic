@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
@@ -9,6 +10,8 @@ namespace CombatSystem.UI
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private bool closeOnBackground = true;
         [SerializeField] private bool pauseGameplay = true;
+        [Header("Navigation")]
+        [SerializeField] private Selectable defaultSelectable;
 
         public bool CloseOnBackground => closeOnBackground;
         public bool PauseGameplay => pauseGameplay;
@@ -49,6 +52,10 @@ namespace CombatSystem.UI
         public virtual void OnFocus() { }
         public virtual void OnBlur() { }
         public virtual string GetFooterHintText() => string.Empty;
+        public virtual bool FocusDefaultSelectable()
+        {
+            return UIFocusUtility.FocusDefault(defaultSelectable, this);
+        }
 
         private CanvasGroup EnsureCanvasGroup()
         {

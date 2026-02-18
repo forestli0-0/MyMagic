@@ -8,6 +8,7 @@ namespace CombatSystem.UI
     /// - Tab 打开/关闭角色-背包-任务页签菜单
     /// - Esc 在菜单打开时关闭菜单
     /// - 左右方向键在菜单内切换页签
+    /// - 手柄 LB/RB 或十字键左右切页，B 关闭
     /// </summary>
     public class GameplayMenuHotkey : MonoBehaviour
     {
@@ -20,6 +21,8 @@ namespace CombatSystem.UI
         [SerializeField] private bool onlyWhenGameplayScreen = true;
         [SerializeField] private bool closeIfMenuAlreadyOpen = true;
         [SerializeField] private bool allowArrowTabSwitch = true;
+        [SerializeField] private bool allowGamepadTabSwitch = true;
+        [SerializeField] private bool allowGamepadClose = true;
 
         private void Awake()
         {
@@ -29,28 +32,19 @@ namespace CombatSystem.UI
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard == null)
+            var gamepad = Gamepad.current;
+
+            if (TryHandleArrowTabSwitch(keyboard) || TryHandleGamepadTabSwitch(gamepad))
             {
                 return;
             }
 
-            if (TryHandleArrowTabSwitch(keyboard))
+            if (TryHandleCloseKey(keyboard) || TryHandleGamepadClose(gamepad))
             {
                 return;
             }
 
-            if (TryHandleCloseKey(keyboard))
-            {
-                return;
-            }
-
-            var toggle = keyboard[toggleKey];
-            if (toggle == null || !toggle.wasPressedThisFrame)
-            {
-                return;
-            }
-
-            ToggleMenu();
+            TryHandleToggleKey(keyboard);
         }
 
         private void ResolveReferences()
@@ -105,6 +99,23 @@ namespace CombatSystem.UI
             }
 
             uiManager.PushScreen(defaultMenuScreen);
+        }
+
+        private bool TryHandleToggleKey(Keyboard keyboard)
+        {
+            if (keyboard == null)
+            {
+                return false;
+            }
+
+            var toggle = keyboard[toggleKey];
+            if (toggle == null || !toggle.wasPressedThisFrame)
+            {
+                return false;
+            }
+
+            ToggleMenu();
+            return true;
         }
 
         private bool TryHandleCloseKey(Keyboard keyboard)
@@ -174,6 +185,72 @@ namespace CombatSystem.UI
             }
 
             return false;
+        }
+
+        private bool TryHandleGamepadTabSwitch(Gamepad gamepad)
+        {
+            if (!allowGamepadTabSwitch || gamepad == null)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+            if (uiManager == null || uiManager.ModalCount > 0)
+            {
+                return false;
+            }
+
+            var current = uiManager.CurrentScreen;
+            if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
+            {
+                return false;
+            }
+
+            var tabs = current.GetComponent<GameplayMenuTabs>();
+            if (tabs == null)
+            {
+                return false;
+            }
+
+            if (gamepad.leftShoulder.wasPressedThisFrame || gamepad.dpad.left.wasPressedThisFrame)
+            {
+                return tabs.OpenRelativeTab(-1);
+            }
+
+            if (gamepad.rightShoulder.wasPressedThisFrame || gamepad.dpad.right.wasPressedThisFrame)
+            {
+                return tabs.OpenRelativeTab(1);
+            }
+
+            return false;
+        }
+
+        private bool TryHandleGamepadClose(Gamepad gamepad)
+        {
+            if (!allowGamepadClose || gamepad == null)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+            if (uiManager == null || uiManager.ModalCount > 0)
+            {
+                return false;
+            }
+
+            if (!gamepad.buttonEast.wasPressedThisFrame)
+            {
+                return false;
+            }
+
+            var current = uiManager.CurrentScreen;
+            if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
+            {
+                return false;
+            }
+
+            CloseGameplayMenu(current);
+            return true;
         }
 
         private void CloseGameplayMenu(UIScreenBase current)

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace CombatSystem.UI
 {
@@ -10,6 +11,10 @@ namespace CombatSystem.UI
         [SerializeField] private bool hideAllScreensOnStart = true;
         [SerializeField] private bool hideHudOnStart = true;
         [SerializeField] private bool pauseGameplayOnUiScreens = true;
+        [Header("Navigation")]
+        [SerializeField] private bool recoverFocusInUiMode = true;
+        [Min(0.05f)]
+        [SerializeField] private float focusRecoveryInterval = 0.12f;
 
         [Header("Roots")]
         [SerializeField] private Transform screensRoot;
@@ -27,6 +32,7 @@ namespace CombatSystem.UI
         private float screenCachedTimeScale = 1f;
         private bool pausedByScreen;
         private bool initialized;
+        private float nextFocusRecoveryTime;
 
         public event Action<UIInputMode> InputModeChanged;
 
@@ -42,6 +48,11 @@ namespace CombatSystem.UI
                 var owner = GetComponentInParent<UIRoot>();
                 Initialize(owner);
             }
+        }
+
+        private void Update()
+        {
+            TryRecoverUiFocus();
         }
 
         public void Initialize(UIRoot uiRoot)
@@ -122,6 +133,11 @@ namespace CombatSystem.UI
             screen.SetVisible(true);
             screen.OnEnter();
             screen.OnFocus();
+            if (modalStack.Count == 0 && screen.InputMode == UIInputMode.UI && screen.FocusDefaultSelectable())
+            {
+                ScheduleNextFocusRecovery();
+            }
+
             UpdateInputModeAfterModalChange();
         }
 
@@ -149,6 +165,10 @@ namespace CombatSystem.UI
             {
                 next.SetVisible(true);
                 next.OnFocus();
+                if (modalStack.Count == 0 && next.InputMode == UIInputMode.UI && next.FocusDefaultSelectable())
+                {
+                    ScheduleNextFocusRecovery();
+                }
             }
 
             UpdateInputModeAfterModalChange();
@@ -175,6 +195,11 @@ namespace CombatSystem.UI
             modal.SetVisible(true);
             modal.OnEnter();
             modal.OnFocus();
+            if (modal.FocusDefaultSelectable())
+            {
+                ScheduleNextFocusRecovery();
+            }
+
             // Modal 计数式暂停，支持多层弹窗叠加
             TrackPause(modal, true);
             SetInputMode(UIInputMode.UI);
@@ -210,6 +235,10 @@ namespace CombatSystem.UI
                 {
                     next.SetVisible(true);
                     next.OnFocus();
+                    if (next.FocusDefaultSelectable())
+                    {
+                        ScheduleNextFocusRecovery();
+                    }
                 }
             }
 
@@ -267,6 +296,11 @@ namespace CombatSystem.UI
                 // 有弹窗时强制 UI 输入模式
                 SetInputMode(UIInputMode.UI);
                 UpdateScreenPauseState();
+                if (FocusTopUiDefault())
+                {
+                    ScheduleNextFocusRecovery();
+                }
+
                 return;
             }
 
@@ -277,6 +311,10 @@ namespace CombatSystem.UI
             }
 
             UpdateScreenPauseState();
+            if (inputMode == UIInputMode.UI && FocusTopUiDefault())
+            {
+                ScheduleNextFocusRecovery();
+            }
         }
 
         private void SetInputMode(UIInputMode mode)
@@ -411,6 +449,50 @@ namespace CombatSystem.UI
             {
                 child.SetParent(root, false);
             }
+        }
+
+        private void TryRecoverUiFocus()
+        {
+            if (!recoverFocusInUiMode || inputMode != UIInputMode.UI)
+            {
+                return;
+            }
+
+            if (Time.unscaledTime < nextFocusRecoveryTime)
+            {
+                return;
+            }
+
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null || eventSystem.currentSelectedGameObject != null)
+            {
+                return;
+            }
+
+            FocusTopUiDefault();
+            ScheduleNextFocusRecovery();
+        }
+
+        private bool FocusTopUiDefault()
+        {
+            var modal = modalStack.Peek();
+            if (modal != null)
+            {
+                return modal.FocusDefaultSelectable();
+            }
+
+            var screen = screenStack.Peek();
+            if (screen == null || screen.InputMode != UIInputMode.UI)
+            {
+                return false;
+            }
+
+            return screen.FocusDefaultSelectable();
+        }
+
+        private void ScheduleNextFocusRecovery()
+        {
+            nextFocusRecoveryTime = Time.unscaledTime + Mathf.Max(0.05f, focusRecoveryInterval);
         }
     }
 }

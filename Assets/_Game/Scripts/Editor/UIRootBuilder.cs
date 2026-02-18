@@ -2035,6 +2035,12 @@ namespace CombatSystem.Editor
             var footer = CreateText(footerGo, "ESC：继续游戏", font, 16, TextAnchor.MiddleLeft);
             footer.color = new Color(0.72f, 0.76f, 0.82f, 1f);
             AddLayoutElement(footerGo, 28f);
+
+            SetSerialized(modal, "defaultSelectable", resumeButton);
+            SetSerialized(modal, "resumeButton", resumeButton);
+            SetSerialized(modal, "saveButton", saveButton);
+            SetSerialized(modal, "settingsButton", settingsButton);
+            SetSerialized(modal, "mainMenuButton", menuButton);
         }
 
         private static void BuildQuestGiverModalUI(QuestGiverModal modal, Sprite sprite, Font font)
