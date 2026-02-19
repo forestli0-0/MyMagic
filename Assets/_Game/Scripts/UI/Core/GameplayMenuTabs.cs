@@ -53,7 +53,6 @@ namespace CombatSystem.UI
         [Header("State")]
         [SerializeField] private GameplayMenuTab activeTab = GameplayMenuTab.Inventory;
         [SerializeField] private string activeTabId = "Inventory";
-        [SerializeField] private bool disableActiveTabButton = true;
         [SerializeField] private Color activeColor = new Color(0.29f, 0.45f, 0.66f, 1f);
         [SerializeField] private Color inactiveColor = new Color(0.2f, 0.2f, 0.2f, 1f);
         [SerializeField] private Color activeTextColor = new Color(0.97f, 0.98f, 1f, 1f);
@@ -390,10 +389,9 @@ namespace CombatSystem.UI
                 return;
             }
 
-            if (disableActiveTabButton)
-            {
-                button.interactable = !isActive;
-            }
+            // Keep active tabs interactable so they stay in normal/selected visual states.
+            // Re-click is already safely ignored in SwitchTo when target equals current screen.
+            button.interactable = true;
 
             var image = button.targetGraphic as Image;
             if (image != null)

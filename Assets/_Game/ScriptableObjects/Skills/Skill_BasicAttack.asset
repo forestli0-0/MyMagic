@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_BasicAttack
   displayName: Basic Attack
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: a59d6029d282ea148bf57966b0c2401e, type: 3}
   resourceType: 0
   resourceCost: 0
   cooldown: 1

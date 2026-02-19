@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Item_Weapon_Test
   displayName: Test Weapon
-  icon: {fileID: 21300000, guid: 3bc6150d7a3f42e78b5c58879355cac7, type: 3}
+  icon: {fileID: 21300000, guid: a59d6029d282ea148bf57966b0c2401e, type: 3}
   rarity: 0
   description: Test weapon for drag/drop.
   slot: 1

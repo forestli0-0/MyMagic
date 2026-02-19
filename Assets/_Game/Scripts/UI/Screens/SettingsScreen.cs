@@ -470,7 +470,8 @@ namespace CombatSystem.UI
                 return;
             }
 
-            button.interactable = !active;
+            // Keep active category tabs interactable to avoid Unity disabled tint overriding active style.
+            button.interactable = true;
 
             var image = button.targetGraphic as Image;
             if (image != null)

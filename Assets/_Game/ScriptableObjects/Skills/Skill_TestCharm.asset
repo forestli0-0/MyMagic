@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_TestCharm
   displayName: Test Charm
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: ff540c47ce362b14586113013966b811, type: 3}
   resourceType: 0
   resourceCost: 0
   cooldown: 3

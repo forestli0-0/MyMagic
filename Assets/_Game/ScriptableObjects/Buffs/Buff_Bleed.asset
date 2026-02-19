@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_Bleed
   displayName: Bleed
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 33a6203d7c3a9244ba0e334f4fe0ac3a, type: 3}
   isDebuff: 1
   dispellable: 1
   duration: 6
@@ -30,5 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 38335d6ad507c3740a5fe1a9ddfbb814, type: 2}
-  controlEffects: []
-  controlImmunities: []
+  controlEffects: 
+  controlImmunities: 

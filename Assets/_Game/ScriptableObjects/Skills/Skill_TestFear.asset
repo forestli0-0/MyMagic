@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_TestFear
   displayName: Test Fear
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 322058629e47df340a9cfbe5daf6c21a, type: 3}
   resourceType: 0
   resourceCost: 0
   cooldown: 3

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_TestRoot
   displayName: Test Root
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: cc08ccd1cf04a3d43b8d437d087cfc02, type: 3}
   isDebuff: 1
   dispellable: 1
   duration: 2

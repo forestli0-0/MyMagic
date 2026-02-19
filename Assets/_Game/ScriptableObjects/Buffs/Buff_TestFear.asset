@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_TestFear
   displayName: Test Fear
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: f4564a0502fffb04e8e1a38d85c6fb34, type: 3}
   isDebuff: 1
   dispellable: 1
   duration: 1.5

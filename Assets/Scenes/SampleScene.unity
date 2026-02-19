@@ -454,7 +454,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -846,7 +846,6 @@ MonoBehaviour:
   playerTag: Player
   playerDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
   playerUnitId: Unit_Player
-  debugSpawn: 0
   persistAcrossScenes: 1
 --- !u!4 &50030979
 Transform:
@@ -1267,7 +1266,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1371,6 +1370,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -1737,6 +1742,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -2394,6 +2405,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 1354554323}
   cooldownText: {fileID: 234377900}
   keyText: {fileID: 1492376914}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &128734751
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2414,7 +2430,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2585,6 +2601,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -3253,7 +3275,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3574,7 +3596,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4136,7 +4158,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4773,7 +4795,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4824,10 +4846,16 @@ MonoBehaviour:
   canvasGroup: {fileID: 405689904}
   closeOnBackground: 1
   pauseGameplay: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
+  resumeButton: {fileID: 0}
+  saveButton: {fileID: 0}
+  settingsButton: {fileID: 0}
+  mainMenuButton: {fileID: 0}
   mainMenuScreen: {fileID: 1936584465}
   settingsModal: {fileID: 0}
   settingsScreen: {fileID: 1425223026}
+  mainMenuSceneName: MainMenu
   saveManager: {fileID: 461756027}
 --- !u!225 &405689904
 CanvasGroup:
@@ -5152,7 +5180,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5387,6 +5415,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 143370944}
   cooldownText: {fileID: 131642123}
   keyText: {fileID: 408437793}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &443643375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5407,7 +5440,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5681,7 +5714,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5791,6 +5824,7 @@ GameObject:
   - component: {fileID: 461756026}
   - component: {fileID: 461756033}
   - component: {fileID: 461756032}
+  - component: {fileID: 461756034}
   m_Layer: 0
   m_Name: UIRoot
   m_TagString: Untagged
@@ -5829,9 +5863,11 @@ MonoBehaviour:
   saveRotation: 1
   saveHealth: 1
   saveResource: 1
+  saveCurrency: 1
   saveProgression: 1
   saveInventory: 1
   saveEquipment: 1
+  saveQuests: 1
   quickSaveName: Quick Save
 --- !u!114 &461756028
 MonoBehaviour:
@@ -5850,6 +5886,8 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   autoFindInputReader: 1
   onlyWhenGameplayScreen: 1
+  suppressAfterUiPauseSeconds: 0.12
+  suppressAfterInputModeSwitchSeconds: 0.12
 --- !u!114 &461756029
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5866,6 +5904,8 @@ MonoBehaviour:
   hideAllScreensOnStart: 1
   hideHudOnStart: 1
   pauseGameplayOnUiScreens: 1
+  recoverFocusInUiMode: 1
+  focusRecoveryInterval: 0.12
   screensRoot: {fileID: 0}
   hudRoot: {fileID: 0}
   modalRoot: {fileID: 0}
@@ -5888,6 +5928,9 @@ MonoBehaviour:
   overlayCanvas: {fileID: 1965797537}
   dontDestroyOnLoad: 1
   uiManager: {fileID: 461756029}
+  themeController: {fileID: 461756034}
+  focusVisualController: {fileID: 0}
+  hoverVisualController: {fileID: 0}
 --- !u!4 &461756031
 Transform:
   m_ObjectHideFlags: 0
@@ -5923,6 +5966,8 @@ MonoBehaviour:
   actionsAsset: {fileID: -944628639613478452, guid: 959188057e83cfd48803f392c338429a,
     type: 3}
   autoFindInputReader: 1
+  isolateEventSystemActionsAtRuntime: 1
+  forceDynamicInputUpdateForUi: 1
 --- !u!114 &461756033
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5940,6 +5985,20 @@ MonoBehaviour:
   inputReader: {fileID: 684316650}
   autoFindInputReader: 1
   onlyWhenGameplayScreen: 1
+--- !u!114 &461756034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461756025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 438bb1db6e7e9cc438b024be00020928, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  theme: {fileID: 11400000, guid: c69cc89583ce57645ba65e7d5e03bf19, type: 2}
+  applyOnEnable: 1
 --- !u!1 &471596950
 GameObject:
   m_ObjectHideFlags: 0
@@ -6282,6 +6341,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -6663,7 +6728,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -7310,7 +7375,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8364,7 +8429,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8688,8 +8753,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -8780,6 +8845,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -10115,7 +10186,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10504,7 +10575,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10837,7 +10908,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10951,7 +11022,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -11955,6 +12026,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -12336,7 +12413,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -12675,7 +12752,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13004,7 +13081,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13159,7 +13236,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13364,7 +13441,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -14085,7 +14162,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -14336,7 +14413,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -14938,7 +15015,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -15183,7 +15260,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -15358,6 +15435,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 1789997928}
   cooldownText: {fileID: 26411277}
   keyText: {fileID: 2042921536}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &1235632182
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15378,7 +15460,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -15859,6 +15941,7 @@ MonoBehaviour:
   experienceBar: {fileID: 557281869}
   levelText: {fileID: 1023074953}
   pointsText: {fileID: 1347173881}
+  autoRebindInterval: 0.5
   levelFormat: Lv {0}
   pointsFormat: 'Points: {0}'
 --- !u!1 &1253542382
@@ -15984,7 +16067,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -16268,7 +16351,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -16441,6 +16524,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotsRoot: {fileID: 1306544248}
   slotTemplate: {fileID: 1253542384}
+  autoFitCellSize: 1
+  minCellSize: 88
+  maxCellSize: 130
 --- !u!1 &1311512897
 GameObject:
   m_ObjectHideFlags: 0
@@ -16498,6 +16584,7 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   autoFindInputReader: 1
   refreshInterval: 0.25
+  autoResolveInterval: 0.5
   targetUnit: {fileID: 1954876143}
   health: {fileID: 0}
   resource: {fileID: 0}
@@ -17333,15 +17420,34 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1425223028}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
   backScreen: {fileID: 1936584465}
   masterVolume: {fileID: 1685273626}
+  cameraZoomSlider: {fileID: 0}
   fullscreenToggle: {fileID: 1102979313}
   vSyncToggle: {fileID: 857708015}
   qualityDropdown: {fileID: 438337577}
   fpsDropdown: {fileID: 1729137382}
+  movementModeDropdown: {fileID: 0}
+  cameraModeDropdown: {fileID: 0}
+  edgePanToggle: {fileID: 0}
   applyButton: {fileID: 836937034}
-  pauseGameplay: 0
+  gameplayCategoryButton: {fileID: 0}
+  controlCategoryButton: {fileID: 0}
+  audioCategoryButton: {fileID: 0}
+  videoCategoryButton: {fileID: 0}
+  graphicsCategoryButton: {fileID: 0}
+  gameplayCategoryPanel: {fileID: 0}
+  controlCategoryPanel: {fileID: 0}
+  audioCategoryPanel: {fileID: 0}
+  videoCategoryPanel: {fileID: 0}
+  graphicsCategoryPanel: {fileID: 0}
+  activeCategoryColor: {r: 0.26, g: 0.38, b: 0.56, a: 1}
+  inactiveCategoryColor: {r: 0.2, g: 0.22, b: 0.26, a: 1}
+  activeCategoryTextColor: {r: 0.97, g: 0.98, b: 1, a: 1}
+  inactiveCategoryTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+  pauseMenuModal: {fileID: 0}
 --- !u!224 &1425223027
 RectTransform:
   m_ObjectHideFlags: 0
@@ -17537,8 +17643,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -17613,6 +17719,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 423676904}
   cooldownText: {fileID: 761030976}
   keyText: {fileID: 28022969}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &1451475563
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17633,7 +17744,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -17781,6 +17892,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1475500550}
   inputMode: 0
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
 --- !u!225 &1475500550
 CanvasGroup:
@@ -18548,7 +18660,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -18806,6 +18918,7 @@ MonoBehaviour:
   hudConfig: {fileID: 11400000, guid: 30fa15c661bf3c84ca51c52cadff7d28, type: 2}
   targetUnit: {fileID: 1954876143}
   worldCamera: {fileID: 1050392819}
+  autoRebindInterval: 0.5
   healthBar: {fileID: 505881828}
   resourceBar: {fileID: 1871022430}
   skillBar: {fileID: 1440696200}
@@ -18813,6 +18926,12 @@ MonoBehaviour:
   castBar: {fileID: 786912564}
   combatLog: {fileID: 1536066186}
   floatingText: {fileID: 120939249}
+  hudToastOverlay: {fileID: 0}
+  questTracker: {fileID: 0}
+  enableQuestUpdateToast: 1
+  enableLootPickupToast: 1
+  enableSkillReleaseToast: 1
+  questProgressToastCooldown: 0.25
 --- !u!1 &1576502262
 GameObject:
   m_ObjectHideFlags: 0
@@ -19075,6 +19194,8 @@ MonoBehaviour:
   showDuration: 5
   showPlayer: 0
   playerTag: Player
+  discoverOnSceneLoad: 1
+  showOnDiscover: 1
 --- !u!1 &1596657930
 GameObject:
   m_ObjectHideFlags: 0
@@ -19208,6 +19329,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 1343199896}
   cooldownText: {fileID: 862824502}
   keyText: {fileID: 1344572247}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &1608103795
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19228,7 +19354,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -19780,7 +19906,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -20711,7 +20837,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -22452,7 +22578,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -22563,7 +22689,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -22993,6 +23119,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1936584464}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
   saveSelectScreen: {fileID: 1983729265}
   settingsScreen: {fileID: 1425223026}
@@ -23079,7 +23206,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -23437,6 +23564,7 @@ MonoBehaviour:
   initialPage: 0
   inputReader: {fileID: 0}
   autoFindInputReader: 1
+  allowSwitchOnTab: 0
   switchCooldown: 0.2
   pages:
   - name: AOE & Targeting
@@ -23522,6 +23650,13 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   viewCamera: {fileID: 1050392819}
   useCameraYaw: 1
+  clickMoveMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  clickStopDistance: 0.2
+  refreshTargetWhileHoldingRightButton: 1
+  autoSetupGameplayCamera: 1
+  gameplayCamera: {fileID: 0}
 --- !u!114 &1954876154
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24163,6 +24298,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1983729266}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
   mainMenuScreen: {fileID: 1936584465}
   inGameScreen: {fileID: 1475500549}
@@ -24474,14 +24610,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 2035431592}
   inputMode: 1
+  defaultSelectable: {fileID: 0}
   uiManager: {fileID: 461756029}
   inventory: {fileID: 0}
   equipment: {fileID: 0}
   inventoryGrid: {fileID: 1306544251}
   equipmentPanel: {fileID: 471596953}
   comparePanel: {fileID: 1529601132}
+  allFilterButton: {fileID: 0}
+  equipmentFilterButton: {fileID: 0}
+  consumableFilterButton: {fileID: 0}
+  questFilterButton: {fileID: 0}
+  searchInputField: {fileID: 0}
+  sortDropdown: {fileID: 0}
+  rarityAllButton: {fileID: 0}
+  rarityCommonButton: {fileID: 0}
+  rarityMagicButton: {fileID: 0}
+  rarityRareButton: {fileID: 0}
+  rarityEpicButton: {fileID: 0}
+  rarityLegendaryButton: {fileID: 0}
+  capacityText: {fileID: 0}
   equipButton: {fileID: 664993595}
   unequipButton: {fileID: 458637574}
+  actionHintText: {fileID: 0}
+  filterActiveColor: {r: 0.26, g: 0.38, b: 0.56, a: 1}
+  filterInactiveColor: {r: 0.2, g: 0.22, b: 0.26, a: 1}
+  filterActiveTextColor: {r: 0.97, g: 0.98, b: 1, a: 1}
+  filterInactiveTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+  actionProfiles: []
+  categoryActionOverrides: []
 --- !u!224 &2035431591
 RectTransform:
   m_ObjectHideFlags: 0
@@ -24652,6 +24809,11 @@ MonoBehaviour:
   cooldownFill: {fileID: 664919750}
   cooldownText: {fileID: 2128216532}
   keyText: {fileID: 1217280323}
+  enableCastPulse: 1
+  castPulseScale: 1.12
+  castPulseDuration: 0.14
+  pulseUseUnscaledTime: 1
+  castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
 --- !u!114 &2074414516
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24672,7 +24834,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 06c7c4f85e1115347896822a136c9775, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -24984,7 +25146,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 222208b8f1bf3c34ca80016c1b58cd6a, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -25486,7 +25648,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: a9ace1a6935f4f341b72b43f88c26e68, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1

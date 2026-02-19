@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_ChainLightning
   displayName: Chain Lightning
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: ed8ef41e0593c444f89985400bb18768, type: 3}
   resourceType: 0
   resourceCost: 12
   cooldown: 6
@@ -22,6 +22,12 @@ MonoBehaviour:
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
+  postCastTime: 0
+  gcdDuration: 0
+  channelTickInterval: 0
+  queueWindow: 0
+  queuePolicy: 0
+  targetSnapshotPolicy: 0
   targeting: {fileID: 11400000, guid: 643bc60f438a9b64ba97a8186505210f, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}

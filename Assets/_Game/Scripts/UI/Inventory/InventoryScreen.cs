@@ -1832,7 +1832,8 @@ namespace CombatSystem.UI
                 var isActive = i >= 0 &&
                                i < sortPickerOptionModes.Count &&
                                sortPickerOptionModes[i] == activeSortMode;
-                button.interactable = !isActive;
+                // Keep active sort option interactable so visual state stays consistent.
+                button.interactable = true;
 
                 var image = button.targetGraphic as Image;
                 if (image != null)
@@ -2217,7 +2218,8 @@ namespace CombatSystem.UI
                 return;
             }
 
-            button.interactable = !active;
+            // Keep active filter buttons interactable to preserve active-state visuals.
+            button.interactable = true;
 
             var image = button.targetGraphic as Image;
             if (image != null)

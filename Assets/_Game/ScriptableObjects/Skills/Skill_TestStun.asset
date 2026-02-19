@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_TestStun
   displayName: Test Stun
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: f050b492e03119344b04cf01a3486662, type: 3}
   resourceType: 0
   resourceCost: 0
   cooldown: 3

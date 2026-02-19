@@ -60,3 +60,9 @@ crashlytics-build.properties
 # OS generated
 .DS_Store
 Thumbs.db
+
+# Local imported UI packs (keep out of repo for now)
+Assets/Clean Vector Icons/
+Assets/Clean Vector Icons.meta
+Assets/_Game/Art/UIThemes/
+Assets/_Game/Art/UIThemes.meta

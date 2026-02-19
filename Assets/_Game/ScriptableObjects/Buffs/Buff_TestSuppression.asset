@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_TestSuppression
   displayName: Test Suppression
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 4d2a4136ebef6f041b43fdca42412caa, type: 3}
   isDebuff: 1
   dispellable: 0
   duration: 1.5

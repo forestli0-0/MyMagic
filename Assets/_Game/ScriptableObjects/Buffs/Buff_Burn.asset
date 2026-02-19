@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_Burn
   displayName: Burn
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 062eeb9d5e8ba8f45a9ddfea52518f82, type: 3}
   isDebuff: 1
   dispellable: 1
   duration: 5
@@ -30,5 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 78fcaa908fefdc54496398ada172336f, type: 2}
-  controlEffects: []
-  controlImmunities: []
+  controlEffects: 
+  controlImmunities: 

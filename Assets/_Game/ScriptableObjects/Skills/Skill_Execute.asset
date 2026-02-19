@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_Execute
   displayName: Execute
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: a3580baf4cda17643bebcd843ca5881f, type: 3}
   resourceType: 0
   resourceCost: 8
   cooldown: 8
@@ -22,6 +22,12 @@ MonoBehaviour:
   channelTime: 0
   canMoveWhileCasting: 1
   canRotateWhileCasting: 1
+  postCastTime: 0
+  gcdDuration: 0
+  channelTickInterval: 0
+  queueWindow: 0
+  queuePolicy: 0
+  targetSnapshotPolicy: 0
   targeting: {fileID: 11400000, guid: edf6f826bdbc46948b7be81b3a9e63f7, type: 2}
   tags:
   - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}

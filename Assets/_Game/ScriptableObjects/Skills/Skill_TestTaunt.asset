@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_TestTaunt
   displayName: Test Taunt
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3e382c1295a11054dacdc58d5933d206, type: 3}
   resourceType: 0
   resourceCost: 0
   cooldown: 3

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Item_Clothes_Test
   displayName: Test Clothes
-  icon: {fileID: 21300000, guid: 3bc6150d7a3f42e78b5c58879355cac7, type: 3}
+  icon: {fileID: 21300000, guid: 1815ea71c4e799e45b0db8899c240c4a, type: 3}
   rarity: 0
   description: Test clothes for drag/drop.
   slot: 3

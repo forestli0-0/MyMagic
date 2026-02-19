@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_BoxField
   displayName: Box Field
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 2dcc619a49088ab4599cc7e3b756a1ed, type: 3}
   resourceType: 0
   resourceCost: 8
   cooldown: 7
@@ -22,6 +22,12 @@ MonoBehaviour:
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
+  postCastTime: 0
+  gcdDuration: 0
+  channelTickInterval: 0
+  queueWindow: 0
+  queuePolicy: 0
+  targetSnapshotPolicy: 0
   targeting: {fileID: 11400000, guid: dee814731c48b7742b5feda924a73bc9, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}

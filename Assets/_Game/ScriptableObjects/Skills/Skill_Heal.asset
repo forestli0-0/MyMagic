@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Skill_Heal
   displayName: Heal
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8747fbd096b50834ab608c29a3c05bcc, type: 3}
   resourceType: 0
   resourceCost: 10
   cooldown: 4
@@ -22,6 +22,12 @@ MonoBehaviour:
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
+  postCastTime: 0
+  gcdDuration: 0
+  channelTickInterval: 0
+  queueWindow: 0
+  queuePolicy: 0
+  targetSnapshotPolicy: 0
   targeting: {fileID: 11400000, guid: 80461f7211f5cdd448bae4f55e0c5767, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}

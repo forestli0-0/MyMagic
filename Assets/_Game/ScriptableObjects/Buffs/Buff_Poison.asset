@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_Poison
   displayName: Poison
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 2c4df9274f4db1f4eb7118e0b06c4554, type: 3}
   isDebuff: 1
   dispellable: 1
   duration: 4
@@ -30,5 +30,5 @@ MonoBehaviour:
     condition: {fileID: 0}
     effects:
     - {fileID: 11400000, guid: 3d253ad53f4924043832484e5f343ddc, type: 2}
-  controlEffects: []
-  controlImmunities: []
+  controlEffects: 
+  controlImmunities: 

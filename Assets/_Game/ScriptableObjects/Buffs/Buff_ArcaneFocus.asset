@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Buff_ArcaneFocus
   displayName: Arcane Focus
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: bef29bce6ed719f4a946d25ac181f8bd, type: 3}
   isDebuff: 0
   dispellable: 1
   duration: 8
@@ -29,5 +29,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5b220bcb251d2964a81fb93bef0579b3, type: 2}
   - {fileID: 11400000, guid: a2147e181c8c0cb45a0be869a741aff5, type: 2}
   triggers: []
-  controlEffects: []
-  controlImmunities: []
+  controlEffects: 
+  controlImmunities: 
