@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Enemy
   prefab: {fileID: 195245260206196433, guid: 684f608c345d55e448499e6dbd7dc350, type: 3}
   portrait: {fileID: 0}
-  visualProfile: {fileID: 11400000, guid: cf280df9cfecfa343848126aa616fc7b, type: 2}
+  visualProfile: {fileID: 11400000, guid: bd3610df92ccab5489c1cd78f42c1622, type: 2}
   tags:
   - {fileID: 11400000, guid: 5694c53b3beef254ba056d7d5908bddf, type: 2}
   baseStats:
@@ -29,7 +29,7 @@ MonoBehaviour:
   - stat: {fileID: 11400000, guid: 9513982558b6fb943b14b6b56874d4a9, type: 2}
     value: 1
   - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
-    value: 3.5
+    value: 2.6
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills: []
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}

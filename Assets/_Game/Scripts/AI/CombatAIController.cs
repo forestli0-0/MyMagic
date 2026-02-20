@@ -71,6 +71,16 @@ namespace CombatSystem.AI
         [Tooltip("分离强度，值越大越不容易挤在一起")]
         [SerializeField] private float separationStrength = 0.6f;
 
+        [Header("导航平滑")]
+        [Tooltip("SetDestination 最小刷新间隔（秒），避免每帧重算路径引发方向抖动。")]
+        [SerializeField] private float destinationRefreshInterval = 0.08f;
+        [Tooltip("目标点变化超过该距离才立即刷新路径。")]
+        [SerializeField] private float destinationRefreshThreshold = 0.25f;
+        [Tooltip("距目标足够近时才启用围攻分散计算，降低远距离追击时的方向抖动。")]
+        [SerializeField] private float spreadResolveDistancePadding = 1.2f;
+        [Tooltip("NavMesh 期望速度平滑强度，值越大响应越快。")]
+        [SerializeField] private float desiredVelocitySmoothing = 12f;
+
         [Header("撤退机制")]
         [Tooltip("是否启用撤退机制")]
         [SerializeField] private bool enableRetreat;
@@ -103,6 +113,11 @@ namespace CombatSystem.AI
         private float selectedMinRange;
         // 选中技能的最大释放距离
         private float selectedMaxRange;
+        private Vector3 lastIssuedDestination;
+        private bool hasIssuedDestination;
+        private float nextDestinationRefreshTime;
+        private Vector3 smoothedDesiredVelocity;
+        private bool hasSmoothedDesiredVelocity;
 
         /// <summary>
         /// 编辑器重置时自动查找组件。
@@ -412,6 +427,7 @@ namespace CombatSystem.AI
             hasTarget = false;
             currentTarget = default;
             debugTarget = null;
+            ResetNavSteeringCache();
         }
 
         /// <summary>
@@ -480,14 +496,19 @@ namespace CombatSystem.AI
             if (useNavMesh && navAgent != null)
             {
                 navAgent.speed = movement != null ? movement.MoveSpeed : 3.5f;
-                navAgent.stoppingDistance = spreadAroundTarget ? 0.08f : desiredStopDistance;
+                navAgent.stoppingDistance = spreadAroundTarget
+                    ? Mathf.Max(0.35f, desiredStopDistance * 0.5f)
+                    : desiredStopDistance;
                 navAgent.isStopped = false;
-                navAgent.SetDestination(destination);
+                if (ShouldRefreshDestination(destination))
+                {
+                    navAgent.SetDestination(destination);
+                }
 
                 if (movement != null)
                 {
                     navAgent.nextPosition = transform.position;
-                    movement.SetMoveVelocity(navAgent.desiredVelocity);
+                    movement.SetMoveVelocity(GetSmoothedDesiredVelocity(navAgent.desiredVelocity));
                 }
                 else
                 {
@@ -509,10 +530,15 @@ namespace CombatSystem.AI
             }
 
             var ringRadius = Mathf.Max(0.75f, desiredStopDistance + Mathf.Max(0f, surroundRadiusOffset));
-            var outerRing = GetQueueRingDepth(currentTarget.Transform, ringRadius);
-            if (outerRing > 0)
+            var distanceToTarget = Vector3.Distance(transform.position, targetPosition);
+            var shouldResolveSpread = distanceToTarget <= ringRadius + Mathf.Max(0f, spreadResolveDistancePadding);
+            if (shouldResolveSpread)
             {
-                ringRadius += outerRing * Mathf.Max(0.1f, queuedRingSpacing);
+                var outerRing = GetQueueRingDepth(currentTarget.Transform, ringRadius);
+                if (outerRing > 0)
+                {
+                    ringRadius += outerRing * Mathf.Max(0.1f, queuedRingSpacing);
+                }
             }
 
             var radial = transform.position - targetPosition;
@@ -529,7 +555,7 @@ namespace CombatSystem.AI
             var tangent = Vector3.Cross(Vector3.up, radial);
             var dir = radial + tangent * (GetStableSlotBias() * 0.6f);
 
-            var separation = ComputeSeparationOffset();
+            var separation = shouldResolveSpread ? ComputeSeparationOffset() : Vector3.zero;
             if (separation.sqrMagnitude > 0.0001f)
             {
                 dir += separation * Mathf.Max(0f, separationStrength);
@@ -806,6 +832,57 @@ namespace CombatSystem.AI
                     navAgent.nextPosition = transform.position;
                 }
             }
+
+            ResetNavSteeringCache();
+        }
+
+        private bool ShouldRefreshDestination(Vector3 destination)
+        {
+            var interval = Mathf.Max(0.02f, destinationRefreshInterval);
+            var threshold = Mathf.Max(0.05f, destinationRefreshThreshold);
+
+            if (!hasIssuedDestination)
+            {
+                lastIssuedDestination = destination;
+                hasIssuedDestination = true;
+                nextDestinationRefreshTime = Time.time + interval;
+                return true;
+            }
+
+            var moved = (destination - lastIssuedDestination).sqrMagnitude >= threshold * threshold;
+            if (!moved && Time.time < nextDestinationRefreshTime)
+            {
+                return false;
+            }
+
+            lastIssuedDestination = destination;
+            nextDestinationRefreshTime = Time.time + interval;
+            return true;
+        }
+
+        private Vector3 GetSmoothedDesiredVelocity(Vector3 desiredVelocity)
+        {
+            var dt = Mathf.Max(0.0001f, Time.deltaTime);
+            var smoothing = Mathf.Max(1f, desiredVelocitySmoothing);
+            var t = 1f - Mathf.Exp(-smoothing * dt);
+
+            if (!hasSmoothedDesiredVelocity)
+            {
+                smoothedDesiredVelocity = desiredVelocity;
+                hasSmoothedDesiredVelocity = true;
+                return smoothedDesiredVelocity;
+            }
+
+            smoothedDesiredVelocity = Vector3.Lerp(smoothedDesiredVelocity, desiredVelocity, t);
+            return smoothedDesiredVelocity;
+        }
+
+        private void ResetNavSteeringCache()
+        {
+            hasIssuedDestination = false;
+            nextDestinationRefreshTime = 0f;
+            hasSmoothedDesiredVelocity = false;
+            smoothedDesiredVelocity = Vector3.zero;
         }
 
         private bool CanRotateWhileCasting()

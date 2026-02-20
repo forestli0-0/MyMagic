@@ -136,6 +136,7 @@ namespace CombatSystem.Core
 
         private void Update()
         {
+            EnsureVisualChainReady();
             UpdateAnimatorMovementState();
         }
 
@@ -169,9 +170,11 @@ namespace CombatSystem.Core
             var modelLocalPos = spawnedModel != null ? spawnedModel.transform.localPosition : Vector3.zero;
             var expectedLocalPos = activeProfile != null ? activeProfile.LocalPosition : Vector3.zero;
             var state = animator != null ? animator.GetCurrentAnimatorStateInfo(0) : default;
+            var resolvedProfile = ResolveProfile();
+            var definition = unitRoot != null ? unitRoot.Definition : null;
 
             Debug.Log(
-                $"[UnitVisualPresenter] Diagnostics '{name}': root={transform.position}, modelWorld={modelWorldPos}, modelLocal={modelLocalPos}, expectedLocal={expectedLocalPos}, rootMotion={(animator != null && animator.applyRootMotion)}, stateHash={(animator != null ? state.shortNameHash : 0)}, stateTime={(animator != null ? state.normalizedTime : 0f):F2}",
+                $"[UnitVisualPresenter] Diagnostics '{name}': unitDef={(definition != null ? definition.name : "None")}, resolvedProfile={(resolvedProfile != null ? resolvedProfile.name : "None")}, activeProfile={(activeProfile != null ? activeProfile.name : "None")}, modelPrefab={(resolvedProfile != null && resolvedProfile.ModelPrefab != null ? resolvedProfile.ModelPrefab.name : "None")}, spawnedModel={(spawnedModel != null ? spawnedModel.name : "None")}, animator={(animator != null ? animator.name : "None")}, root={transform.position}, modelWorld={modelWorldPos}, modelLocal={modelLocalPos}, expectedLocal={expectedLocalPos}, rootMotion={(animator != null && animator.applyRootMotion)}, stateHash={(animator != null ? state.shortNameHash : 0)}, stateTime={(animator != null ? state.normalizedTime : 0f):F2}",
                 this);
         }
 
@@ -201,6 +204,7 @@ namespace CombatSystem.Core
             }
 
             ResolveAnimator();
+            EnsureAnimatorComponent();
             EnsureAnimationEventProxy();
             ApplyAnimatorOverridesFromProfile();
             CacheAnimatorParameters();
@@ -313,6 +317,70 @@ namespace CombatSystem.Core
             if (animator == null && autoFindAnimatorOnModel)
             {
                 animator = GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        private void EnsureVisualChainReady()
+        {
+            var resolvedProfile = ResolveProfile();
+            if (resolvedProfile != activeProfile)
+            {
+                RebuildVisual(force: true);
+                return;
+            }
+
+            if (resolvedProfile == null || resolvedProfile.ModelPrefab == null)
+            {
+                return;
+            }
+
+            if (spawnedModel == null)
+            {
+                RebuildVisual(force: true);
+                return;
+            }
+
+            if (animator != null)
+            {
+                return;
+            }
+
+            ResolveAnimator();
+            EnsureAnimatorComponent();
+            ApplyAnimatorOverridesFromProfile();
+            CacheAnimatorParameters();
+
+            if (refreshHitFlashTargetsAfterModelSwap && hitFlashReceiver != null)
+            {
+                hitFlashReceiver.RefreshRendererCache();
+            }
+        }
+
+        private void EnsureAnimatorComponent()
+        {
+            if (animator != null || spawnedModel == null || activeProfile == null)
+            {
+                return;
+            }
+
+            if (!autoFindAnimatorOnModel)
+            {
+                return;
+            }
+
+            if (activeProfile.AnimatorController == null && activeProfile.AvatarOverride == null)
+            {
+                return;
+            }
+
+            animator = spawnedModel.GetComponent<Animator>();
+            if (animator == null)
+            {
+                animator = spawnedModel.AddComponent<Animator>();
+                if (enableDebugLog)
+                {
+                    Debug.Log($"[UnitVisualPresenter] Added Animator on spawned model '{spawnedModel.name}'.", this);
+                }
             }
         }
 

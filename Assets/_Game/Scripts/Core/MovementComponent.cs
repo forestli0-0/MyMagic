@@ -49,6 +49,14 @@ namespace CombatSystem.Core
         [Tooltip("是否在移动时自动朝向移动方向")]
         [SerializeField] private bool rotateToMovement = true;
 
+        [Header("导航平滑")]
+        [Tooltip("AI/NavMesh 驱动方向的平滑强度，值越大响应越快。")]
+        [SerializeField, Range(1f, 40f)] private float navDirectionSmoothing = 14f;
+        [Tooltip("Nav 低速时的方向死区（避免停驻附近抖动转向）。")]
+        [SerializeField, Range(0f, 0.3f)] private float navDirectionDeadZone = 0.08f;
+        [Tooltip("Nav 低速时的转向速度倍率。")]
+        [SerializeField, Range(0.1f, 1f)] private float navLowSpeedTurnScale = 0.5f;
+
         [Header("控制驱动")]
         [Tooltip("强制移动控制的速度倍率（Fear/Taunt/Charm）")]
         [SerializeField] private float forcedControlSpeedMultiplier = 1f;
@@ -64,6 +72,14 @@ namespace CombatSystem.Core
 
         /// <summary>当前帧是否有移动输入</summary>
         private bool hasMoveInput;
+        /// <summary>当前帧移动速度缩放（0-1），用于保留 NavMesh 期望速度幅值。</summary>
+        private float moveInputSpeedScale = 1f;
+        /// <summary>当前输入是否来自速度向量（通常由 NavMesh 驱动）。</summary>
+        private bool moveInputFromVelocity;
+        /// <summary>Nav 方向平滑缓存。</summary>
+        private Vector3 smoothedNavDirection = Vector3.forward;
+        /// <summary>Nav 方向平滑缓存是否已初始化。</summary>
+        private bool hasSmoothedNavDirection;
 
         #endregion
 
@@ -197,6 +213,8 @@ namespace CombatSystem.Core
 
             moveInput = direction;
             hasMoveInput = true;
+            moveInputSpeedScale = 1f;
+            moveInputFromVelocity = false;
         }
 
         /// <summary>
@@ -205,12 +223,23 @@ namespace CombatSystem.Core
         /// <param name="velocity">速度向量（方向 × 速度）</param>
         public void SetMoveVelocity(Vector3 velocity)
         {
-            if (velocity.sqrMagnitude <= 0.0001f)
+            var speed = velocity.magnitude;
+            if (speed <= 0.001f)
             {
                 return;
             }
 
-            SetMoveInput(velocity.normalized);
+            var maxSpeed = Mathf.Max(0.01f, GetMoveSpeed());
+            var speedScale = Mathf.Clamp01(speed / maxSpeed);
+            if (speedScale <= 0.01f)
+            {
+                return;
+            }
+
+            moveInput = velocity / speed;
+            hasMoveInput = true;
+            moveInputSpeedScale = speedScale;
+            moveInputFromVelocity = true;
         }
 
         /// <summary>
@@ -220,6 +249,8 @@ namespace CombatSystem.Core
         {
             hasMoveInput = false;
             moveInput = Vector3.zero;
+            moveInputSpeedScale = 1f;
+            moveInputFromVelocity = false;
         }
 
         /// <summary>
@@ -315,13 +346,21 @@ namespace CombatSystem.Core
                     direction.Normalize();
                 }
 
-                var speed = GetMoveSpeed();
+                if (moveInputFromVelocity)
+                {
+                    direction = ResolveVelocityDrivenDirection(direction, deltaTime);
+                }
+
+                var speed = GetMoveSpeed() * Mathf.Clamp01(moveInputSpeedScale);
                 Move(direction * speed * deltaTime);
 
                 // 根据配置决定是否朝向移动方向
-                if (rotateToMovement)
+                if (rotateToMovement && speed > 0.05f)
                 {
-                    RotateTowards(direction);
+                    var turnScale = moveInputFromVelocity
+                        ? Mathf.Lerp(Mathf.Clamp(navLowSpeedTurnScale, 0.1f, 1f), 1f, Mathf.Clamp01(moveInputSpeedScale))
+                        : 1f;
+                    RotateTowards(direction, turnScale);
                 }
             }
 
@@ -349,7 +388,7 @@ namespace CombatSystem.Core
         /// 平滑旋转朝向指定方向。
         /// </summary>
         /// <param name="direction">目标方向</param>
-        private void RotateTowards(Vector3 direction)
+        private void RotateTowards(Vector3 direction, float speedScale = 1f)
         {
             // 检查是否允许旋转（施法时可能被限制）
             var canRotate = skillUser == null || !skillUser.IsCasting || skillUser.CanRotateWhileCasting;
@@ -366,7 +405,46 @@ namespace CombatSystem.Core
             }
 
             var rotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+            var safeScale = Mathf.Clamp(speedScale, 0.05f, 2f);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rotation, rotationSpeed * safeScale * Time.deltaTime);
+        }
+
+        private Vector3 ResolveVelocityDrivenDirection(Vector3 direction, float deltaTime)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return hasSmoothedNavDirection ? smoothedNavDirection : transform.forward;
+            }
+
+            direction.Normalize();
+            if (!hasSmoothedNavDirection)
+            {
+                smoothedNavDirection = direction;
+                hasSmoothedNavDirection = true;
+                return direction;
+            }
+
+            var speedScale = Mathf.Clamp01(moveInputSpeedScale);
+            if (speedScale < Mathf.Clamp01(navDirectionDeadZone))
+            {
+                return smoothedNavDirection;
+            }
+
+            var smoothing = Mathf.Max(1f, navDirectionSmoothing);
+            var t = 1f - Mathf.Exp(-smoothing * Mathf.Max(0.0001f, deltaTime));
+            var smoothed = Vector3.Slerp(smoothedNavDirection, direction, t);
+            if (smoothed.sqrMagnitude > 0.0001f)
+            {
+                smoothed.Normalize();
+                smoothedNavDirection = smoothed;
+            }
+            else
+            {
+                smoothedNavDirection = direction;
+            }
+
+            return smoothedNavDirection;
         }
 
         private void ProcessControlMove(float deltaTime, Vector3 direction, bool rotate)
@@ -505,6 +583,8 @@ namespace CombatSystem.Core
         {
             hasMoveInput = false;
             moveInput = Vector3.zero;
+            moveInputSpeedScale = 1f;
+            moveInputFromVelocity = false;
         }
 
         /// <summary>

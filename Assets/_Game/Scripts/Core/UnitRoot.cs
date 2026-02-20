@@ -27,6 +27,8 @@ namespace CombatSystem.Core
         [Header("选项")]
         [Tooltip("是否在 Awake 时自动初始化")]
         [SerializeField] private bool initializeOnAwake = true;
+        [Tooltip("若单位缺少 UnitVisualPresenter，运行时自动补齐，保证视觉配置链路可用。")]
+        [SerializeField] private bool ensureVisualPresenterOnAwake = true;
 
         public UnitDefinition Definition => unitDefinition;
         public CombatEventHub EventHub => eventHub;
@@ -47,10 +49,27 @@ namespace CombatSystem.Core
 
         private void Awake()
         {
+            EnsureVisualPresenterIfMissing();
+
             if (initializeOnAwake)
             {
                 Initialize(unitDefinition);
             }
+        }
+
+        private void EnsureVisualPresenterIfMissing()
+        {
+            if (!ensureVisualPresenterOnAwake)
+            {
+                return;
+            }
+
+            if (GetComponent<UnitVisualPresenter>() != null)
+            {
+                return;
+            }
+
+            gameObject.AddComponent<UnitVisualPresenter>();
         }
 
         /// <summary>

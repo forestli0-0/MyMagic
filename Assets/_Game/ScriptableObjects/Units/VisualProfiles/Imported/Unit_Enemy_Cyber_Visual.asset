@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d30e698e8e61744842ae7e11044497, type: 3}
+  m_Name: Unit_Enemy_Cyber_Visual
+  m_EditorClassIdentifier: 
+  modelPrefab: {fileID: 1335500218136280, guid: e10e470cb8ac58346ab2adcf73cc6e93,
+    type: 3}
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 0, z: 0}
+  localScale: {x: 1, y: 1, z: 1}
+  hideRootRenderersWhenModelActive: 1
+  animatorController: {fileID: 9100000, guid: fbf6bf3e1c65ae945a7572a5aa2e7d05, type: 2}
+  avatarOverride: {fileID: 9000000, guid: a4544f3443b35324db34bf13819a2a48, type: 3}
+  applyRootMotion: 0
+  moveSpeedFloat: MoveSpeed
+  movingBool: IsMoving
+  attackTrigger: Attack
+  castTrigger: Cast
+  hitTrigger: Hit
+  dieTrigger: Die
+  deadBool: IsDead
+  castingBool: IsCasting
+  useAttackTriggerForBasicAttack: 1
+  moveSpeedSmoothing: 14
+  movingThreshold: 0.06

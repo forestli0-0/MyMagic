@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d30e698e8e61744842ae7e11044497, type: 3}
+  m_Name: Unit_Enemy_Spider_Visual
+  m_EditorClassIdentifier: 
+  modelPrefab: {fileID: 8688803186435683820, guid: fd02805ee801de64a828e8190cac7784,
+    type: 3}
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 180, z: 0}
+  localScale: {x: 0.28, y: 0.28, z: 0.28}
+  hideRootRenderersWhenModelActive: 1
+  animatorController: {fileID: 9100000, guid: 80e40221249c38f478661ac74561c5ec, type: 2}
+  avatarOverride: {fileID: 0}
+  applyRootMotion: 0
+  moveSpeedFloat: MoveSpeed
+  movingBool: IsMoving
+  attackTrigger: Attack
+  castTrigger: Cast
+  hitTrigger: Hit
+  dieTrigger: Die
+  deadBool: IsDead
+  castingBool: IsCasting
+  useAttackTriggerForBasicAttack: 1
+  moveSpeedSmoothing: 14
+  movingThreshold: 0.06
