@@ -60,6 +60,8 @@ namespace CombatSystem.Gameplay
 
         /// <summary>目标列表缓存（避免GC）</summary>
         private readonly List<CombatTarget> cachedTargets = new List<CombatTarget>(8);
+        /// <summary>非普攻技能缓存（用于数字键映射）</summary>
+        private readonly List<SkillDefinition> nonBasicSkillBuffer = new List<SkillDefinition>(8);
 
         /// <summary>当前高亮的目标</summary>
         private Transform currentTarget;
@@ -244,20 +246,35 @@ namespace CombatSystem.Gameplay
         /// <returns>对应的技能定义，如果不存在则返回null</returns>
         private SkillDefinition GetSkillForSlot(int index)
         {
-            if (skillUser == null)
+            if (skillUser == null || index < 0)
             {
                 return null;
             }
 
             var skills = skillUser.Skills;
-            // 如果索引在技能列表范围内，返回对应技能
-            if (skills != null && index >= 0 && index < skills.Count)
+            if (skills == null || skills.Count == 0)
             {
-                return skills[index];
+                return null;
             }
 
-            // 索引0时回退到普通攻击
-            return index == 0 ? skillUser.BasicAttack : null;
+            nonBasicSkillBuffer.Clear();
+            for (var i = 0; i < skills.Count; i++)
+            {
+                var skill = skills[i];
+                if (skill == null || skillUser.IsBasicAttackSkill(skill))
+                {
+                    continue;
+                }
+
+                nonBasicSkillBuffer.Add(skill);
+            }
+
+            if (index >= nonBasicSkillBuffer.Count)
+            {
+                return null;
+            }
+
+            return nonBasicSkillBuffer[index];
         }
 
         /// <summary>

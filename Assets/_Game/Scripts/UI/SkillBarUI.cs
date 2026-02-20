@@ -25,6 +25,12 @@ namespace CombatSystem.UI
         [Tooltip("每个槽位对应的快捷键标签")]
         [SerializeField] private string[] keyLabels = { "1", "2", "3", "4", "5", "6" };
 
+        [Header("普攻槽位")]
+        [Tooltip("是否在技能栏中预留首格用于显示普攻")]
+        [SerializeField] private bool showBasicAttackSlot = true;
+        [Tooltip("普攻槽位的快捷键标签（仅显示用途）")]
+        [SerializeField] private string basicAttackKeyLabel = "RMB";
+
         /// <summary>
         /// 绑定的技能使用者组件（提供装备的技能列表）
         /// </summary>
@@ -36,6 +42,7 @@ namespace CombatSystem.UI
         private CooldownComponent cooldown;
 
         private int lastMaxSlots;
+        private readonly List<SkillDefinition> nonBasicSkills = new List<SkillDefinition>(8);
 
         private void Awake()
         {
@@ -176,8 +183,68 @@ namespace CombatSystem.UI
                 return;
             }
 
+            if (!showBasicAttackSlot)
+            {
+                RebuildSlotsLegacy(maxSlots);
+                return;
+            }
+
             var skills = skillUser.Skills;
-            // 确定实际显示数量：取配置覆盖值、外部传入值、实际技能数和可用槽位数的最小值
+            var limit = maxSlotsOverride >= 0 ? maxSlotsOverride : maxSlots;
+            var displayLimit = Mathf.Min(limit, slots.Count);
+            var basicAttack = skillUser.BasicAttack;
+
+            nonBasicSkills.Clear();
+            for (int i = 0; i < skills.Count; i++)
+            {
+                var skill = skills[i];
+                if (skill == null || skillUser.IsBasicAttackSkill(skill))
+                {
+                    continue;
+                }
+
+                nonBasicSkills.Add(skill);
+            }
+
+            var slotCursor = 0;
+            var hasBasicSlot = basicAttack != null && displayLimit > 0;
+            if (hasBasicSlot)
+            {
+                slots[slotCursor].BindSkill(basicAttack, basicAttackKeyLabel);
+                slotCursor++;
+            }
+
+            var nonBasicDisplayCount = Mathf.Min(nonBasicSkills.Count, Mathf.Max(0, displayLimit - slotCursor));
+            for (var i = 0; i < nonBasicDisplayCount; i++)
+            {
+                var slot = slots[slotCursor];
+                if (slot == null)
+                {
+                    slotCursor++;
+                    continue;
+                }
+
+                var labelIndex = hasBasicSlot ? i : slotCursor;
+                var label = labelIndex >= 0 && labelIndex < keyLabels.Length ? keyLabels[labelIndex] : string.Empty;
+                slot.BindSkill(nonBasicSkills[i], label);
+                slotCursor++;
+            }
+
+            for (int i = slotCursor; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                slot.BindSkill(null, string.Empty);
+            }
+        }
+
+        private void RebuildSlotsLegacy(int maxSlots)
+        {
+            var skills = skillUser.Skills;
             var limit = maxSlotsOverride >= 0 ? maxSlotsOverride : maxSlots;
             var count = Mathf.Min(limit, skills.Count, slots.Count);
 
@@ -191,13 +258,11 @@ namespace CombatSystem.UI
 
                 if (i < count)
                 {
-                    // 在有效范围内：绑定技能和快捷键标签
                     var label = i < keyLabels.Length ? keyLabels[i] : string.Empty;
                     slot.BindSkill(skills[i], label);
                 }
                 else
                 {
-                    // 超出范围：清空槽位
                     slot.BindSkill(null, string.Empty);
                 }
             }
