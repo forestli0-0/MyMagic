@@ -261,29 +261,21 @@ namespace CombatSystem.Gameplay
                 var startingSkills = definition.StartingSkills;
                 for (int i = 0; i < startingSkills.Count; i++)
                 {
-                    var skill = startingSkills[i];
-                    if (skill != null && !runtimeSkills.Contains(skill))
-                    {
-                        runtimeSkills.Add(skill);
-                    }
+                    AddRuntimeSkillUnique(startingSkills[i]);
                 }
             }
 
             // 添加额外配置的技能
             for (int i = 0; i < skills.Count; i++)
             {
-                var skill = skills[i];
-                if (skill != null && !runtimeSkills.Contains(skill))
-                {
-                    runtimeSkills.Add(skill);
-                }
+                AddRuntimeSkillUnique(skills[i]);
             }
 
             SkillsChanged?.Invoke();
         }
 
         /// <summary>
-        /// 覆盖当前技能列表（用于快速切换技能分页）。
+        /// 覆盖当前技能列表（用于读档恢复或运行时构筑重设）。
         /// </summary>
         /// <param name="newSkills">新的技能列表</param>
         /// <param name="includeBasicAttack">是否自动包含普攻</param>
@@ -304,15 +296,22 @@ namespace CombatSystem.Gameplay
             {
                 for (int i = 0; i < newSkills.Count; i++)
                 {
-                    var skill = newSkills[i];
-                    if (skill != null && !runtimeSkills.Contains(skill))
-                    {
-                        runtimeSkills.Add(skill);
-                    }
+                    AddRuntimeSkillUnique(newSkills[i]);
                 }
             }
 
             SkillsChanged?.Invoke();
+        }
+
+        private bool AddRuntimeSkillUnique(SkillDefinition skill)
+        {
+            if (skill == null || runtimeSkills.Contains(skill))
+            {
+                return false;
+            }
+
+            runtimeSkills.Add(skill);
+            return true;
         }
 
         /// <summary>
@@ -349,17 +348,16 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            if (runtimeSkills.Contains(skill))
-            {
-                return false;
-            }
-
             if (maxSkillCount > 0 && runtimeSkills.Count >= maxSkillCount)
             {
                 return false;
             }
 
-            runtimeSkills.Add(skill);
+            if (!AddRuntimeSkillUnique(skill))
+            {
+                return false;
+            }
+
             SkillsChanged?.Invoke();
             return true;
         }

@@ -107,8 +107,7 @@ namespace CombatSystem.Gameplay
                 cachedPlayerState = default;
             }
 
-            pendingLevelId = levelId;
-            pendingSpawnId = string.IsNullOrWhiteSpace(spawnId) ? level.DefaultSpawnId : spawnId;
+            var resolvedSpawnId = string.IsNullOrWhiteSpace(spawnId) ? level.DefaultSpawnId : spawnId;
 
             if (string.IsNullOrWhiteSpace(level.SceneName))
             {
@@ -116,6 +115,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            pendingLevelId = levelId;
+            pendingSpawnId = resolvedSpawnId;
             SceneManager.LoadScene(level.SceneName);
         }
 
@@ -255,6 +256,7 @@ namespace CombatSystem.Gameplay
                 }
                 catch (UnityException)
                 {
+                    // 当标签未在 TagManager 中配置时会抛异常，降级到后续组件查找路径。
                 }
             }
 
@@ -324,7 +326,6 @@ namespace CombatSystem.Gameplay
             var activeScene = SceneManager.GetActiveScene();
             if (instance.scene != activeScene)
             {
-                var fromScene = instance.scene.name;
                 SceneManager.MoveGameObjectToScene(instance, activeScene);
             }
 
@@ -343,9 +344,7 @@ namespace CombatSystem.Gameplay
             if (!TryApplySpawn(spawnId, instance))
             {
                 var fallback = level != null ? level.DefaultSpawnId : "Start";
-                if (!TryApplySpawn(fallback, instance))
-                {
-                }
+                TryApplySpawn(fallback, instance);
             }
 
             return instance;
@@ -358,24 +357,17 @@ namespace CombatSystem.Gameplay
                 return playerDefinition;
             }
 
-            var resolvedDatabase = database != null ? database : FindFirstObjectByType<GameDatabase>();
-            if (resolvedDatabase == null || string.IsNullOrWhiteSpace(playerUnitId))
+            if (!EnsureDatabase() || string.IsNullOrWhiteSpace(playerUnitId))
             {
                 return null;
             }
 
-            var resolved = resolvedDatabase.GetUnit(playerUnitId);
-            return resolved;
+            return database.GetUnit(playerUnitId);
         }
 
         private LevelDefinition ResolveLevel(string levelId)
         {
-            if (database == null)
-            {
-                database = FindFirstObjectByType<GameDatabase>();
-            }
-
-            if (database == null || string.IsNullOrWhiteSpace(levelId))
+            if (!EnsureDatabase() || string.IsNullOrWhiteSpace(levelId))
             {
                 return null;
             }
@@ -385,12 +377,7 @@ namespace CombatSystem.Gameplay
 
         private LevelDefinition ResolveLevelByScene(string sceneName)
         {
-            if (database == null)
-            {
-                database = FindFirstObjectByType<GameDatabase>();
-            }
-
-            if (database == null || database.Levels == null)
+            if (!EnsureDatabase() || database.Levels == null)
             {
                 return null;
             }
@@ -405,6 +392,16 @@ namespace CombatSystem.Gameplay
             }
 
             return null;
+        }
+
+        private bool EnsureDatabase()
+        {
+            if (database == null)
+            {
+                database = FindFirstObjectByType<GameDatabase>();
+            }
+
+            return database != null;
         }
 
         /// <summary>
