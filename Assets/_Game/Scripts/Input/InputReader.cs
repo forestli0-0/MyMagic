@@ -67,8 +67,6 @@ namespace CombatSystem.Input
         public event Action PausePerformed;
         /// <summary>物品栏按下时触发（I）</summary>
         public event Action InventoryPerformed;
-        /// <summary>切换技能页时触发（参数为方向：1=下一页，-1=上一页）</summary>
-        public event Action<int> SwitchPage;
         /// <summary>切换调试覆盖层时触发（F3）</summary>
         public event Action ToggleOverlay;
 
@@ -89,8 +87,6 @@ namespace CombatSystem.Input
         private InputAction pauseActionUi;
         private InputAction inventoryAction;
         private InputAction inventoryActionUi;
-        private InputAction switchPageAction;
-        private InputAction pageModifierAction;
         private InputAction toggleOverlayAction;
         private InputAction[] skillActions;
 
@@ -111,9 +107,6 @@ namespace CombatSystem.Input
         };
 
         #endregion
-
-        /// <summary>检查分页修饰键是否按下（Shift）</summary>
-        private bool IsPageModifierHeld => pageModifierAction != null && pageModifierAction.IsPressed();
 
         #region Unity 生命周期
 
@@ -195,8 +188,6 @@ namespace CombatSystem.Input
             cancelAction = gameplayMap.FindAction(CombatInputIds.Cancel, false);
             pauseAction = gameplayMap.FindAction(CombatInputIds.Pause, false);
             inventoryAction = gameplayMap.FindAction(CombatInputIds.Inventory, false);
-            switchPageAction = gameplayMap.FindAction(CombatInputIds.SwitchPage, false);
-            pageModifierAction = gameplayMap.FindAction(CombatInputIds.PageModifier, false);
 
             skillActions = new InputAction[SkillActionNames.Length];
             for (var i = 0; i < SkillActionNames.Length; i++)
@@ -288,11 +279,6 @@ namespace CombatSystem.Input
             if (inventoryActionUi != null && inventoryActionUi != inventoryAction)
             {
                 inventoryActionUi.performed += HandleInventory;
-            }
-
-            if (switchPageAction != null)
-            {
-                switchPageAction.performed += HandleSwitchPage;
             }
 
             if (toggleOverlayAction != null)
@@ -506,15 +492,6 @@ namespace CombatSystem.Input
         private void HandleInventory(InputAction.CallbackContext context)
         {
             InventoryPerformed?.Invoke();
-        }
-
-        /// <summary>
-        /// 切换技能页回调。根据 Shift 键决定方向。
-        /// </summary>
-        private void HandleSwitchPage(InputAction.CallbackContext context)
-        {
-            var delta = IsPageModifierHeld ? -1 : 1;
-            SwitchPage?.Invoke(delta);
         }
 
         /// <summary>

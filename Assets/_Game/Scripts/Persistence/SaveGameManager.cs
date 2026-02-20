@@ -373,6 +373,7 @@ namespace CombatSystem.Persistence
                 var levelFlow = FindFirstObjectByType<LevelFlowController>();
                 if (levelFlow != null)
                 {
+                    levelFlow.SkipCachedStateOnNextSceneLoad();
                     levelFlow.PrepareSpawn(data.player.levelId, data.player.spawnPointId);
                 }
             }

@@ -47,10 +47,6 @@ namespace CombatSystem.Input
         public const string Pause = "Pause";
         /// <summary>打开/关闭物品栏（I）</summary>
         public const string Inventory = "Inventory";
-        /// <summary>切换技能页（Tab/RB）</summary>
-        public const string SwitchPage = "SwitchPage";
-        /// <summary>分页修饰键（Shift/LB，反向切换）</summary>
-        public const string PageModifier = "PageModifier";
 
         #endregion
 

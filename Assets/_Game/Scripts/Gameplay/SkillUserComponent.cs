@@ -316,6 +316,95 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 检查当前技能列表中是否已包含指定技能。
+        /// </summary>
+        public bool HasSkill(SkillDefinition skill)
+        {
+            return skill != null && runtimeSkills.Contains(skill);
+        }
+
+        /// <summary>
+        /// 获取技能在运行时列表中的索引，不存在时返回 -1。
+        /// </summary>
+        public int IndexOfSkill(SkillDefinition skill)
+        {
+            if (skill == null)
+            {
+                return -1;
+            }
+
+            return runtimeSkills.IndexOf(skill);
+        }
+
+        /// <summary>
+        /// 尝试向运行时技能列表新增一个技能。
+        /// </summary>
+        /// <param name="skill">要添加的技能</param>
+        /// <param name="maxSkillCount">最大技能数限制（-1 表示不限）</param>
+        /// <returns>成功添加返回 true</returns>
+        public bool TryAddSkill(SkillDefinition skill, int maxSkillCount = -1)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            if (runtimeSkills.Contains(skill))
+            {
+                return false;
+            }
+
+            if (maxSkillCount > 0 && runtimeSkills.Count >= maxSkillCount)
+            {
+                return false;
+            }
+
+            runtimeSkills.Add(skill);
+            SkillsChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// 尝试替换指定槽位技能。
+        /// </summary>
+        /// <param name="index">要替换的技能索引</param>
+        /// <param name="skill">新技能</param>
+        /// <param name="lockBasicAttackSlot">是否禁止替换普攻槽</param>
+        /// <returns>替换成功返回 true</returns>
+        public bool TryReplaceSkill(int index, SkillDefinition skill, bool lockBasicAttackSlot = true)
+        {
+            if (skill == null)
+            {
+                return false;
+            }
+
+            if (index < 0 || index >= runtimeSkills.Count)
+            {
+                return false;
+            }
+
+            var current = runtimeSkills[index];
+            if (current == skill)
+            {
+                return true;
+            }
+
+            if (lockBasicAttackSlot && IsBasicAttackSkill(current))
+            {
+                return false;
+            }
+
+            if (runtimeSkills.Contains(skill))
+            {
+                return false;
+            }
+
+            runtimeSkills[index] = skill;
+            SkillsChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
         /// 尝试释放指定技能。
         /// </summary>
         /// <param name="skill">要释放的技能</param>

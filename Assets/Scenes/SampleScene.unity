@@ -23379,7 +23379,6 @@ GameObject:
   - component: {fileID: 1954876154}
   - component: {fileID: 1954876153}
   - component: {fileID: 1954876152}
-  - component: {fileID: 1954876151}
   - component: {fileID: 1954876162}
   - component: {fileID: 1954876163}
   m_Layer: 0
@@ -23544,69 +23543,6 @@ MonoBehaviour:
   unitRoot: {fileID: 1954876143}
   unitTags: {fileID: 1954876146}
   initializeOnAwake: 1
---- !u!114 &1954876151
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1954876142}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5e69949f51534b94ba37b061ff2bcc80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  skillUser: {fileID: 1954876145}
-  skillBar: {fileID: 1440696200}
-  slotsPerPage: 6
-  includeBasicAttack: 0
-  wrapPages: 1
-  initialPage: 0
-  inputReader: {fileID: 0}
-  autoFindInputReader: 1
-  allowSwitchOnTab: 0
-  switchCooldown: 0.2
-  pages:
-  - name: AOE & Targeting
-    skills:
-    - {fileID: 11400000, guid: 041b4100faf51b54fa9003abde681785, type: 2}
-    - {fileID: 11400000, guid: 9e573ba9b009c2a40bbba0017a5b18e2, type: 2}
-    - {fileID: 11400000, guid: 909ce94cfd28f23448c894059dcd74b8, type: 2}
-    - {fileID: 11400000, guid: 66b9ac080c7e6004a9af8b5f06f64ab1, type: 2}
-    - {fileID: 11400000, guid: dac22c712bec7e140a379ab4be0d7fa7, type: 2}
-    - {fileID: 11400000, guid: 0187230bb1ff61a4885c6188e246ae88, type: 2}
-  - name: Skillshots
-    skills:
-    - {fileID: 11400000, guid: 6267ac4cf13edf64ab008aa9167e43a3, type: 2}
-    - {fileID: 11400000, guid: 5c0f9f44d8e865942b776665ed6e0e7b, type: 2}
-    - {fileID: 11400000, guid: 909ce94cfd28f23448c894059dcd74b8, type: 2}
-    - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}
-    - {fileID: 11400000, guid: dac22c712bec7e140a379ab4be0d7fa7, type: 2}
-    - {fileID: 11400000, guid: 0187230bb1ff61a4885c6188e246ae88, type: 2}
-  - name: Buffs & DOT
-    skills:
-    - {fileID: 11400000, guid: bbba8ad6b33fd2a4c837d744b5218ee2, type: 2}
-    - {fileID: 11400000, guid: 99fd39085c1b4dd4087d1d187e0e2830, type: 2}
-    - {fileID: 11400000, guid: 18775e59637590242a1dac4a7b619a7e, type: 2}
-    - {fileID: 11400000, guid: 73e400a4917058948b78a690c0b94521, type: 2}
-    - {fileID: 11400000, guid: f50636b76fb6a1d47b856befb555b1cb, type: 2}
-    - {fileID: 11400000, guid: 4e93c4a65b6f0654aa80325ea1b92dc5, type: 2}
-  - name: Utility
-    skills:
-    - {fileID: 11400000, guid: b2f4e32bce5341145977ec8c76caee65, type: 2}
-    - {fileID: 11400000, guid: cf0f96ca94a546648a8662ad48469d69, type: 2}
-    - {fileID: 11400000, guid: 8e1bb0e4065d921499a679fac32731a4, type: 2}
-    - {fileID: 11400000, guid: 1706376aa00b700409b79fea89fe70bb, type: 2}
-    - {fileID: 11400000, guid: 5d6e4e70139a34d4b8b200e9ed9cea21, type: 2}
-    - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}
-  - name: Control Tests
-    skills:
-    - {fileID: 11400000, guid: bae7eded940a4b569d8ac6c86643d497, type: 2}
-    - {fileID: 11400000, guid: 618d41702717462d831ba4c95c14c447, type: 2}
-    - {fileID: 11400000, guid: e028c8700b554c3594deaf984ef46a88, type: 2}
-    - {fileID: 11400000, guid: f34f406333e34b589ce0dfb44dd77ec0, type: 2}
-    - {fileID: 11400000, guid: a0bc412e872c4713b494724270f8f88e, type: 2}
-    - {fileID: 11400000, guid: 963604de651740bc90f71a30a7e05663, type: 2}
 --- !u!114 &1954876152
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1658,98 +1658,6 @@ namespace CombatSystem.Editor
             EnsureEventSystem();
             EnsureInputRoot();
 
-            var pageSwitcher = player.AddComponent<SkillPageSwitcher>();
-            SetComponentReference(pageSwitcher, "skillUser", player.GetComponent<SkillUserComponent>());
-            if (skillBar != null)
-            {
-                SetComponentReference(pageSwitcher, "skillBar", skillBar);
-            }
-            else
-            {
-                Debug.LogWarning("[CombatSampleGenerator] SkillBarUI not found, SkillPageSwitcher UI binding skipped.");
-            }
-            SetComponentValue(pageSwitcher, "slotsPerPage", assets.HUDDefault != null ? assets.HUDDefault.MaxSkillSlots : 6);
-            SetComponentValue(pageSwitcher, "includeBasicAttack", false);
-            SetComponentValue(pageSwitcher, "wrapPages", true);
-            var controlTestSkills = BuildSkillList(
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestStun.asset"),
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestRoot.asset"),
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestSuppression.asset"),
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestFear.asset"),
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestTaunt.asset"),
-                LoadOptionalSkill("Assets/_Game/ScriptableObjects/Skills/Skill_TestCharm.asset"));
-
-            var pages = new List<SkillPageData>
-            {
-                new SkillPageData
-                {
-                    Name = "AOE & Targeting",
-                    Skills = new Object[]
-                    {
-                        assets.SkillCleave,
-                        assets.SkillChainLightning,
-                        assets.SkillRandomShot,
-                        assets.SkillShockwave,
-                        assets.SkillArcaneBolt,
-                        assets.SkillDash
-                    }
-                },
-                new SkillPageData
-                {
-                    Name = "Skillshots",
-                    Skills = new Object[]
-                    {
-                        assets.SkillLineStrike,
-                        assets.SkillBoxField,
-                        assets.SkillRandomShot,
-                        assets.SkillFireball,
-                        assets.SkillArcaneBolt,
-                        assets.SkillDash
-                    }
-                },
-                new SkillPageData
-                {
-                    Name = "Buffs & DOT",
-                    Skills = new Object[]
-                    {
-                        assets.SkillBleedStrike,
-                        assets.SkillPoisonDart,
-                        assets.SkillStoneSkin,
-                        assets.SkillMagicWard,
-                        assets.SkillQuickCast,
-                        assets.SkillTimeWarp
-                    }
-                },
-                new SkillPageData
-                {
-                    Name = "Utility",
-                    Skills = new Object[]
-                    {
-                        assets.SkillHeal,
-                        assets.SkillManaSurge,
-                        assets.SkillSummonTotem,
-                        assets.SkillTriggerFocus,
-                        assets.SkillExecute,
-                        assets.SkillFireball
-                    }
-                }
-            };
-
-            if (controlTestSkills.Length > 0)
-            {
-                pages.Add(new SkillPageData
-                {
-                    Name = "Control Tests",
-                    Skills = controlTestSkills
-                });
-            }
-            else
-            {
-                Debug.LogWarning("[CombatSampleGenerator] Control test skills not found, skipping control page.");
-            }
-
-            ConfigureSkillPages(pageSwitcher, 0, pages.ToArray());
-
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, SampleScenePath);
         }
@@ -3237,36 +3145,6 @@ namespace CombatSystem.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private struct SkillPageData
-        {
-            public string Name;
-            public Object[] Skills;
-        }
-
-        private static void ConfigureSkillPages(SkillPageSwitcher switcher, int initialPage, SkillPageData[] pages)
-        {
-            var so = new SerializedObject(switcher);
-            so.FindProperty("initialPage").intValue = Mathf.Max(0, initialPage);
-
-            var list = so.FindProperty("pages");
-            if (pages == null || pages.Length == 0)
-            {
-                list.arraySize = 0;
-                so.ApplyModifiedPropertiesWithoutUndo();
-                return;
-            }
-
-            list.arraySize = pages.Length;
-            for (int i = 0; i < pages.Length; i++)
-            {
-                var page = list.GetArrayElementAtIndex(i);
-                page.FindPropertyRelative("name").stringValue = pages[i].Name ?? string.Empty;
-                SetObjectList(page.FindPropertyRelative("skills"), pages[i].Skills);
-            }
-
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         private static void SetObjectList(SerializedProperty property, Object[] items)
         {
             if (property == null)
@@ -3285,35 +3163,6 @@ namespace CombatSystem.Editor
             {
                 property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
             }
-        }
-
-        private static SkillDefinition LoadOptionalSkill(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-            {
-                return null;
-            }
-
-            return AssetDatabase.LoadAssetAtPath<SkillDefinition>(path);
-        }
-
-        private static Object[] BuildSkillList(params SkillDefinition[] skills)
-        {
-            if (skills == null || skills.Length == 0)
-            {
-                return new Object[0];
-            }
-
-            var list = new List<Object>(skills.Length);
-            for (int i = 0; i < skills.Length; i++)
-            {
-                if (skills[i] != null)
-                {
-                    list.Add(skills[i]);
-                }
-            }
-
-            return list.ToArray();
         }
 
         private static void SetComponentReference(Object component, string propertyName, Object value)

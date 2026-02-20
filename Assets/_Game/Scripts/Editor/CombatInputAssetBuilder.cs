@@ -145,17 +145,6 @@ namespace CombatSystem.Editor
             // 物品栏：I
             var inventory = map.AddAction(CombatInputIds.Inventory, InputActionType.Button);
             inventory.AddBinding("<Keyboard>/i");
-
-            // 切换技能页：Tab + 手柄 RB
-            var switchPage = map.AddAction(CombatInputIds.SwitchPage, InputActionType.Button);
-            switchPage.AddBinding("<Keyboard>/tab");
-            switchPage.AddBinding("<Gamepad>/rightShoulder");
-
-            // 分页修饰键：Shift + 手柄 LB（反向切换）
-            var pageModifier = map.AddAction(CombatInputIds.PageModifier, InputActionType.Button);
-            pageModifier.AddBinding("<Keyboard>/leftShift");
-            pageModifier.AddBinding("<Keyboard>/rightShift");
-            pageModifier.AddBinding("<Gamepad>/leftShoulder");
         }
 
         /// <summary>

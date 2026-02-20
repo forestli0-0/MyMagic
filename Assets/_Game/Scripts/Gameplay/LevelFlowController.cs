@@ -44,6 +44,10 @@ namespace CombatSystem.Gameplay
         private string cachedSceneName;
         /// <summary>场景切换时临时保存的玩家状态</summary>
         private PlayerStateCache cachedPlayerState;
+        /// <summary>下一次加载是否按新开局处理（不继承旧玩家状态）</summary>
+        private bool forceFreshStartLoad;
+        /// <summary>下一次场景加载时跳过缓存状态应用（用于读档覆盖）</summary>
+        private bool skipCachedStateOnNextLoad;
 
         public string CurrentLevelId { get; private set; }
         public string CurrentSpawnPointId { get; private set; }
@@ -76,10 +80,16 @@ namespace CombatSystem.Gameplay
 
         public void StartNewGame()
         {
-            LoadLevel(startLevelId, startSpawnId);
+            forceFreshStartLoad = true;
+            LoadLevelInternal(startLevelId, startSpawnId, false);
         }
 
         public void LoadLevel(string levelId, string spawnId)
+        {
+            LoadLevelInternal(levelId, spawnId, true);
+        }
+
+        private void LoadLevelInternal(string levelId, string spawnId, bool cacheCurrentPlayerState)
         {
             var level = ResolveLevel(levelId);
             if (level == null)
@@ -88,7 +98,14 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            CachePlayerState();
+            if (cacheCurrentPlayerState)
+            {
+                CachePlayerState();
+            }
+            else
+            {
+                cachedPlayerState = default;
+            }
 
             pendingLevelId = levelId;
             pendingSpawnId = string.IsNullOrWhiteSpace(spawnId) ? level.DefaultSpawnId : spawnId;
@@ -106,6 +123,15 @@ namespace CombatSystem.Gameplay
         {
             pendingLevelId = levelId;
             pendingSpawnId = spawnId;
+        }
+
+        /// <summary>
+        /// 下一次场景加载时不应用缓存玩家状态。
+        /// </summary>
+        public void SkipCachedStateOnNextSceneLoad()
+        {
+            skipCachedStateOnNextLoad = true;
+            cachedPlayerState = default;
         }
 
         public bool TryApplySpawn(string spawnId, GameObject player)
@@ -165,12 +191,41 @@ namespace CombatSystem.Gameplay
                 TryApplySpawn(fallback, player);
             }
 
+            if (skipCachedStateOnNextLoad)
+            {
+                cachedPlayerState = default;
+                skipCachedStateOnNextLoad = false;
+            }
+
+            if (forceFreshStartLoad)
+            {
+                ResetPlayerSkillsForNewGame(player);
+                forceFreshStartLoad = false;
+            }
+
             ApplyCachedPlayerState(player);
             EnsurePlayerDeathFlow(player);
             EnsureGameplayScreen();
 
             pendingLevelId = null;
             pendingSpawnId = null;
+        }
+
+        private static void ResetPlayerSkillsForNewGame(GameObject player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            var skillUser = player.GetComponent<SkillUserComponent>();
+            if (skillUser == null)
+            {
+                return;
+            }
+
+            var unitRoot = player.GetComponent<UnitRoot>();
+            skillUser.Initialize(unitRoot != null ? unitRoot.Definition : null);
         }
 
         /// <summary>
@@ -469,6 +524,13 @@ namespace CombatSystem.Gameplay
                 cachedPlayerState.attributePoints = progression.UnspentAttributePoints;
             }
 
+            // 缓存当前技能构筑（保持技能栏顺序）
+            var skillUser = player.GetComponent<SkillUserComponent>();
+            if (skillUser != null)
+            {
+                cachedPlayerState.skillLoadout = CloneSkills(skillUser.Skills);
+            }
+
             var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
             if (characterScreen != null)
             {
@@ -526,14 +588,21 @@ namespace CombatSystem.Gameplay
                     cachedPlayerState.allocatedMoveSpeedPoints);
             }
 
-            // 2. 恢复背包物品
+            // 2. 恢复技能构筑（先于背包恢复，避免 UI 首帧显示旧技能）
+            var skillUser = player.GetComponent<SkillUserComponent>();
+            if (skillUser != null && cachedPlayerState.skillLoadout != null && cachedPlayerState.skillLoadout.Count > 0)
+            {
+                skillUser.SetSkills(cachedPlayerState.skillLoadout, false);
+            }
+
+            // 3. 恢复背包物品
             var inventory = player.GetComponent<InventoryComponent>();
             if (inventory != null && cachedPlayerState.inventoryItems != null)
             {
                 inventory.LoadItems(cachedPlayerState.inventoryItems);
             }
 
-            // 3. 恢复装备（按槽位索引逐个穿戴）
+            // 4. 恢复装备（按槽位索引逐个穿戴）
             var equipment = player.GetComponent<EquipmentComponent>();
             if (equipment != null && cachedPlayerState.equipmentItems != null)
             {
@@ -551,14 +620,14 @@ namespace CombatSystem.Gameplay
                 }
             }
 
-            // 4. 恢复生命值
+            // 5. 恢复生命值
             var health = player.GetComponent<CombatSystem.Core.HealthComponent>();
             if (cachedPlayerState.hasHealth && health != null)
             {
                 health.SetCurrent(cachedPlayerState.health);
             }
 
-            // 5. 恢复资源值（仅当资源类型匹配时）
+            // 6. 恢复资源值（仅当资源类型匹配时）
             var resource = player.GetComponent<CombatSystem.Core.ResourceComponent>();
             if (cachedPlayerState.hasResource && resource != null && resource.ResourceType == cachedPlayerState.resourceType)
             {
@@ -620,6 +689,29 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 拷贝当前技能栏顺序（仅拷贝定义引用，不复制资源本体）。
+        /// </summary>
+        private static List<SkillDefinition> CloneSkills(IReadOnlyList<SkillDefinition> skills)
+        {
+            if (skills == null)
+            {
+                return null;
+            }
+
+            var list = new List<SkillDefinition>(skills.Count);
+            for (int i = 0; i < skills.Count; i++)
+            {
+                var skill = skills[i];
+                if (skill != null)
+                {
+                    list.Add(skill);
+                }
+            }
+
+            return list;
+        }
+
+        /// <summary>
         /// 玩家状态缓存结构，用于场景切换时临时保存玩家数据。
         /// </summary>
         private struct PlayerStateCache
@@ -647,6 +739,8 @@ namespace CombatSystem.Gameplay
             public int allocatedMoveSpeedPoints;
 
             // -------- 物品 --------
+            /// <summary>技能栏顺序快照</summary>
+            public List<SkillDefinition> skillLoadout;
             /// <summary>背包物品深拷贝</summary>
             public List<ItemInstance> inventoryItems;
             /// <summary>装备物品深拷贝（按槽位索引）</summary>
@@ -701,6 +795,7 @@ namespace CombatSystem.Gameplay
                 player.AddComponent<PlayerDeathFlowController>();
             }
         }
+
     }
 
     /// <summary>
