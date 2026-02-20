@@ -2,6 +2,7 @@
 
 ## 1. Role & Goal
 你是 Unity 高级架构师。当前目标已从“战斗系统 Demo”转为“可完整游玩的 ARPG”，核心体验对标暗黑2：城镇 -> 野外/地城 -> 任务 -> Boss -> 掉落 -> 回城 -> 继续推进。重点是系统化、可拓展、可持续迭代。
+项目路线已锁定为**传统 ARPG（章节推进 + 持久化角色）**，不采用肉鸽 Run 式随机构筑与死亡重开循环。
 
 ## 2. Core Architectural Rules (STRICTLY FOLLOW)
 * **Data-Driven:** 所有静态配置（技能、BUFF、掉落、关卡、任务、物品）必须使用 `ScriptableObject`。MonoBehaviour 只做运行时逻辑。
@@ -10,6 +11,7 @@
 * **Zero GC in Hot Paths:** Update/战斗循环无分配；投射物/特效/飘字/掉落物全部池化。
 * **SOLID:** 单一职责，避免巨型类。
 * **Industry-Grade Design:** 系统设计需遵循成熟行业规范，禁止“小作坊式”的补丁式修改；任何改动需有明确设计依据、可扩展性与一致性。
+* **Progression Model Lock:** 采用持久化 RPG 成长（等级/装备/任务/地图推进持续保存），不引入肉鸽局内构筑重开模型。
 
 ## 3. Tech Stack
 * Unity 2022.3 LTS (URP)
@@ -33,7 +35,9 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 
 ## 2. 新目标：完整可游玩 ARPG 体验
 - **核心循环**：城镇 -> 任务/指引 -> 多段地图推进 -> 精英/小Boss -> 大Boss -> 结算/掉落 -> 回城 -> 继续推进
+- **玩法形态**：传统 ARPG（主线/支线/章节推进），不采用局内三选一构筑与 Run 重开为核心驱动
 - **玩家成长**：等级、属性点、技能解锁/升级、装备成长
+- **技能机制**：保留技能栏位管理与可拆卸/可替换能力，构建常规 RPG 的“获取-装备-调整”闭环
 - **装备与掉落**：稀有度、词缀、随机掉落、鉴定/分解/售卖
 - **关卡推进**：Act 概念、多张地图、Boss 关卡、传送点/存档点
 - **任务系统**：主线 + 支线；奖励物品/经验/解锁功能
@@ -46,11 +50,12 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - **Content**:
   - ItemDefinition: 物品基础数据
   - AffixDefinition: 词缀/随机属性
-  - LootTableDefinition: 掉落表/掉落权重
-  - QuestDefinition: 任务目标与奖励
+  - LootTableDefinition: 掉落表/掉落权重（含精英怪技能书/技能碎片掉落）
+  - QuestDefinition: 任务目标与奖励（含技能奖励）
   - LevelDefinition: 关卡/地图配置
   - EncounterDefinition: 怪群/刷怪配置
-  - VendorDefinition: 商店售卖清单
+  - VendorDefinition: 商店售卖清单（含技能商品）
+  - ExchangeRecipeDefinition: NPC 兑换配方（含技能兑换）
   - ProgressionDefinition: 等级曲线/属性成长
 
 ## 4. 运行时核心组件 (新增与扩展)
@@ -190,9 +195,12 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 自动化验证：Day4/Day5/Day6 PlayMode 测试 + Day7 性能烟测已建立并通过
 
 ### 9.2 当前正在做/下一步（优先级顺序）
-- MVP 验收走查已完成（8.4 清单全部通过），进入里程碑收尾与后续内容规划
+- MVP 验收走查已完成（8.4 清单全部通过），进入传统 ARPG 内容扩展阶段（非肉鸽）
+- 下一步重点：章节地图扩展（Act2+）-> 职业/技能树深化 -> 怪物/Boss 内容包扩展 -> 装备与掉落层级深化
+- 技能获取渠道锁定：精英怪掉落 / 商店购买 / NPC兑换 / 任务奖励（保留技能可拆卸机制）
 
 ### 9.3 待确认/风险
+- 玩法路线：**已确认传统 ARPG 路线，不走肉鸽 Run 构筑**
 - 角色职业与战斗主题：已定为「符文守望者 Rune Warden」（火焰/奥术风格）
 - 视角/操控手感：俯视 ARPG，鼠标点击/指向
 - 美术资源来源：Unity Asset Store 免费资源（见 9.5）
