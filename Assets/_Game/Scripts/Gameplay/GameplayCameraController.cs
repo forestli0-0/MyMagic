@@ -1,3 +1,4 @@
+using CombatSystem.Core;
 using CombatSystem.Persistence;
 using CombatSystem.UI;
 using UnityEngine;
@@ -314,7 +315,7 @@ namespace CombatSystem.Gameplay
 
             if (!string.IsNullOrEmpty(playerTag))
             {
-                var player = GameObject.FindGameObjectWithTag(playerTag);
+                var player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
                 if (player != null)
                 {
                     followTarget = player.transform;

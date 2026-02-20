@@ -56,7 +56,7 @@ namespace CombatSystem.Debugging
                 return;
             }
 
-            var player = GameObject.FindGameObjectWithTag("Player");
+            var player = PlayerUnitLocator.FindGameObjectWithTagSafe("Player");
             if (player != null)
             {
                 progression = player.GetComponent<PlayerProgression>();

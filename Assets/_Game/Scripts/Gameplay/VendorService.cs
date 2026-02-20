@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
 using UnityEngine;
 
@@ -558,7 +559,7 @@ namespace CombatSystem.Gameplay
             // 通过标签查找玩家
             if (!string.IsNullOrEmpty(playerTag))
             {
-                var player = GameObject.FindGameObjectWithTag(playerTag);
+                var player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
                 if (player != null)
                 {
                     if (playerInventory == null)

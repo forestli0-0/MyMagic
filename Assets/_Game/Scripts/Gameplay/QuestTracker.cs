@@ -794,13 +794,7 @@ namespace CombatSystem.Gameplay
             GameObject player = null;
             if (!string.IsNullOrWhiteSpace(playerTag))
             {
-                try
-                {
-                    player = GameObject.FindGameObjectWithTag(playerTag);
-                }
-                catch (UnityException)
-                {
-                }
+                player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
             }
 
             if (player == null)
@@ -856,13 +850,7 @@ namespace CombatSystem.Gameplay
             GameObject player = null;
             if (!string.IsNullOrWhiteSpace(playerTag))
             {
-                try
-                {
-                    player = GameObject.FindGameObjectWithTag(playerTag);
-                }
-                catch (UnityException)
-                {
-                }
+                player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
             }
 
             var unitRoot = player != null ? player.GetComponent<UnitRoot>() : null;

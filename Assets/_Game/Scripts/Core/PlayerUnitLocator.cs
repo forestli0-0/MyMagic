@@ -8,9 +8,29 @@ namespace CombatSystem.Core
     /// </summary>
     public static class PlayerUnitLocator
     {
+        /// <summary>
+        /// 安全地按标签查找对象，标签未在 TagManager 中注册时返回 null。
+        /// </summary>
+        public static GameObject FindGameObjectWithTagSafe(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                return null;
+            }
+
+            try
+            {
+                return GameObject.FindGameObjectWithTag(tag);
+            }
+            catch (UnityException)
+            {
+                return null;
+            }
+        }
+
         public static UnitRoot FindPlayerUnit()
         {
-            var taggedPlayer = GameObject.FindGameObjectWithTag("Player");
+            var taggedPlayer = FindGameObjectWithTagSafe("Player");
             if (taggedPlayer != null)
             {
                 var taggedUnit = taggedPlayer.GetComponent<UnitRoot>();
@@ -64,7 +84,7 @@ namespace CombatSystem.Core
                 return true;
             }
 
-            return unit.GetComponent<PlayerMovementDriver>() != null;
+            return false;
         }
     }
 }

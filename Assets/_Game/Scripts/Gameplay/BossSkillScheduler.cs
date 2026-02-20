@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
 using UnityEngine;
 
@@ -183,7 +184,7 @@ namespace CombatSystem.Gameplay
 
             if (!string.IsNullOrWhiteSpace(targetTag))
             {
-                var tagged = GameObject.FindGameObjectWithTag(targetTag);
+                var tagged = PlayerUnitLocator.FindGameObjectWithTagSafe(targetTag);
                 if (tagged != null)
                 {
                     return tagged.transform;

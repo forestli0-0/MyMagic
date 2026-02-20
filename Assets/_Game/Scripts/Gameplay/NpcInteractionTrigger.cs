@@ -109,7 +109,7 @@ namespace CombatSystem.Gameplay
             public bool CloseMenuBeforeInvoke;
             public string OverrideDialogueLine;
             public NpcInteractionActionEntry ConfigAction;
-            public NpcCustomAction LegacyCustomAction;
+            public NpcCustomAction CustomAction;
         }
 
         [Header("Identity")]
@@ -267,7 +267,7 @@ namespace CombatSystem.Gameplay
                 return output.Count;
             }
 
-            BuildLegacyOptions(output);
+            BuildDefaultOptions(output);
             return output.Count;
         }
 
@@ -346,9 +346,9 @@ namespace CombatSystem.Gameplay
                         return true;
                     }
 
-                    if (action.LegacyCustomAction != null)
+                    if (action.CustomAction != null)
                     {
-                        action.LegacyCustomAction.Invoke();
+                        action.CustomAction.Invoke();
                         closeMenu = requestedClose;
                         return true;
                     }
@@ -500,11 +500,6 @@ namespace CombatSystem.Gameplay
             return output.Count > 0;
         }
 
-        private void BuildLegacyOptions(List<InteractionOptionView> output)
-        {
-            BuildDefaultOptions(output);
-        }
-
         private void BuildDefaultOptions(List<InteractionOptionView> output)
         {
             if (enableDialogueOption)
@@ -555,7 +550,7 @@ namespace CombatSystem.Gameplay
             bool closeMenuBeforeInvoke,
             string overrideDialogueLine,
             NpcInteractionActionEntry configEntry,
-            NpcCustomAction legacyAction,
+            NpcCustomAction customAction,
             List<InteractionOptionView> output)
         {
             var resolvedLabel = ResolveActionLabel(actionType, label);
@@ -592,7 +587,7 @@ namespace CombatSystem.Gameplay
 
                     break;
                 case NpcInteractionActionType.CustomEvent:
-                    interactable = configEntry != null || legacyAction != null;
+                    interactable = configEntry != null || customAction != null;
                     if (!interactable)
                     {
                         disabledReason = "自定义交互未配置。";
@@ -604,7 +599,7 @@ namespace CombatSystem.Gameplay
                     break;
             }
 
-            if (actionType == NpcInteractionActionType.Dialogue && configEntry == null && legacyAction == null)
+            if (actionType == NpcInteractionActionType.Dialogue && configEntry == null && customAction == null)
             {
                 closeMenuBeforeInvoke = false;
             }
@@ -618,7 +613,7 @@ namespace CombatSystem.Gameplay
                 CloseMenuBeforeInvoke = closeMenuBeforeInvoke,
                 OverrideDialogueLine = overrideDialogueLine,
                 ConfigAction = configEntry,
-                LegacyCustomAction = legacyAction
+                CustomAction = customAction
             };
 
             resolvedActions.Add(resolved);

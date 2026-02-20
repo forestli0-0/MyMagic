@@ -40,7 +40,7 @@ namespace CombatSystem.Gameplay
             if (playerProgression == null)
             {
                 // 优先按 Tag 找玩家，避免场景中有多个 Progression
-                var player = GameObject.FindGameObjectWithTag(playerTag);
+                var player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
                 if (player != null)
                 {
                     playerProgression = player.GetComponent<PlayerProgression>();

@@ -149,7 +149,7 @@ namespace CombatSystem.UI
 
             if (playerUnit == null && !string.IsNullOrWhiteSpace(playerTag))
             {
-                var player = GameObject.FindGameObjectWithTag(playerTag);
+                var player = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
                 if (player != null)
                 {
                     playerUnit = player.GetComponent<UnitRoot>();

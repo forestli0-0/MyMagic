@@ -592,7 +592,7 @@ namespace CombatSystem.Persistence
         {
             if (!string.IsNullOrEmpty(playerTag))
             {
-                var playerObj = GameObject.FindGameObjectWithTag(playerTag);
+                var playerObj = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
                 if (playerObj != null)
                 {
                     return playerObj;

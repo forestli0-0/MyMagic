@@ -246,17 +246,10 @@ namespace CombatSystem.Gameplay
         {
             if (!string.IsNullOrEmpty(playerTag))
             {
-                try
+                var playerObj = PlayerUnitLocator.FindGameObjectWithTagSafe(playerTag);
+                if (playerObj != null)
                 {
-                    var playerObj = GameObject.FindGameObjectWithTag(playerTag);
-                    if (playerObj != null)
-                    {
-                        return playerObj;
-                    }
-                }
-                catch (UnityException)
-                {
-                    // 当标签未在 TagManager 中配置时会抛异常，降级到后续组件查找路径。
+                    return playerObj;
                 }
             }
 

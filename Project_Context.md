@@ -76,7 +76,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - `CombatInputAssetBuilder`: 编辑器工具，代码生成 InputActionAsset
 
 **输入映射 (ActionMap)：**
-- `Gameplay`: 移动、瞄准、技能(1-6)、取消、暂停、切换技能页
+- `Gameplay`: 移动、瞄准、技能(1-6)、取消、暂停、背包/菜单入口
 - `UI`: 导航、确认、取消、指针、点击、滚动
 - `Debug`: 切换调试覆盖层(F3)
 

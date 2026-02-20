@@ -99,12 +99,6 @@ namespace CombatSystem.UI
             UIToast.Success("保存成功。");
         }
 
-        // Legacy compatibility hook: quest journal moved out of pause menu.
-        public void OpenQuestJournal()
-        {
-            RequestClose();
-        }
-
         public void BackToMenu()
         {
             if (uiManager != null)

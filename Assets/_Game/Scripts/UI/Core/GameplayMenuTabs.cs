@@ -135,7 +135,7 @@ namespace CombatSystem.UI
                 return false;
             }
 
-            var resolvedActiveId = string.IsNullOrWhiteSpace(activeTabId) ? ResolveLegacyTabId(activeTab) : activeTabId;
+            var resolvedActiveId = string.IsNullOrWhiteSpace(activeTabId) ? ResolveFallbackTabId(activeTab) : activeTabId;
             var currentIndex = -1;
             for (int i = 0; i < runtimeBindings.Count; i++)
             {
@@ -270,7 +270,7 @@ namespace CombatSystem.UI
 
             if (string.IsNullOrWhiteSpace(activeTabId))
             {
-                activeTabId = ResolveLegacyTabId(activeTab);
+                activeTabId = ResolveFallbackTabId(activeTab);
             }
         }
 
@@ -367,7 +367,7 @@ namespace CombatSystem.UI
 
         private void RefreshVisualState()
         {
-            var resolvedActiveId = string.IsNullOrWhiteSpace(activeTabId) ? ResolveLegacyTabId(activeTab) : activeTabId;
+            var resolvedActiveId = string.IsNullOrWhiteSpace(activeTabId) ? ResolveFallbackTabId(activeTab) : activeTabId;
             for (int i = 0; i < runtimeBindings.Count; i++)
             {
                 var binding = runtimeBindings[i];
@@ -448,7 +448,7 @@ namespace CombatSystem.UI
 
             if (string.IsNullOrWhiteSpace(activeTabId))
             {
-                activeTabId = ResolveLegacyTabId(activeTab);
+                activeTabId = ResolveFallbackTabId(activeTab);
             }
         }
 
@@ -485,7 +485,7 @@ namespace CombatSystem.UI
             });
         }
 
-        private static string ResolveLegacyTabId(GameplayMenuTab tab)
+        private static string ResolveFallbackTabId(GameplayMenuTab tab)
         {
             switch (tab)
             {
