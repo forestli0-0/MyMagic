@@ -14,6 +14,8 @@ namespace CombatSystem.Data
         [SerializeField] private GameObject prefab;
         [Tooltip("界面显示的头像")]
         [SerializeField] private Sprite portrait;
+        [Tooltip("单位表现配置（模型挂点、Animator 参数映射）")]
+        [SerializeField] private UnitVisualProfile visualProfile;
         
         [Header("数据与分类")]
         [Tooltip("单位自带的标签（如：英雄、不死族等）")]
@@ -33,6 +35,7 @@ namespace CombatSystem.Data
 
         public GameObject Prefab => prefab;
         public Sprite Portrait => portrait;
+        public UnitVisualProfile VisualProfile => visualProfile;
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<StatValue> BaseStats => baseStats;
         public SkillDefinition BasicAttack => basicAttack;
@@ -40,4 +43,3 @@ namespace CombatSystem.Data
         public AIProfile AIProfile => aiProfile;
     }
 }
-

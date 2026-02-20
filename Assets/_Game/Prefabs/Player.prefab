@@ -33,6 +33,7 @@ GameObject:
   - component: {fileID: 133478098221999752}
   - component: {fileID: 6142504661308433440}
   - component: {fileID: 4569712509572376812}
+  - component: {fileID: 4646100000337356107}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -54,6 +55,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4239830076574626377}
+  - {fileID: 7203401602227046431}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8700217410086039253
@@ -360,6 +362,13 @@ MonoBehaviour:
   inputReader: {fileID: 0}
   viewCamera: {fileID: 0}
   useCameraYaw: 1
+  clickMoveMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  clickStopDistance: 0.2
+  refreshTargetWhileHoldingRightButton: 1
+  autoSetupGameplayCamera: 1
+  gameplayCamera: {fileID: 0}
 --- !u!114 &4080253702839497875
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -406,6 +415,7 @@ MonoBehaviour:
   initialPage: 0
   inputReader: {fileID: 0}
   autoFindInputReader: 1
+  allowSwitchOnTab: 0
   switchCooldown: 0.2
   pages:
   - name: AOE & Targeting
@@ -595,6 +605,31 @@ MonoBehaviour:
   flashStrength: 0.5
   flashDuration: 0.1
   onlyWhenHealthDamage: 1
+--- !u!114 &4646100000337356107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962191944521275768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28e7a12d58e619649b16c463a0a55a3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitRoot: {fileID: 720801789383739849}
+  movement: {fileID: 4932691524152171117}
+  skillUser: {fileID: 3203202813011051223}
+  health: {fileID: 3577631922818317307}
+  hitFlashReceiver: {fileID: 4569712509572376812}
+  visualRoot: {fileID: 7203401602227046431}
+  animator: {fileID: 0}
+  profileOverride: {fileID: 0}
+  useDefinitionProfile: 1
+  autoCreateVisualRoot: 1
+  autoFindAnimatorOnModel: 1
+  refreshHitFlashTargetsAfterModelSwap: 1
+  enableDebugLog: 0
 --- !u!1 &2080525573497573601
 GameObject:
   m_ObjectHideFlags: 0
@@ -754,3 +789,34 @@ MonoBehaviour:
   showTargetHighlight: 1
   targetHighlightRadius: 0.8
   targetHighlightColor: {r: 1, g: 0.2, b: 0.2, a: 0.9}
+--- !u!1 &4903982154259962393
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7203401602227046431}
+  m_Layer: 0
+  m_Name: VisualRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7203401602227046431
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4903982154259962393}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8564399925790308254}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

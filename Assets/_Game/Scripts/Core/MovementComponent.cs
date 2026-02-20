@@ -34,6 +34,8 @@ namespace CombatSystem.Core
         [SerializeField] private SkillUserComponent skillUser;
         [Tooltip("Buff 控制器，用于控制状态判定")]
         [SerializeField] private BuffController buffController;
+        [Tooltip("生命组件，用于死亡时阻止移动")]
+        [SerializeField] private HealthComponent health;
         [Tooltip("属性组件，用于读取移动速度等属性")]
         [SerializeField] private StatsComponent stats;
 
@@ -50,6 +52,8 @@ namespace CombatSystem.Core
         [Header("控制驱动")]
         [Tooltip("强制移动控制的速度倍率（Fear/Taunt/Charm）")]
         [SerializeField] private float forcedControlSpeedMultiplier = 1f;
+        [Tooltip("死亡时是否阻止移动与强制位移")]
+        [SerializeField] private bool blockMovementWhenDead = true;
 
         #endregion
 
@@ -106,6 +110,7 @@ namespace CombatSystem.Core
             controller = GetComponent<CharacterController>();
             skillUser = GetComponent<SkillUserComponent>();
             buffController = GetComponent<BuffController>();
+            health = GetComponent<HealthComponent>();
             stats = GetComponent<StatsComponent>();
         }
 
@@ -129,6 +134,11 @@ namespace CombatSystem.Core
                 buffController = GetComponent<BuffController>();
             }
 
+            if (health == null)
+            {
+                health = GetComponent<HealthComponent>();
+            }
+
             if (stats == null)
             {
                 stats = GetComponent<StatsComponent>();
@@ -140,6 +150,13 @@ namespace CombatSystem.Core
         /// </summary>
         private void Update()
         {
+            if (blockMovementWhenDead && health != null && !health.IsAlive)
+            {
+                forcedActive = false;
+                ClearMoveInput();
+                return;
+            }
+
             var deltaTime = Time.deltaTime;
 
             // 优先处理强制位移（击退、冲刺等）

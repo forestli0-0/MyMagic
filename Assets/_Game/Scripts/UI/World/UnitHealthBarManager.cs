@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using CombatSystem.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -24,14 +26,44 @@ namespace CombatSystem.UI
         [SerializeField] private bool discoverOnSceneLoad = true;
         [SerializeField] private bool showOnDiscover = true;
 
+        [Header("Hover Target")]
+        [SerializeField] private bool enableHoverTargetInfo = true;
+        [SerializeField] private bool hoverEnemiesOnly = true;
+        [SerializeField] private bool hideHoverWhenPointerOverUI = true;
+        [SerializeField] private LayerMask hoverRaycastMask = ~0;
+        [SerializeField] private float hoverRaycastDistance = 240f;
+        [SerializeField] private TeamComponent playerTeam;
+
+        [Header("Hover Panel")]
+        [SerializeField] private Vector2 hoverPanelSize = new Vector2(220f, 70f);
+        [SerializeField] private Vector2 hoverPanelTopLeftOffset = new Vector2(20f, -98f);
+        [SerializeField] private Color hoverPanelBackgroundColor = new Color(0.02f, 0.08f, 0.16f, 0.92f);
+        [SerializeField] private Color hoverPanelOutlineColor = new Color(0.35f, 0.65f, 1f, 0.85f);
+        [SerializeField] private Color hoverHealthFillColor = new Color(0.92f, 0.26f, 0.26f, 1f);
+
+        [Header("Hover Ring")]
+        [SerializeField] private bool showHoverRing = true;
+        [SerializeField] private float hoverRingRadius = 0.82f;
+        [SerializeField] private float hoverRingHeight = 0.05f;
+        [SerializeField] private float hoverRingWidth = 0.055f;
+        [SerializeField] private int hoverRingSegments = 36;
+        [SerializeField] private Color hoverRingColor = new Color(1f, 0.92f, 0.32f, 0.9f);
+
         private readonly Dictionary<HealthComponent, UnitHealthBar> bars = new Dictionary<HealthComponent, UnitHealthBar>(32);
         private readonly List<HealthComponent> releaseQueue = new List<HealthComponent>(8);
         private readonly List<UnitHealthBar> pool = new List<UnitHealthBar>(16);
         private readonly HashSet<HealthComponent> observedHealth = new HashSet<HealthComponent>();
 
         private HealthComponent currentTarget;
+        private HealthComponent hoveredTarget;
         private bool templateBuilt;
         private static Sprite fallbackSprite;
+        private RectTransform hoverPanelRect;
+        private Text hoverNameText;
+        private Text hoverHpText;
+        private Image hoverHpFill;
+        private LineRenderer hoverRing;
+        private Material hoverRingMaterial;
 
         private void Awake()
         {
@@ -61,6 +93,8 @@ namespace CombatSystem.UI
         {
             Unsubscribe();
             UnsubscribeLocal();
+            HideHoverPresentation();
+            DestroyHoverRuntime();
             if (discoverOnSceneLoad)
             {
                 SceneManager.sceneLoaded -= HandleSceneLoaded;
@@ -69,52 +103,53 @@ namespace CombatSystem.UI
 
         private void LateUpdate()
         {
-            if (bars.Count == 0)
+            if (worldCamera == null)
             {
-                return;
+                worldCamera = Camera.main;
             }
 
             if (worldCamera == null)
             {
-                worldCamera = Camera.main;
-                if (worldCamera == null)
-                {
-                    return;
-                }
+                HideHoverPresentation();
+                return;
             }
 
-            var now = Time.unscaledTime;
-
-            foreach (var pair in bars)
+            if (bars.Count > 0)
             {
-                var bar = pair.Value;
-                if (bar == null)
+                var now = Time.unscaledTime;
+                foreach (var pair in bars)
                 {
-                    releaseQueue.Add(pair.Key);
-                    continue;
-                }
-
-                if (bar.ShouldHide(now))
-                {
-                    releaseQueue.Add(pair.Key);
-                    continue;
-                }
-
-                UpdateBarPosition(bar);
-            }
-
-            if (releaseQueue.Count > 0)
-            {
-                for (var i = 0; i < releaseQueue.Count; i++)
-                {
-                    if (bars.TryGetValue(releaseQueue[i], out var bar))
+                    var bar = pair.Value;
+                    if (bar == null)
                     {
-                        ReleaseBar(releaseQueue[i], bar);
+                        releaseQueue.Add(pair.Key);
+                        continue;
                     }
+
+                    if (bar.ShouldHide(now))
+                    {
+                        releaseQueue.Add(pair.Key);
+                        continue;
+                    }
+
+                    UpdateBarPosition(bar);
                 }
 
-                releaseQueue.Clear();
+                if (releaseQueue.Count > 0)
+                {
+                    for (var i = 0; i < releaseQueue.Count; i++)
+                    {
+                        if (bars.TryGetValue(releaseQueue[i], out var bar))
+                        {
+                            ReleaseBar(releaseQueue[i], bar);
+                        }
+                    }
+
+                    releaseQueue.Clear();
+                }
             }
+
+            UpdateHoverTargetPresentation();
         }
 
         private void ResolveEventHub()
@@ -281,6 +316,383 @@ namespace CombatSystem.UI
                 {
                     bar.ShowForDuration(showDuration, now);
                 }
+            }
+        }
+
+        private void UpdateHoverTargetPresentation()
+        {
+            if (!enableHoverTargetInfo || barsRoot == null || worldCamera == null || !UIRoot.IsGameplayInputAllowed())
+            {
+                HideHoverPresentation();
+                return;
+            }
+
+            if (hideHoverWhenPointerOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                HideHoverPresentation();
+                return;
+            }
+
+            if (!TryGetPointerPosition(out var pointerScreen))
+            {
+                HideHoverPresentation();
+                return;
+            }
+
+            if (!TryResolveHoveredTarget(pointerScreen, out var health))
+            {
+                HideHoverPresentation();
+                return;
+            }
+
+            hoveredTarget = health;
+            EnsureHoverPanel();
+            RefreshHoverPanel(health);
+            UpdateHoverPanelPosition();
+            UpdateHoverRing(health);
+        }
+
+        private bool TryGetPointerPosition(out Vector2 pointerScreen)
+        {
+            pointerScreen = default;
+
+            if (Mouse.current != null)
+            {
+                pointerScreen = Mouse.current.position.ReadValue();
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryResolveHoveredTarget(Vector2 pointerScreen, out HealthComponent health)
+        {
+            health = null;
+
+            var ray = worldCamera.ScreenPointToRay(pointerScreen);
+            if (!Physics.Raycast(ray, out var hit, hoverRaycastDistance, hoverRaycastMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            health = hit.collider != null ? hit.collider.GetComponentInParent<HealthComponent>() : null;
+            if (health == null || !health.IsAlive || !CanShowFor(health))
+            {
+                return false;
+            }
+
+            if (hoverEnemiesOnly && !IsEnemyTarget(health))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsEnemyTarget(HealthComponent target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            if (playerTeam == null)
+            {
+                var player = PlayerUnitLocator.FindPlayerUnit();
+                if (player != null)
+                {
+                    playerTeam = player.Team != null ? player.Team : player.GetComponent<TeamComponent>();
+                }
+            }
+
+            var targetTeam = target.GetComponent<TeamComponent>();
+            if (playerTeam != null && targetTeam != null)
+            {
+                return !playerTeam.IsSameTeam(targetTeam);
+            }
+
+            if (!string.IsNullOrWhiteSpace(playerTag))
+            {
+                return !target.CompareTag(playerTag);
+            }
+
+            return true;
+        }
+
+        private void EnsureHoverPanel()
+        {
+            if (hoverPanelRect != null)
+            {
+                return;
+            }
+
+            var panelGo = new GameObject("HoverTargetPanel", typeof(RectTransform), typeof(Image), typeof(Outline));
+            panelGo.transform.SetParent(barsRoot, false);
+
+            hoverPanelRect = panelGo.GetComponent<RectTransform>();
+            hoverPanelRect.anchorMin = new Vector2(0f, 1f);
+            hoverPanelRect.anchorMax = new Vector2(0f, 1f);
+            hoverPanelRect.pivot = new Vector2(0f, 1f);
+            hoverPanelRect.sizeDelta = hoverPanelSize;
+
+            var panelBg = panelGo.GetComponent<Image>();
+            panelBg.sprite = GetDefaultSprite();
+            panelBg.color = hoverPanelBackgroundColor;
+            panelBg.raycastTarget = false;
+
+            var outline = panelGo.GetComponent<Outline>();
+            outline.effectColor = hoverPanelOutlineColor;
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = true;
+
+            hoverNameText = CreateHoverLabel(panelGo.transform, "Name", 15, TextAnchor.MiddleLeft, new Color(0.94f, 0.97f, 1f, 1f));
+            var nameRect = hoverNameText.rectTransform;
+            nameRect.anchorMin = new Vector2(0f, 1f);
+            nameRect.anchorMax = new Vector2(1f, 1f);
+            nameRect.pivot = new Vector2(0f, 1f);
+            nameRect.anchoredPosition = new Vector2(10f, -8f);
+            nameRect.sizeDelta = new Vector2(-20f, 24f);
+
+            hoverHpText = CreateHoverLabel(panelGo.transform, "HpText", 13, TextAnchor.MiddleRight, new Color(0.9f, 0.95f, 1f, 0.95f));
+            var hpTextRect = hoverHpText.rectTransform;
+            hpTextRect.anchorMin = new Vector2(0f, 0f);
+            hpTextRect.anchorMax = new Vector2(1f, 0f);
+            hpTextRect.pivot = new Vector2(1f, 0f);
+            hpTextRect.anchoredPosition = new Vector2(-10f, 8f);
+            hpTextRect.sizeDelta = new Vector2(-20f, 20f);
+
+            var barBgRect = new GameObject("HealthBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            barBgRect.SetParent(panelGo.transform, false);
+            barBgRect.anchorMin = new Vector2(0f, 0f);
+            barBgRect.anchorMax = new Vector2(1f, 0f);
+            barBgRect.pivot = new Vector2(0.5f, 0f);
+            barBgRect.anchoredPosition = new Vector2(0f, 30f);
+            barBgRect.sizeDelta = new Vector2(-20f, 14f);
+
+            var barBg = barBgRect.GetComponent<Image>();
+            barBg.sprite = GetDefaultSprite();
+            barBg.color = new Color(0f, 0f, 0f, 0.5f);
+            barBg.raycastTarget = false;
+
+            var fillRect = new GameObject("HealthBarFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            fillRect.SetParent(barBgRect, false);
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(1f, 1f);
+            fillRect.offsetMax = new Vector2(-1f, -1f);
+
+            hoverHpFill = fillRect.GetComponent<Image>();
+            hoverHpFill.sprite = GetDefaultSprite();
+            hoverHpFill.color = hoverHealthFillColor;
+            hoverHpFill.type = Image.Type.Filled;
+            hoverHpFill.fillMethod = Image.FillMethod.Horizontal;
+            hoverHpFill.fillOrigin = 0;
+            hoverHpFill.fillAmount = 1f;
+            hoverHpFill.raycastTarget = false;
+
+            panelGo.SetActive(false);
+        }
+
+        private Text CreateHoverLabel(Transform parent, string objectName, int fontSize, TextAnchor alignment, Color color)
+        {
+            var textRect = new GameObject(objectName, typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            textRect.SetParent(parent, false);
+            var text = textRect.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.color = color;
+            text.raycastTarget = false;
+            text.text = string.Empty;
+            return text;
+        }
+
+        private void RefreshHoverPanel(HealthComponent health)
+        {
+            if (hoverPanelRect == null || health == null)
+            {
+                return;
+            }
+
+            var displayName = ResolveDisplayName(health);
+            if (hoverNameText != null)
+            {
+                hoverNameText.text = displayName;
+            }
+
+            var current = Mathf.Max(0f, health.Current);
+            var max = Mathf.Max(1f, health.Max);
+
+            if (hoverHpText != null)
+            {
+                hoverHpText.text = $"{Mathf.CeilToInt(current)}/{Mathf.CeilToInt(max)}";
+            }
+
+            if (hoverHpFill != null)
+            {
+                hoverHpFill.fillAmount = Mathf.Clamp01(current / max);
+            }
+
+            if (!hoverPanelRect.gameObject.activeSelf)
+            {
+                hoverPanelRect.gameObject.SetActive(true);
+            }
+        }
+
+        private string ResolveDisplayName(HealthComponent health)
+        {
+            var unit = health != null ? health.GetComponent<UnitRoot>() : null;
+            var baseName = unit != null && unit.Definition != null && !string.IsNullOrWhiteSpace(unit.Definition.DisplayName)
+                ? unit.Definition.DisplayName
+                : health != null ? health.name : "Target";
+
+            var progression = health != null ? health.GetComponent<PlayerProgression>() : null;
+            if (progression != null)
+            {
+                return $"{baseName}  Lv {Mathf.Max(1, progression.Level)}";
+            }
+
+            return baseName;
+        }
+
+        private void UpdateHoverPanelPosition()
+        {
+            if (hoverPanelRect == null || barsRoot == null)
+            {
+                return;
+            }
+
+            var panelSize = hoverPanelRect.rect.size;
+            var rootRect = barsRoot.rect;
+            var minX = rootRect.xMin;
+            var maxX = rootRect.xMax - panelSize.x;
+            var minY = rootRect.yMin + panelSize.y;
+            var maxY = rootRect.yMax;
+
+            var anchored = hoverPanelTopLeftOffset;
+            anchored.x = Mathf.Clamp(anchored.x, minX, maxX);
+            anchored.y = Mathf.Clamp(anchored.y, minY, maxY);
+            hoverPanelRect.anchoredPosition = anchored;
+        }
+
+        private void EnsureHoverRing()
+        {
+            if (hoverRing != null)
+            {
+                return;
+            }
+
+            var ringGo = new GameObject("HoverTargetRing", typeof(LineRenderer));
+            hoverRing = ringGo.GetComponent<LineRenderer>();
+            hoverRing.useWorldSpace = true;
+            hoverRing.loop = true;
+            hoverRing.positionCount = 0;
+            hoverRing.widthMultiplier = Mathf.Max(0.005f, hoverRingWidth);
+            hoverRing.startColor = hoverRingColor;
+            hoverRing.endColor = hoverRingColor;
+            hoverRing.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            hoverRing.receiveShadows = false;
+            hoverRing.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+
+            var shader = Shader.Find("Sprites/Default");
+            if (shader != null)
+            {
+                hoverRingMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                hoverRing.sharedMaterial = hoverRingMaterial;
+            }
+
+            hoverRing.enabled = false;
+        }
+
+        private void UpdateHoverRing(HealthComponent health)
+        {
+            if (!showHoverRing || health == null)
+            {
+                if (hoverRing != null)
+                {
+                    hoverRing.enabled = false;
+                }
+                return;
+            }
+
+            EnsureHoverRing();
+            if (hoverRing == null)
+            {
+                return;
+            }
+
+            var center = health.transform.position;
+            var radius = ResolveHoverRingRadius(health);
+            var y = center.y + hoverRingHeight;
+            var segmentCount = Mathf.Max(12, hoverRingSegments);
+            var step = Mathf.PI * 2f / segmentCount;
+
+            hoverRing.positionCount = segmentCount;
+            for (int i = 0; i < segmentCount; i++)
+            {
+                var angle = step * i;
+                var x = center.x + Mathf.Sin(angle) * radius;
+                var z = center.z + Mathf.Cos(angle) * radius;
+                hoverRing.SetPosition(i, new Vector3(x, y, z));
+            }
+
+            hoverRing.enabled = true;
+        }
+
+        private float ResolveHoverRingRadius(HealthComponent health)
+        {
+            var radius = Mathf.Max(0.2f, hoverRingRadius);
+            var controller = health != null ? health.GetComponent<CharacterController>() : null;
+            if (controller != null)
+            {
+                return Mathf.Max(radius, controller.radius * 1.18f);
+            }
+
+            var capsule = health != null ? health.GetComponent<CapsuleCollider>() : null;
+            if (capsule != null)
+            {
+                return Mathf.Max(radius, capsule.radius * 1.15f);
+            }
+
+            return radius;
+        }
+
+        private void HideHoverPresentation()
+        {
+            hoveredTarget = null;
+
+            if (hoverPanelRect != null && hoverPanelRect.gameObject.activeSelf)
+            {
+                hoverPanelRect.gameObject.SetActive(false);
+            }
+
+            if (hoverRing != null && hoverRing.enabled)
+            {
+                hoverRing.enabled = false;
+                hoverRing.positionCount = 0;
+            }
+        }
+
+        private void DestroyHoverRuntime()
+        {
+            if (hoverPanelRect != null)
+            {
+                Destroy(hoverPanelRect.gameObject);
+                hoverPanelRect = null;
+            }
+
+            if (hoverRing != null)
+            {
+                Destroy(hoverRing.gameObject);
+                hoverRing = null;
+            }
+
+            if (hoverRingMaterial != null)
+            {
+                Destroy(hoverRingMaterial);
+                hoverRingMaterial = null;
             }
         }
 

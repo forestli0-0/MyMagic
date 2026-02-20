@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.UI;
 using UnityEngine;
@@ -165,6 +166,7 @@ namespace CombatSystem.Gameplay
             }
 
             ApplyCachedPlayerState(player);
+            EnsurePlayerDeathFlow(player);
             EnsureGameplayScreen();
 
             pendingLevelId = null;
@@ -679,6 +681,299 @@ namespace CombatSystem.Gameplay
 
             cachedInGameScreen = screens[0];
             return cachedInGameScreen;
+        }
+
+        private static void EnsurePlayerDeathFlow(GameObject player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            var root = player.GetComponent<UnitRoot>();
+            if (!PlayerUnitLocator.IsPlayerUnit(root))
+            {
+                return;
+            }
+
+            if (player.GetComponent<PlayerDeathFlowController>() == null)
+            {
+                player.AddComponent<PlayerDeathFlowController>();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 玩家死亡流程控制：
+    /// - 监听玩家死亡事件
+    /// - 打开死亡弹窗（复活 / 返回主菜单）
+    /// - 复活时恢复生命/资源并回出生点
+    /// </summary>
+    [DisallowMultipleComponent]
+    public class PlayerDeathFlowController : MonoBehaviour
+    {
+        [Header("References")]
+        [SerializeField] private UnitRoot unitRoot;
+        [SerializeField] private HealthComponent health;
+        [SerializeField] private ResourceComponent resource;
+        [SerializeField] private CooldownComponent cooldown;
+        [SerializeField] private UnitVisualPresenter visualPresenter;
+        [SerializeField] private UIManager uiManager;
+        [SerializeField] private UIRoot uiRoot;
+        [SerializeField] private PlayerDeathModal deathModal;
+
+        [Header("Respawn")]
+        [SerializeField, Range(0.01f, 1f)] private float respawnHealthRatio = 1f;
+        [SerializeField, Range(0f, 1f)] private float respawnResourceRatio = 1f;
+        [SerializeField] private bool clearCooldownOnRespawn = true;
+        [SerializeField] private bool respawnAtCurrentSpawnPoint = true;
+        [SerializeField] private string fallbackSpawnPointId = "Start";
+
+        [Header("Navigation")]
+        [SerializeField] private string mainMenuSceneName = "MainMenu";
+
+        [Header("Runtime Modal")]
+        [SerializeField] private bool autoCreateDeathModalIfMissing = true;
+
+        private bool isDead;
+
+        private void Reset()
+        {
+            unitRoot = GetComponent<UnitRoot>();
+            health = GetComponent<HealthComponent>();
+            resource = GetComponent<ResourceComponent>();
+            cooldown = GetComponent<CooldownComponent>();
+            visualPresenter = GetComponent<UnitVisualPresenter>();
+            uiRoot = UIRoot.Instance != null ? UIRoot.Instance : FindFirstObjectByType<UIRoot>();
+            uiManager = uiRoot != null ? uiRoot.Manager : FindFirstObjectByType<UIManager>();
+        }
+
+        private void Awake()
+        {
+            ResolveReferences();
+        }
+
+        private void OnEnable()
+        {
+            ResolveReferences();
+            if (health != null)
+            {
+                health.Died -= HandleDied;
+                health.Died += HandleDied;
+                health.HealthChanged -= HandleHealthChanged;
+                health.HealthChanged += HandleHealthChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (health != null)
+            {
+                health.Died -= HandleDied;
+                health.HealthChanged -= HandleHealthChanged;
+            }
+        }
+
+        public void Respawn()
+        {
+            if (!isDead)
+            {
+                return;
+            }
+
+            ResolveReferences();
+
+            var flow = LevelFlowController.Instance != null ? LevelFlowController.Instance : FindFirstObjectByType<LevelFlowController>();
+            var spawnId = ResolveRespawnSpawnId(flow);
+            if (flow != null && !string.IsNullOrWhiteSpace(spawnId))
+            {
+                flow.TryApplySpawn(spawnId, gameObject);
+            }
+
+            if (health != null)
+            {
+                health.RefreshMaxHealth(false);
+                var targetHealth = Mathf.Max(1f, health.Max * Mathf.Clamp01(respawnHealthRatio));
+                health.SetCurrent(targetHealth);
+            }
+
+            if (resource != null)
+            {
+                var targetResource = resource.Max * Mathf.Clamp01(respawnResourceRatio);
+                resource.SetCurrent(targetResource);
+            }
+
+            if (clearCooldownOnRespawn && cooldown != null)
+            {
+                cooldown.ClearAll();
+            }
+
+            if (visualPresenter != null)
+            {
+                visualPresenter.ForceReviveVisualState();
+            }
+
+            isDead = false;
+            CloseDeathModal();
+            RestoreGameplayScreen();
+        }
+
+        public void BackToMainMenu()
+        {
+            if (!string.IsNullOrWhiteSpace(mainMenuSceneName))
+            {
+                if (uiManager != null)
+                {
+                    uiManager.CloseAllModals();
+                }
+
+                if (Time.timeScale != 1f)
+                {
+                    Time.timeScale = 1f;
+                }
+
+                SceneManager.LoadScene(mainMenuSceneName);
+            }
+        }
+
+        private void HandleDied(HealthComponent source)
+        {
+            if (source != health || isDead)
+            {
+                return;
+            }
+
+            isDead = true;
+            ShowDeathModal();
+        }
+
+        private void HandleHealthChanged(HealthChangedEvent evt)
+        {
+            if (!isDead || !evt.IsAlive || evt.NewValue <= 0f)
+            {
+                return;
+            }
+
+            isDead = false;
+            CloseDeathModal();
+            RestoreGameplayScreen();
+        }
+
+        private void ShowDeathModal()
+        {
+            ResolveReferences();
+
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            if (deathModal == null)
+            {
+                deathModal = FindFirstObjectByType<PlayerDeathModal>(FindObjectsInactive.Include);
+            }
+
+            if (deathModal == null && autoCreateDeathModalIfMissing)
+            {
+                deathModal = PlayerDeathModalFactory.Create(uiRoot != null ? uiRoot.ModalCanvas : null);
+            }
+
+            if (deathModal == null)
+            {
+                return;
+            }
+
+            uiManager.CloseAllModals();
+            deathModal.Bind(this);
+            uiManager.PushModal(deathModal);
+        }
+
+        private void CloseDeathModal()
+        {
+            if (uiManager == null || deathModal == null)
+            {
+                return;
+            }
+
+            uiManager.CloseModal(deathModal);
+        }
+
+        private void RestoreGameplayScreen()
+        {
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            var current = uiManager.CurrentScreen;
+            if (current != null && current.InputMode == UIInputMode.Gameplay)
+            {
+                uiManager.SetHudVisible(true);
+                return;
+            }
+
+            var inGame = FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
+            if (inGame != null)
+            {
+                uiManager.ShowScreen(inGame, true);
+            }
+            else
+            {
+                uiManager.SetHudVisible(true);
+            }
+        }
+
+        private string ResolveRespawnSpawnId(LevelFlowController flow)
+        {
+            if (!respawnAtCurrentSpawnPoint || flow == null)
+            {
+                return fallbackSpawnPointId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(flow.CurrentSpawnPointId))
+            {
+                return flow.CurrentSpawnPointId;
+            }
+
+            return fallbackSpawnPointId;
+        }
+
+        private void ResolveReferences()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            if (health == null)
+            {
+                health = GetComponent<HealthComponent>();
+            }
+
+            if (resource == null)
+            {
+                resource = GetComponent<ResourceComponent>();
+            }
+
+            if (cooldown == null)
+            {
+                cooldown = GetComponent<CooldownComponent>();
+            }
+
+            if (visualPresenter == null)
+            {
+                visualPresenter = GetComponent<UnitVisualPresenter>();
+            }
+
+            if (uiRoot == null)
+            {
+                uiRoot = UIRoot.Instance != null ? UIRoot.Instance : FindFirstObjectByType<UIRoot>();
+            }
+
+            if (uiManager == null)
+            {
+                uiManager = uiRoot != null ? uiRoot.Manager : FindFirstObjectByType<UIManager>();
+            }
         }
     }
 }

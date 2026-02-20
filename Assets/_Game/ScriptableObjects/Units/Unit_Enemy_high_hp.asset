@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Enemy
   prefab: {fileID: 195245260206196433, guid: 1712a29a9d0a28447868b6c80454ccf4, type: 3}
   portrait: {fileID: 0}
+  visualProfile: {fileID: 11400000, guid: 453dc25f8bc34db47a0de09da485b52b, type: 2}
   tags:
   - {fileID: 11400000, guid: 5694c53b3beef254ba056d7d5908bddf, type: 2}
   baseStats:

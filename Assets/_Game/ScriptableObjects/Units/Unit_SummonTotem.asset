@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Summon Totem
   prefab: {fileID: 297537472786897973, guid: 4907fde8d195abc4b8c30866500721ae, type: 3}
   portrait: {fileID: 0}
+  visualProfile: {fileID: 11400000, guid: caac5d643a0b7604cb2d1e622158db0d, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}
   baseStats:

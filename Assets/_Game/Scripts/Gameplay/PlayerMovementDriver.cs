@@ -1,4 +1,5 @@
 using CombatSystem.Core;
+using CombatSystem.Data;
 using CombatSystem.Input;
 using CombatSystem.Persistence;
 using CombatSystem.UI;
@@ -30,6 +31,12 @@ namespace CombatSystem.Gameplay
 
         [Tooltip("技能组件引用")]
         [SerializeField] private SkillUserComponent skillUser;
+        [Tooltip("单位根组件（用于目标与阵营判定）")]
+        [SerializeField] private UnitRoot unitRoot;
+        [Tooltip("队伍组件（用于敌我判定）")]
+        [SerializeField] private TeamComponent team;
+        [Tooltip("目标系统（用于按技能形状判断普攻是否在范围内）")]
+        [SerializeField] private TargetingSystem targetingSystem;
 
         [Tooltip("输入读取器（Input System）")]
         [SerializeField] private InputReader inputReader;
@@ -49,6 +56,18 @@ namespace CombatSystem.Gameplay
 
         [Tooltip("按住右键时持续刷新目标点（模拟 LoL 连续点地）")]
         [SerializeField] private bool refreshTargetWhileHoldingRightButton = true;
+        [Tooltip("按住右键时持续刷新锁定目标（可选）")]
+        [SerializeField] private bool refreshAttackTargetWhileHoldingRightButton = true;
+        [Tooltip("施法开始时清除右键目标点，避免朝向被旧移动目标瞬间拉回。")]
+        [SerializeField] private bool clearClickDestinationOnCast = true;
+
+        [Header("Auto Basic Attack")]
+        [Tooltip("右键点击敌人时自动追击并普攻")]
+        [SerializeField] private bool autoBasicAttackOnRightClick = true;
+        [Tooltip("进入普攻范围后的额外停止缓冲")]
+        [SerializeField] private float attackRangeBuffer = 0.1f;
+        [Tooltip("自动追击时超过该距离将丢失目标（0 表示不限制）")]
+        [SerializeField] private float loseAttackTargetDistance = 40f;
 
         [Header("Camera")]
         [Tooltip("是否自动确保主相机挂载 GameplayCameraController")]
@@ -64,6 +83,8 @@ namespace CombatSystem.Gameplay
         private MovementControlMode movementControlMode = MovementControlMode.KeyboardWASD;
         private bool hasClickDestination;
         private Vector3 clickDestination;
+        private bool hasAttackTarget;
+        private CombatTarget attackTarget;
 
         #endregion
 
@@ -76,6 +97,8 @@ namespace CombatSystem.Gameplay
         {
             movement = GetComponent<MovementComponent>();
             skillUser = GetComponent<SkillUserComponent>();
+            unitRoot = GetComponent<UnitRoot>();
+            team = GetComponent<TeamComponent>();
         }
 
         private void Awake()
@@ -90,6 +113,7 @@ namespace CombatSystem.Gameplay
                 skillUser = GetComponent<SkillUserComponent>();
             }
 
+            EnsureCombatReferences();
             TryResolveViewCamera();
             EnsureGameplayCameraController(true);
             ApplyMovementMode(SettingsService.LoadOrCreate());
@@ -99,6 +123,11 @@ namespace CombatSystem.Gameplay
         {
             SettingsService.SettingsApplied += ApplyMovementMode;
             EnsureGameplayCameraController(true);
+            EnsureCombatReferences();
+            if (skillUser != null)
+            {
+                skillUser.SkillCastStarted += HandleSkillCastStarted;
+            }
 
             var current = SettingsService.Current ?? SettingsService.LoadOrCreate();
             ApplyMovementMode(current);
@@ -107,6 +136,10 @@ namespace CombatSystem.Gameplay
         private void OnDisable()
         {
             SettingsService.SettingsApplied -= ApplyMovementMode;
+            if (skillUser != null)
+            {
+                skillUser.SkillCastStarted -= HandleSkillCastStarted;
+            }
         }
 
         /// <summary>
@@ -183,12 +216,20 @@ namespace CombatSystem.Gameplay
             var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             if (!pointerOverUi && Mouse.current.rightButton.wasPressedThisFrame)
             {
-                UpdateClickDestination();
+                ProcessRightClickCommand(true, true);
             }
 
-            if (!pointerOverUi && refreshTargetWhileHoldingRightButton && Mouse.current.rightButton.isPressed)
+            var refreshAttackTarget = autoBasicAttackOnRightClick && refreshAttackTargetWhileHoldingRightButton;
+            var canRefreshWhileHolding = !hasAttackTarget || refreshAttackTarget;
+            var refreshMoveTarget = canRefreshWhileHolding && refreshTargetWhileHoldingRightButton;
+            if (!pointerOverUi && Mouse.current.rightButton.isPressed && (refreshMoveTarget || refreshAttackTarget))
             {
-                UpdateClickDestination();
+                ProcessRightClickCommand(refreshMoveTarget, refreshAttackTarget);
+            }
+
+            if (TryProcessAutoBasicAttack())
+            {
+                return;
             }
 
             if (!hasClickDestination)
@@ -215,7 +256,7 @@ namespace CombatSystem.Gameplay
             movement.SetMoveInput(delta.normalized);
         }
 
-        private void UpdateClickDestination()
+        private void ProcessRightClickCommand(bool allowMoveDestination, bool allowAttackTarget)
         {
             if (viewCamera == null || Mouse.current == null)
             {
@@ -223,17 +264,31 @@ namespace CombatSystem.Gameplay
             }
 
             var pointerPosition = Mouse.current.position.ReadValue();
-            if (!TryResolvePointerWorldPoint(pointerPosition, out var worldPoint))
+            if (!TryResolvePointerWorldHit(pointerPosition, out var hit, out var worldPoint))
             {
                 return;
             }
 
+            if (allowAttackTarget && autoBasicAttackOnRightClick && TryResolveAttackTarget(hit, out var target))
+            {
+                SetAttackTarget(target);
+                hasClickDestination = false;
+                return;
+            }
+
+            if (!allowMoveDestination)
+            {
+                return;
+            }
+
+            ClearAttackTarget();
             clickDestination = worldPoint;
             hasClickDestination = true;
         }
 
-        private bool TryResolvePointerWorldPoint(Vector2 screenPoint, out Vector3 worldPoint)
+        private bool TryResolvePointerWorldHit(Vector2 screenPoint, out RaycastHit hit, out Vector3 worldPoint)
         {
+            hit = default;
             worldPoint = Vector3.zero;
 
             if (viewCamera == null)
@@ -242,7 +297,7 @@ namespace CombatSystem.Gameplay
             }
 
             var ray = viewCamera.ScreenPointToRay(screenPoint);
-            if (Physics.Raycast(ray, out var hit, 500f, clickMoveMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(ray, out hit, 500f, clickMoveMask, QueryTriggerInteraction.Ignore))
             {
                 worldPoint = hit.point;
                 return true;
@@ -258,12 +313,240 @@ namespace CombatSystem.Gameplay
             return true;
         }
 
+        private bool TryResolveAttackTarget(RaycastHit hit, out CombatTarget target)
+        {
+            target = default;
+            if (!autoBasicAttackOnRightClick)
+            {
+                return false;
+            }
+
+            if (hit.collider == null || !CombatTarget.TryCreate(hit.collider.gameObject, out target))
+            {
+                return false;
+            }
+
+            if (!IsAttackTargetValid(target))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TryProcessAutoBasicAttack()
+        {
+            if (!autoBasicAttackOnRightClick || !hasAttackTarget || movement == null || skillUser == null)
+            {
+                return false;
+            }
+
+            EnsureCombatReferences();
+            if (!IsAttackTargetValid(attackTarget))
+            {
+                ClearAttackTarget();
+                return false;
+            }
+
+            if (skillUser.IsChanneling && !skillUser.CanMoveWhileCasting)
+            {
+                skillUser.InterruptCast();
+                return true;
+            }
+
+            var basicAttack = skillUser.BasicAttack;
+            if (basicAttack == null)
+            {
+                ClearAttackTarget();
+                return false;
+            }
+
+            var targetPosition = attackTarget.Transform.position;
+            var delta = targetPosition - transform.position;
+            delta.y = 0f;
+            if (delta.sqrMagnitude <= 0.0001f)
+            {
+                return true;
+            }
+
+            if (IsBasicAttackInRange(basicAttack, attackTarget, delta))
+            {
+                movement.Stop();
+                TryFaceTowards(delta.normalized);
+
+                if (skillUser.CanCast(basicAttack))
+                {
+                    skillUser.TryCast(basicAttack, attackTarget.GameObject);
+                }
+
+                return true;
+            }
+
+            movement.SetMoveInput(delta.normalized);
+            return true;
+        }
+
+        private bool IsBasicAttackInRange(SkillDefinition basicAttack, CombatTarget target, Vector3 flatDelta)
+        {
+            if (basicAttack == null || !target.IsValid || target.Transform == null)
+            {
+                return false;
+            }
+
+            var targeting = basicAttack.Targeting;
+            if (targetingSystem != null && unitRoot != null && targeting != null)
+            {
+                var aimDirection = flatDelta.sqrMagnitude > 0.0001f ? flatDelta.normalized : transform.forward;
+                var aimPoint = target.Transform.position;
+                var inShape = targetingSystem.IsWithinTargetingShape(
+                    targeting,
+                    unitRoot,
+                    target,
+                    target.GameObject,
+                    true,
+                    aimPoint,
+                    aimDirection);
+
+                if (inShape)
+                {
+                    return true;
+                }
+            }
+
+            var fallbackRange = GetBasicAttackFallbackRange(basicAttack) + Mathf.Max(0f, attackRangeBuffer);
+            return fallbackRange <= 0f || flatDelta.sqrMagnitude <= fallbackRange * fallbackRange;
+        }
+
+        private static float GetBasicAttackFallbackRange(SkillDefinition basicAttack)
+        {
+            if (basicAttack == null || basicAttack.Targeting == null)
+            {
+                return 0f;
+            }
+
+            var targeting = basicAttack.Targeting;
+            if (targeting.Mode == TargetingMode.Sphere && targeting.Radius > 0f)
+            {
+                return targeting.Radius;
+            }
+
+            if (targeting.Range > 0f)
+            {
+                return targeting.Range;
+            }
+
+            if (targeting.Radius > 0f)
+            {
+                return targeting.Radius;
+            }
+
+            return 0f;
+        }
+
         private void ApplyMovementMode(SettingsData data)
         {
             movementControlMode = data != null ? data.movementControlMode : MovementControlMode.KeyboardWASD;
             if (movementControlMode == MovementControlMode.KeyboardWASD)
             {
                 hasClickDestination = false;
+                ClearAttackTarget();
+            }
+        }
+
+        private void HandleSkillCastStarted(SkillCastEvent evt)
+        {
+            if (!clearClickDestinationOnCast || movementControlMode != MovementControlMode.RightClickMove)
+            {
+                return;
+            }
+
+            if (skillUser != null && evt.Skill != null && skillUser.IsBasicAttackSkill(evt.Skill))
+            {
+                return;
+            }
+
+            hasClickDestination = false;
+        }
+
+        private void SetAttackTarget(CombatTarget target)
+        {
+            attackTarget = target;
+            hasAttackTarget = target.IsValid;
+        }
+
+        private void ClearAttackTarget()
+        {
+            attackTarget = default;
+            hasAttackTarget = false;
+        }
+
+        private bool IsAttackTargetValid(CombatTarget target)
+        {
+            if (!target.IsValid || target.Transform == null || target.GameObject == gameObject)
+            {
+                return false;
+            }
+
+            if (target.Health == null)
+            {
+                return false;
+            }
+
+            if (!target.Health.IsAlive)
+            {
+                return false;
+            }
+
+            if (target.Team != null && team != null && team.IsSameTeam(target.Team))
+            {
+                return false;
+            }
+
+            if (loseAttackTargetDistance > 0f)
+            {
+                var selfPos = transform.position;
+                var targetPos = target.Transform.position;
+                selfPos.y = 0f;
+                targetPos.y = 0f;
+                if ((targetPos - selfPos).sqrMagnitude > loseAttackTargetDistance * loseAttackTargetDistance)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void TryFaceTowards(Vector3 direction)
+        {
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            if (skillUser != null && skillUser.IsCasting && !skillUser.CanRotateWhileCasting)
+            {
+                return;
+            }
+
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
+
+        private void EnsureCombatReferences()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            if (team == null)
+            {
+                team = GetComponent<TeamComponent>();
+            }
+
+            if (targetingSystem == null)
+            {
+                targetingSystem = FindFirstObjectByType<TargetingSystem>();
             }
         }
 

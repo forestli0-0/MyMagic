@@ -25,6 +25,7 @@ GameObject:
   - component: {fileID: 646772897833855870}
   - component: {fileID: 6451709022361986392}
   - component: {fileID: 7896530938909812957}
+  - component: {fileID: 7376920759631762405}
   m_Layer: 0
   m_Name: Enemy_Default
   m_TagString: Untagged
@@ -44,7 +45,8 @@ Transform:
   m_LocalPosition: {x: 4.5, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 5260357201671059647}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6529022959557212038
@@ -362,6 +364,12 @@ MonoBehaviour:
   stoppingDistance: 1.5
   attackRangeBuffer: 0.25
   turnSpeed: 720
+  spreadAroundTarget: 1
+  surroundRadiusOffset: 0.45
+  maxCloseAttackers: 3
+  queuedRingSpacing: 0.9
+  separationRadius: 1.2
+  separationStrength: 0.6
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -386,3 +394,59 @@ MonoBehaviour:
   flashStrength: 0.62
   flashDuration: 0.08
   onlyWhenHealthDamage: 1
+--- !u!114 &7376920759631762405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 195245260206196433}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28e7a12d58e619649b16c463a0a55a3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitRoot: {fileID: 7932865846804875288}
+  movement: {fileID: 646772897833855870}
+  skillUser: {fileID: 5985681213502163525}
+  health: {fileID: 7381963129378387524}
+  hitFlashReceiver: {fileID: 7896530938909812957}
+  visualRoot: {fileID: 5260357201671059647}
+  animator: {fileID: 0}
+  profileOverride: {fileID: 0}
+  useDefinitionProfile: 1
+  autoCreateVisualRoot: 1
+  autoFindAnimatorOnModel: 1
+  refreshHitFlashTargetsAfterModelSwap: 1
+  enableDebugLog: 0
+--- !u!1 &8103287138565786217
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5260357201671059647}
+  m_Layer: 0
+  m_Name: VisualRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5260357201671059647
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8103287138565786217}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2948012704376663653}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

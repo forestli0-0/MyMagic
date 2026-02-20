@@ -114,7 +114,7 @@ namespace CombatSystem.Core
             UpdateShieldExpiry();
 
             // 处理每秒自动回血
-            if (regenStat == null || stats == null || currentHealth >= maxHealth)
+            if (!IsAlive || regenStat == null || stats == null || currentHealth >= maxHealth)
             {
                 return;
             }

@@ -66,3 +66,19 @@ Assets/Clean Vector Icons/
 Assets/Clean Vector Icons.meta
 Assets/_Game/Art/UIThemes/
 Assets/_Game/Art/UIThemes.meta
+
+# Local imported character packs (keep out of repo for now)
+Assets/ThirdParty/
+Assets/ThirdParty.meta
+Assets/ThirdParty/Characters/AssetHunts_Mannequin/
+Assets/ThirdParty/Characters/AssetHunts_Mannequin.meta
+Assets/ThirdParty/Characters/ExplosiveLLC_RPGAnimPack/
+Assets/ThirdParty/Characters/ExplosiveLLC_RPGAnimPack.meta
+Assets/ThirdParty/Characters/KevinIglesias_HumanAnimations/
+Assets/ThirdParty/Characters/KevinIglesias_HumanAnimations.meta
+Assets/ThirdParty/Characters/JC_LP_MedievalCharacters_LITE/
+Assets/ThirdParty/Characters/JC_LP_MedievalCharacters_LITE.meta
+
+# Local tooling logs
+unit_visual_setup.log
+unit_visual_anim_setup.log

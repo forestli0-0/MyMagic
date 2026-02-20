@@ -42,7 +42,7 @@ namespace CombatSystem.Gameplay
 
         private void OnEnable()
         {
-            EnsureReferences();
+            RefreshRendererCache();
             Subscribe();
         }
 
@@ -180,6 +180,17 @@ namespace CombatSystem.Gameplay
             }
 
             rendererStates = states.ToArray();
+        }
+
+        /// <summary>
+        /// 重新解析目标渲染器并重建闪烁缓存。
+        /// 供运行时替换模型后主动刷新调用。
+        /// </summary>
+        public void RefreshRendererCache()
+        {
+            EnsureReferences();
+            BuildRendererStateCache();
+            ApplyFlash(0f);
         }
 
         private void ApplyFlash(float normalized)
