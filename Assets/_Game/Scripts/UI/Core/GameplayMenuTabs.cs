@@ -18,6 +18,8 @@ namespace CombatSystem.UI
     /// </summary>
     public class GameplayMenuTabs : MonoBehaviour
     {
+        private const string DefaultFooterHintTemplate = "{MENU_CLOSE} 关闭菜单    {BACK} 返回游戏    {TAB_SWITCH} 切换页签    {CONFIRM} 选择";
+
         [Serializable]
         private sealed class GameplayMenuTabEntry
         {
@@ -60,6 +62,10 @@ namespace CombatSystem.UI
 
         private bool listenersBound;
         private readonly List<RuntimeTabBinding> runtimeBindings = new List<RuntimeTabBinding>(8);
+        private GameObject footerHintsObject;
+        private Text footerHintsText;
+        private UIHintDeviceFamily footerHintDeviceFamily = UIHintDeviceFamily.KeyboardMouse;
+        private string cachedFooterHint = string.Empty;
 
         public static bool IsGameplayMenuScreen(UIScreenBase screen)
         {
@@ -98,12 +104,20 @@ namespace CombatSystem.UI
             CollectTabs();
             BindButtons();
             RefreshVisualState();
+            SetOwnerFooterHintsVisible(true);
+            RefreshOwnerFooterHints(force: true);
         }
 
         private void OnDisable()
         {
             UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
             UnbindButtons();
+            SetOwnerFooterHintsVisible(false);
+        }
+
+        private void Update()
+        {
+            RefreshOwnerFooterHints(force: false);
         }
 
         public void OpenCharacter()
@@ -217,6 +231,7 @@ namespace CombatSystem.UI
             {
                 ownerScreen = GetComponent<UIScreenBase>();
             }
+
         }
 
         private void SyncActiveStateFromOwner()
@@ -512,6 +527,114 @@ namespace CombatSystem.UI
         {
             SyncThemeColors();
             RefreshVisualState();
+            RefreshOwnerFooterHints(force: true);
         }
+
+        private void SetOwnerFooterHintsVisible(bool visible)
+        {
+            ResolveReferences();
+            if (footerHintsObject == null)
+            {
+                footerHintsObject = FindNamedChild(ownerScreen != null ? ownerScreen.transform : transform, "FooterHints");
+            }
+
+            if (footerHintsObject != null)
+            {
+                footerHintsObject.SetActive(visible);
+                if (visible && footerHintsText == null)
+                {
+                    footerHintsText = ResolveFooterHintTextComponent();
+                }
+            }
+        }
+
+        private void RefreshOwnerFooterHints(bool force)
+        {
+            ResolveReferences();
+            if (footerHintsObject == null)
+            {
+                footerHintsObject = FindNamedChild(ownerScreen != null ? ownerScreen.transform : transform, "FooterHints");
+            }
+
+            if (footerHintsObject == null || !footerHintsObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            if (footerHintsText == null)
+            {
+                footerHintsText = ResolveFooterHintTextComponent();
+            }
+
+            if (footerHintsText == null)
+            {
+                return;
+            }
+
+            var rawHint = ownerScreen != null ? ownerScreen.GetFooterHintText() : string.Empty;
+            if (string.IsNullOrWhiteSpace(rawHint))
+            {
+                rawHint = DefaultFooterHintTemplate;
+            }
+
+            var deviceFamily = UIInputPromptFormatter.ResolveCurrentDeviceFamily(footerHintDeviceFamily);
+            var formattedHint = UIInputPromptFormatter.Format(rawHint, deviceFamily);
+            if (!force &&
+                deviceFamily == footerHintDeviceFamily &&
+                string.Equals(formattedHint, cachedFooterHint, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            footerHintDeviceFamily = deviceFamily;
+            cachedFooterHint = formattedHint;
+            footerHintsText.text = formattedHint;
+        }
+
+        private Text ResolveFooterHintTextComponent()
+        {
+            if (footerHintsObject == null)
+            {
+                return null;
+            }
+
+            var hintTextObject = FindNamedChild(footerHintsObject.transform, "HintText");
+            if (hintTextObject != null)
+            {
+                var text = hintTextObject.GetComponent<Text>();
+                if (text != null)
+                {
+                    return text;
+                }
+            }
+
+            return footerHintsObject.GetComponentInChildren<Text>(true);
+        }
+
+        private static GameObject FindNamedChild(Transform root, string name)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            var allChildren = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allChildren.Length; i++)
+            {
+                var child = allChildren[i];
+                if (child == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(child.name, name, StringComparison.Ordinal))
+                {
+                    return child.gameObject;
+                }
+            }
+
+            return null;
+        }
+
     }
 }

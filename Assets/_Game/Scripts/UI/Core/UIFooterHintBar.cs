@@ -21,6 +21,8 @@ namespace CombatSystem.UI
         [SerializeField] private string gameplayMenuHint = GameplayMenuHintTemplate;
         [SerializeField] private bool showGameplayHint = false;
         [SerializeField] private string gameplayHint = GameplayHintTemplate;
+        [SerializeField] private bool raiseForGameplayMenu = true;
+        [SerializeField, Min(0f)] private float gameplayMenuYOffset = 70f;
 
         [Header("Input Prompt")]
         [SerializeField] private bool autoSwitchPromptByDevice = true;
@@ -31,6 +33,10 @@ namespace CombatSystem.UI
         private UIInputMode cachedInputMode;
         private UIHintDeviceFamily cachedDeviceFamily = UIHintDeviceFamily.KeyboardMouse;
         private string cachedHint = string.Empty;
+        private RectTransform selfRect;
+        private Vector2 baseOffsetMin;
+        private Vector2 baseOffsetMax;
+        private bool hasBaseOffsets;
 
         private void Awake()
         {
@@ -75,6 +81,18 @@ namespace CombatSystem.UI
                 }
             }
 
+            if (selfRect == null)
+            {
+                selfRect = transform as RectTransform;
+            }
+
+            if (!hasBaseOffsets && selfRect != null)
+            {
+                baseOffsetMin = selfRect.offsetMin;
+                baseOffsetMax = selfRect.offsetMax;
+                hasBaseOffsets = true;
+            }
+
             EnsureHintTemplates();
         }
 
@@ -104,6 +122,7 @@ namespace CombatSystem.UI
             cachedScreen = currentScreen;
             cachedInputMode = currentInputMode;
             cachedDeviceFamily = currentDeviceFamily;
+            ApplyLayoutOffset(currentModal, currentScreen);
 
             var rawHint = ResolveHint(currentModal, currentScreen, currentInputMode);
             var hint = UIInputPromptFormatter.Format(rawHint, currentDeviceFamily);
@@ -136,15 +155,15 @@ namespace CombatSystem.UI
 
             if (screen != null)
             {
+                if (GameplayMenuTabs.IsGameplayMenuScreen(screen))
+                {
+                    return string.Empty;
+                }
+
                 var screenHint = screen.GetFooterHintText();
                 if (!string.IsNullOrWhiteSpace(screenHint))
                 {
                     return screenHint;
-                }
-
-                if (GameplayMenuTabs.IsGameplayMenuScreen(screen))
-                {
-                    return gameplayMenuHint;
                 }
             }
 
@@ -186,6 +205,30 @@ namespace CombatSystem.UI
                 canvasGroup.alpha = visible ? 1f : 0f;
                 canvasGroup.interactable = false;
                 canvasGroup.blocksRaycasts = false;
+            }
+        }
+
+        private void ApplyLayoutOffset(UIModalBase modal, UIScreenBase screen)
+        {
+            if (!hasBaseOffsets || selfRect == null)
+            {
+                return;
+            }
+
+            var shouldRaise = raiseForGameplayMenu && modal == null && GameplayMenuTabs.IsGameplayMenuScreen(screen);
+            var yOffset = shouldRaise ? Mathf.Max(0f, gameplayMenuYOffset) : 0f;
+
+            var targetMin = new Vector2(baseOffsetMin.x, baseOffsetMin.y + yOffset);
+            var targetMax = new Vector2(baseOffsetMax.x, baseOffsetMax.y + yOffset);
+
+            if (selfRect.offsetMin != targetMin)
+            {
+                selfRect.offsetMin = targetMin;
+            }
+
+            if (selfRect.offsetMax != targetMax)
+            {
+                selfRect.offsetMax = targetMax;
             }
         }
 
