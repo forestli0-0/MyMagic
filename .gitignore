@@ -82,3 +82,6 @@ Assets/ThirdParty/Characters/JC_LP_MedievalCharacters_LITE.meta
 # Local tooling logs
 unit_visual_setup.log
 unit_visual_anim_setup.log
+
+# Local interview prep docs/site (do not track)
+Docs/InterviewKit/

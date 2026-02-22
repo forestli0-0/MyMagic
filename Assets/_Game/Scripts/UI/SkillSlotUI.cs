@@ -25,6 +25,11 @@ namespace CombatSystem.UI
         [Tooltip("显示快捷键的文本组件")]
         [SerializeField] private Text keyText;
 
+        [Tooltip("槽位底板（为空时自动尝试获取本物体上的 Image）")]
+        [SerializeField] private Image slotBackground;
+        [SerializeField] private Color occupiedBackgroundColor = new Color(0f, 0f, 0f, 0f);
+        [SerializeField] private Color emptyBackgroundColor = new Color(1f, 1f, 1f, 0.55f);
+
         [Header("Cast FX")]
         [SerializeField] private bool enableCastPulse = true;
         [SerializeField] private float castPulseScale = 1.12f;
@@ -49,6 +54,7 @@ namespace CombatSystem.UI
         private RectTransform rectTransform;
         private Vector3 baseScale = Vector3.one;
         private Color baseIconColor = Color.white;
+        private Color baseSlotColor = Color.white;
         private Coroutine castPulseRoutine;
 
         /// <summary>
@@ -67,6 +73,20 @@ namespace CombatSystem.UI
             if (icon != null)
             {
                 baseIconColor = icon.color;
+            }
+
+            if (slotBackground == null)
+            {
+                slotBackground = GetComponent<Image>();
+            }
+
+            if (slotBackground != null)
+            {
+                baseSlotColor = slotBackground.color;
+                if (occupiedBackgroundColor.a <= 0f)
+                {
+                    occupiedBackgroundColor = baseSlotColor;
+                }
             }
         }
 
@@ -93,6 +113,7 @@ namespace CombatSystem.UI
             if (keyText != null)
             {
                 keyText.text = string.IsNullOrEmpty(keyLabel) ? string.Empty : keyLabel;
+                keyText.enabled = !string.IsNullOrEmpty(keyLabel);
             }
 
             // 重置冷却显示
@@ -108,8 +129,20 @@ namespace CombatSystem.UI
                 cooldownText.enabled = false;
             }
 
-            // 无技能时隐藏整个槽位
-            gameObject.SetActive(skillDef != null);
+            if (slotBackground != null)
+            {
+                slotBackground.color = skillDef != null ? occupiedBackgroundColor : emptyBackgroundColor;
+            }
+        }
+
+        public void SetSlotVisible(bool visible)
+        {
+            if (gameObject.activeSelf == visible)
+            {
+                return;
+            }
+
+            gameObject.SetActive(visible);
         }
 
         public void PlayCastPulse()

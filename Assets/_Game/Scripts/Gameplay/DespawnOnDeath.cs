@@ -10,6 +10,18 @@ namespace CombatSystem.Gameplay
         [SerializeField] private float delaySeconds;
         [SerializeField] private bool destroyAfterDelay;
 
+        public float DelaySeconds
+        {
+            get => delaySeconds;
+            set => delaySeconds = Mathf.Max(0f, value);
+        }
+
+        public bool DestroyAfterDelay
+        {
+            get => destroyAfterDelay;
+            set => destroyAfterDelay = value;
+        }
+
         private void Reset()
         {
             health = GetComponent<HealthComponent>();
@@ -33,6 +45,23 @@ namespace CombatSystem.Gameplay
             if (health != null)
             {
                 health.Died -= HandleDied;
+            }
+        }
+
+        public void Configure(float delay, bool destroyAfter, HealthComponent explicitHealth = null)
+        {
+            delaySeconds = Mathf.Max(0f, delay);
+            destroyAfterDelay = destroyAfter;
+
+            if (explicitHealth != null)
+            {
+                health = explicitHealth;
+                return;
+            }
+
+            if (health == null)
+            {
+                health = GetComponent<HealthComponent>();
             }
         }
 

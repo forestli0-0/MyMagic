@@ -187,6 +187,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 已新增：Day7 战斗反馈（DamageApplied 事件链 / HitFlashReceiver / CombatFeedbackController / CameraShakeController）
 - 已新增：Day7 UI 动效反馈（HudToastOverlay / QuestTrackerHUD 脉冲 / SkillSlotUI 施法脉冲 / LootPickup 提示事件）
 - 已新增：Day7 性能烟测（Day7PerformanceSmokeTests，Field/Boss 基线采样日志）
+- 已新增：Act1 章节布局工具（遭遇触发区 + 进度门解锁传送），用于移除“开局围怪”测试体验
 - 已修复：主菜单返回流程/Continue 进入场景卡住问题（UI/HUD/TimeScale）
 - 已修复：存档加载物品与装备（GameDatabase items 索引补齐）
 - 已修复：CastBar 未施法常驻显示（`Heal` 条常显）问题
@@ -197,6 +198,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 ### 9.2 当前正在做/下一步（优先级顺序）
 - MVP 验收走查已完成（8.4 清单全部通过），进入传统 ARPG 内容扩展阶段（非肉鸽）
 - 下一步重点：章节地图扩展（Act2+）-> 职业/技能树深化 -> 怪物/Boss 内容包扩展 -> 装备与掉落层级深化
+- Act1 场景整理入口：`Combat/Chapter/Setup Act1 Layout (Town + Field + Boss)`（自动重建 Town/Field/Boss 的出生点、传送门、遭遇区与Boss门禁）
 - 技能获取渠道锁定：精英怪掉落 / 商店购买 / NPC兑换 / 任务奖励（保留技能可拆卸机制）
 
 ### 9.3 待确认/风险
@@ -209,6 +211,7 @@ ScriptableObjects: `Assets/_Game/ScriptableObjects/`
 - 样例场景：`Assets/Scenes/SampleScene.unity`
 - 生成工具：`Assets/_Game/Scripts/Editor/CombatSampleGenerator.cs`
 - 关卡流转生成：`Assets/_Game/Scripts/Editor/PlayableFlowGenerator.cs`
+- 章节布局生成：`Assets/_Game/Scripts/Editor/Act1ChapterSetupUtility.cs`
 - 战斗数据库：`Assets/_Game/Scripts/Data/GameDatabase.cs`
 
 ### 9.5 资产清单（已锁定，可跨会话复用）

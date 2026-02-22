@@ -93,13 +93,16 @@ namespace CombatSystem.UI
 
         public void SetVisible(bool state)
         {
-            if (visible == state)
+            if (visible == state && gameObject.activeSelf == state)
             {
                 return;
             }
 
             visible = state;
-            gameObject.SetActive(state);
+            if (gameObject.activeSelf != state)
+            {
+                gameObject.SetActive(state);
+            }
         }
 
         public void SetScreenPosition(Vector2 anchoredPosition)

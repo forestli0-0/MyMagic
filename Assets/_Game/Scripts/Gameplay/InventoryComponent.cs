@@ -623,9 +623,11 @@ namespace CombatSystem.Gameplay
                     return 4;
                 case ItemCategory.Quest:
                     return 5;
+                case ItemCategory.Skill:
+                    return 6;
                 case ItemCategory.General:
                 default:
-                    return 6;
+                    return 7;
             }
         }
 

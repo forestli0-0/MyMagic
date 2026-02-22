@@ -86,6 +86,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b518682ceb244effa41df849f62f9443, type: 2}
   - {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
   - {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
+  - {fileID: 11400000, guid: a74cb9169aca4c1b8636c0737f6b11f3, type: 2}
+  - {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
+  - {fileID: 11400000, guid: a74fd086b52e4ae494c9a6250b3ce49c, type: 2}
   affixes: []
   enemyAffixes:
   - {fileID: 11400000, guid: b12458479e47d1b448e8b3d55588773f, type: 2}

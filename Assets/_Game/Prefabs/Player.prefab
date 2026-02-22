@@ -489,6 +489,18 @@ MonoBehaviour:
     stack: 5
     rarity: 0
     affixes: []
+  - definition: {fileID: 11400000, guid: a74cb9169aca4c1b8636c0737f6b11f3, type: 2}
+    stack: 1
+    rarity: 1
+    affixes: []
+  - definition: {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
+    stack: 1
+    rarity: 0
+    affixes: []
+  - definition: {fileID: 11400000, guid: a74fd086b52e4ae494c9a6250b3ce49c, type: 2}
+    stack: 4
+    rarity: 1
+    affixes: []
 --- !u!114 &133478098221999752
 MonoBehaviour:
   m_ObjectHideFlags: 0

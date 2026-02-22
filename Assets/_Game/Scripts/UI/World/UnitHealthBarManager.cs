@@ -50,9 +50,10 @@ namespace CombatSystem.UI
         [SerializeField] private Color hoverRingColor = new Color(1f, 0.92f, 0.32f, 0.9f);
 
         private readonly Dictionary<HealthComponent, UnitHealthBar> bars = new Dictionary<HealthComponent, UnitHealthBar>(32);
-        private readonly List<HealthComponent> releaseQueue = new List<HealthComponent>(8);
+        private readonly List<KeyValuePair<HealthComponent, UnitHealthBar>> releaseQueue = new List<KeyValuePair<HealthComponent, UnitHealthBar>>(8);
         private readonly List<UnitHealthBar> pool = new List<UnitHealthBar>(16);
         private readonly HashSet<HealthComponent> observedHealth = new HashSet<HealthComponent>();
+        private static readonly Vector2 HiddenBarPosition = new Vector2(-100000f, -100000f);
 
         private HealthComponent currentTarget;
         private HealthComponent hoveredTarget;
@@ -80,12 +81,17 @@ namespace CombatSystem.UI
 
         private void OnEnable()
         {
-            ResolveEventHub();
+            // Guard against stale subscriptions when HUD was toggled during scene transition.
+            Unsubscribe();
+            ResolveEventHub(true);
             Subscribe();
             if (discoverOnSceneLoad)
             {
+                SceneManager.sceneLoaded -= HandleSceneLoaded;
                 SceneManager.sceneLoaded += HandleSceneLoaded;
             }
+
+            ResetRuntimeState(true);
             DiscoverUnits();
         }
 
@@ -93,6 +99,7 @@ namespace CombatSystem.UI
         {
             Unsubscribe();
             UnsubscribeLocal();
+            ClearAllBars();
             HideHoverPresentation();
             DestroyHoverRuntime();
             if (discoverOnSceneLoad)
@@ -110,8 +117,26 @@ namespace CombatSystem.UI
 
             if (worldCamera == null)
             {
+                HideAllRuntimeBars();
                 HideHoverPresentation();
                 return;
+            }
+
+            var staleTarget = currentTarget;
+            if (IsHealthInvalid(staleTarget))
+            {
+                if (staleTarget != null && bars.TryGetValue(staleTarget, out var staleTargetBar))
+                {
+                    staleTargetBar.SetPinned(false);
+                    staleTargetBar.ShowForDuration(showDuration, Time.unscaledTime);
+                }
+
+                currentTarget = null;
+            }
+
+            if (IsHealthInvalid(hoveredTarget))
+            {
+                HideHoverPresentation();
             }
 
             if (bars.Count > 0)
@@ -119,16 +144,17 @@ namespace CombatSystem.UI
                 var now = Time.unscaledTime;
                 foreach (var pair in bars)
                 {
+                    var health = pair.Key;
                     var bar = pair.Value;
-                    if (bar == null)
+                    if (bar == null || IsHealthInvalid(health))
                     {
-                        releaseQueue.Add(pair.Key);
+                        releaseQueue.Add(pair);
                         continue;
                     }
 
                     if (bar.ShouldHide(now))
                     {
-                        releaseQueue.Add(pair.Key);
+                        releaseQueue.Add(pair);
                         continue;
                     }
 
@@ -139,10 +165,8 @@ namespace CombatSystem.UI
                 {
                     for (var i = 0; i < releaseQueue.Count; i++)
                     {
-                        if (bars.TryGetValue(releaseQueue[i], out var bar))
-                        {
-                            ReleaseBar(releaseQueue[i], bar);
-                        }
+                        var pair = releaseQueue[i];
+                        ReleaseBar(pair.Key, pair.Value);
                     }
 
                     releaseQueue.Clear();
@@ -152,10 +176,19 @@ namespace CombatSystem.UI
             UpdateHoverTargetPresentation();
         }
 
-        private void ResolveEventHub()
+        private void ResolveEventHub(bool forceRefresh = false)
         {
-            if (eventHub != null)
+            if (!forceRefresh && eventHub != null)
             {
+                return;
+            }
+
+            eventHub = null;
+
+            var player = PlayerUnitLocator.FindPlayerUnit();
+            if (player != null)
+            {
+                eventHub = player.EventHub;
                 return;
             }
 
@@ -181,6 +214,12 @@ namespace CombatSystem.UI
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            worldCamera = Camera.main;
+            playerTeam = null;
+            ResetRuntimeState(true);
+            Unsubscribe();
+            ResolveEventHub(true);
+            Subscribe();
             DiscoverUnits();
         }
 
@@ -213,8 +252,8 @@ namespace CombatSystem.UI
             bar.Refresh();
             if (evt.Source == currentTarget)
             {
-                bar.SetPinned(true);
-                bar.ShowIndefinite();
+                bar.SetPinned(false);
+                bar.ShowForDuration(showDuration, Time.unscaledTime);
             }
             else if (evt.Delta < 0f)
             {
@@ -235,6 +274,11 @@ namespace CombatSystem.UI
                 currentTarget = null;
             }
 
+            if (hoveredTarget == source)
+            {
+                HideHoverPresentation();
+            }
+
             if (bars.TryGetValue(source, out var bar))
             {
                 ReleaseBar(source, bar);
@@ -243,7 +287,7 @@ namespace CombatSystem.UI
 
         private void HandleTargetChanged(HealthComponent target)
         {
-            if (target == null || !CanShowFor(target))
+            if (target == null || IsHealthInvalid(target) || !CanShowFor(target))
             {
                 HandleTargetCleared();
                 return;
@@ -266,8 +310,8 @@ namespace CombatSystem.UI
             if (bar != null)
             {
                 bar.Refresh();
-                bar.SetPinned(true);
-                bar.ShowIndefinite();
+                bar.SetPinned(false);
+                bar.ShowForDuration(showDuration, Time.unscaledTime);
             }
         }
 
@@ -299,12 +343,18 @@ namespace CombatSystem.UI
             for (int i = 0; i < healthComponents.Length; i++)
             {
                 var health = healthComponents[i];
-                if (health == null || !CanShowFor(health))
+                if (health == null || !health.IsAlive || !CanShowFor(health))
                 {
                     continue;
                 }
 
                 RegisterLocal(health);
+
+                if (!showOnDiscover)
+                {
+                    continue;
+                }
+
                 var bar = GetOrCreateBar(health);
                 if (bar == null)
                 {
@@ -747,10 +797,12 @@ namespace CombatSystem.UI
         /// <returns>血条实例，如果无法创建则返回 null</returns>
         private UnitHealthBar GetOrCreateBar(HealthComponent health)
         {
-            if (health == null)
+            if (health == null || IsHealthInvalid(health))
             {
                 return null;
             }
+
+            RegisterLocal(health);
 
             if (bars.TryGetValue(health, out var existing))
             {
@@ -795,8 +847,9 @@ namespace CombatSystem.UI
                 bar = Instantiate(barTemplate, barsRoot != null ? barsRoot : transform);
             }
 
-            bar.gameObject.SetActive(true);
             bar.SetPinned(false);
+            bar.SetScreenPosition(HiddenBarPosition);
+            bar.SetVisible(false);
             return bar;
         }
 
@@ -808,9 +861,30 @@ namespace CombatSystem.UI
         /// <param name="bar">要释放的血条实例</param>
         private void ReleaseBar(HealthComponent health, UnitHealthBar bar)
         {
-            if (health != null)
+            if ((object)health != null)
             {
                 bars.Remove(health);
+            }
+            else if (bar != null && bars.Count > 0)
+            {
+                HealthComponent removeKey = null;
+                var found = false;
+                foreach (var pair in bars)
+                {
+                    if (!ReferenceEquals(pair.Value, bar))
+                    {
+                        continue;
+                    }
+
+                    removeKey = pair.Key;
+                    found = true;
+                    break;
+                }
+
+                if (found)
+                {
+                    bars.Remove(removeKey);
+                }
             }
 
             if (bar == null)
@@ -820,7 +894,32 @@ namespace CombatSystem.UI
 
             bar.SetPinned(false);
             bar.SetVisible(false);
+            bar.SetScreenPosition(HiddenBarPosition);
             pool.Add(bar);
+        }
+
+        private void ClearAllBars()
+        {
+            if (bars.Count > 0)
+            {
+                foreach (var pair in bars)
+                {
+                    var bar = pair.Value;
+                    if (bar == null)
+                    {
+                        continue;
+                    }
+
+                    bar.SetPinned(false);
+                    bar.SetVisible(false);
+                    bar.SetScreenPosition(HiddenBarPosition);
+                    pool.Add(bar);
+                }
+
+                bars.Clear();
+            }
+
+            releaseQueue.Clear();
         }
 
         /// <summary>
@@ -841,18 +940,40 @@ namespace CombatSystem.UI
             if (screenPoint.z <= 0f)
             {
                 bar.SetVisible(false);
+                bar.SetScreenPosition(HiddenBarPosition);
                 return;
             }
 
-            if (!bar.IsVisible)
+            var uiCamera = ResolveUiCamera();
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(barsRoot, screenPoint + (Vector3)screenOffset, uiCamera, out var localPoint))
             {
-                bar.SetVisible(true);
+                if (!bar.IsVisible)
+                {
+                    bar.SetVisible(true);
+                }
+
+                bar.SetScreenPosition(localPoint);
+                return;
             }
 
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(barsRoot, screenPoint + (Vector3)screenOffset, null, out var localPoint))
+            bar.SetVisible(false);
+            bar.SetScreenPosition(HiddenBarPosition);
+        }
+
+        private Camera ResolveUiCamera()
+        {
+            if (barsRoot == null)
             {
-                bar.SetScreenPosition(localPoint);
+                return null;
             }
+
+            var canvas = barsRoot.GetComponentInParent<Canvas>();
+            if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return null;
+            }
+
+            return canvas.worldCamera != null ? canvas.worldCamera : worldCamera;
         }
 
         /// <summary>
@@ -874,6 +995,64 @@ namespace CombatSystem.UI
             }
 
             return true;
+        }
+
+        private static bool IsHealthInvalid(HealthComponent health)
+        {
+            if (health == null)
+            {
+                return true;
+            }
+
+            var owner = health.gameObject;
+            if (owner == null)
+            {
+                return true;
+            }
+
+            var scene = owner.scene;
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return true;
+            }
+
+            if (!owner.activeInHierarchy)
+            {
+                return true;
+            }
+
+            return !health.IsAlive;
+        }
+
+        private void ResetRuntimeState(bool clearBars)
+        {
+            currentTarget = null;
+            HideHoverPresentation();
+            UnsubscribeLocal();
+            if (clearBars)
+            {
+                ClearAllBars();
+            }
+        }
+
+        private void HideAllRuntimeBars()
+        {
+            if (bars.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pair in bars)
+            {
+                var bar = pair.Value;
+                if (bar == null)
+                {
+                    continue;
+                }
+
+                bar.SetVisible(false);
+                bar.SetScreenPosition(HiddenBarPosition);
+            }
         }
 
         /// <summary>

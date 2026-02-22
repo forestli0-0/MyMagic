@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using CombatSystem.Debugging;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -6,6 +8,13 @@ namespace CombatSystem.UI
 {
     public class UIManager : MonoBehaviour
     {
+        private enum HudVisibilityMode
+        {
+            Hidden = 0,
+            Full = 1,
+            SkillBarOnly = 2
+        }
+
         [Header("Defaults")]
         [SerializeField] private UIScreenBase initialScreen;
         [SerializeField] private bool hideAllScreensOnStart = true;
@@ -33,6 +42,8 @@ namespace CombatSystem.UI
         private bool pausedByScreen;
         private bool initialized;
         private float nextFocusRecoveryTime;
+        private HudVisibilityMode hudVisibilityMode = HudVisibilityMode.Hidden;
+        private readonly List<GameObject> hudTemporarilyHiddenObjects = new List<GameObject>(24);
 
         public event Action<UIInputMode> InputModeChanged;
 
@@ -255,10 +266,12 @@ namespace CombatSystem.UI
 
         public void SetHudVisible(bool visible)
         {
-            if (hudRoot != null)
-            {
-                hudRoot.gameObject.SetActive(visible);
-            }
+            ApplyHudVisibilityMode(visible ? HudVisibilityMode.Full : HudVisibilityMode.Hidden);
+        }
+
+        public void SetHudSkillBarOnlyVisible(bool visible)
+        {
+            ApplyHudVisibilityMode(visible ? HudVisibilityMode.SkillBarOnly : HudVisibilityMode.Hidden);
         }
 
         public void ShowOverlay(UIOverlayBase overlay)
@@ -449,6 +462,182 @@ namespace CombatSystem.UI
             {
                 child.SetParent(root, false);
             }
+        }
+
+        private void ApplyHudVisibilityMode(HudVisibilityMode mode)
+        {
+            if (hudRoot == null)
+            {
+                hudVisibilityMode = mode;
+                return;
+            }
+
+            var hudActive = hudRoot.gameObject.activeSelf;
+            var hasTemporaryMask = hudTemporarilyHiddenObjects.Count > 0;
+            if (hudVisibilityMode == mode)
+            {
+                if (mode == HudVisibilityMode.Hidden && !hudActive && !hasTemporaryMask)
+                {
+                    return;
+                }
+
+                if (mode == HudVisibilityMode.Full && hudActive && !hasTemporaryMask)
+                {
+                    return;
+                }
+
+                if (mode == HudVisibilityMode.SkillBarOnly && hudActive && hasTemporaryMask)
+                {
+                    return;
+                }
+            }
+
+            RestoreHudTemporarilyHiddenObjects();
+            hudVisibilityMode = mode;
+
+            switch (mode)
+            {
+                case HudVisibilityMode.Hidden:
+                    hudRoot.gameObject.SetActive(false);
+                    return;
+                case HudVisibilityMode.Full:
+                    hudRoot.gameObject.SetActive(true);
+                    return;
+                case HudVisibilityMode.SkillBarOnly:
+                    hudRoot.gameObject.SetActive(true);
+                    ApplySkillBarOnlyMask();
+                    return;
+                default:
+                    hudRoot.gameObject.SetActive(true);
+                    return;
+            }
+        }
+
+        private void ApplySkillBarOnlyMask()
+        {
+            if (hudRoot == null)
+            {
+                return;
+            }
+
+            var keepTransforms = CollectSkillBarProtectedTransforms();
+            var candidates = new HashSet<GameObject>();
+
+            CollectHudHideCandidates<ValueBarUI>(candidates, keepTransforms);
+            CollectHudHideCandidates<BuffBarUI>(candidates, keepTransforms);
+            CollectHudHideCandidates<CastBarUI>(candidates, keepTransforms);
+            CollectHudHideCandidates<CombatLogUI>(candidates, keepTransforms);
+            CollectHudHideCandidates<FloatingTextManager>(candidates, keepTransforms);
+            CollectHudHideCandidates<CombatDebugOverlay>(candidates, keepTransforms);
+            CollectHudHideCandidates<ProgressionHUDController>(candidates, keepTransforms);
+            CollectHudHideCandidates<UnitHealthBarManager>(candidates, keepTransforms);
+            CollectHudHideCandidates<QuestTrackerHUD>(candidates, keepTransforms);
+            CollectHudHideCandidates<HudToastOverlay>(candidates, keepTransforms);
+
+            foreach (var go in candidates)
+            {
+                if (go == null || !go.activeSelf)
+                {
+                    continue;
+                }
+
+                hudTemporarilyHiddenObjects.Add(go);
+                go.SetActive(false);
+            }
+        }
+
+        private HashSet<Transform> CollectSkillBarProtectedTransforms()
+        {
+            var protectedTransforms = new HashSet<Transform>();
+            if (hudRoot == null)
+            {
+                return protectedTransforms;
+            }
+
+            var skillBars = hudRoot.GetComponentsInChildren<SkillBarUI>(true);
+            for (int i = 0; i < skillBars.Length; i++)
+            {
+                var bar = skillBars[i];
+                if (bar == null)
+                {
+                    continue;
+                }
+
+                var barTransforms = bar.GetComponentsInChildren<Transform>(true);
+                for (int j = 0; j < barTransforms.Length; j++)
+                {
+                    var node = barTransforms[j];
+                    if (node != null)
+                    {
+                        protectedTransforms.Add(node);
+                    }
+                }
+            }
+
+            return protectedTransforms;
+        }
+
+        private void CollectHudHideCandidates<T>(HashSet<GameObject> candidates, HashSet<Transform> protectedTransforms) where T : Component
+        {
+            if (hudRoot == null)
+            {
+                return;
+            }
+
+            var components = hudRoot.GetComponentsInChildren<T>(true);
+            for (int i = 0; i < components.Length; i++)
+            {
+                var component = components[i];
+                if (component == null)
+                {
+                    continue;
+                }
+
+                var target = component.transform;
+                if (IsProtectedTransform(target, protectedTransforms))
+                {
+                    continue;
+                }
+
+                candidates.Add(component.gameObject);
+            }
+        }
+
+        private static bool IsProtectedTransform(Transform target, HashSet<Transform> protectedTransforms)
+        {
+            if (target == null || protectedTransforms == null || protectedTransforms.Count == 0)
+            {
+                return false;
+            }
+
+            for (var cursor = target; cursor != null; cursor = cursor.parent)
+            {
+                if (protectedTransforms.Contains(cursor))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RestoreHudTemporarilyHiddenObjects()
+        {
+            if (hudTemporarilyHiddenObjects.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < hudTemporarilyHiddenObjects.Count; i++)
+            {
+                var go = hudTemporarilyHiddenObjects[i];
+                if (go != null)
+                {
+                    go.SetActive(true);
+                }
+            }
+
+            hudTemporarilyHiddenObjects.Clear();
         }
 
         private void TryRecoverUiFocus()

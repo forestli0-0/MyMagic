@@ -43,21 +43,18 @@ namespace CombatSystem.UI
         public override void OnEnter()
         {
             EnsureReferences();
-            Subscribe();
-            Refresh();
             if (uiManager != null)
             {
-                uiManager.SetHudVisible(false);
+                uiManager.SetHudSkillBarOnlyVisible(true);
             }
+
+            Subscribe();
+            Refresh();
         }
 
         public override void OnExit()
         {
             Unsubscribe();
-            if (uiManager != null)
-            {
-                uiManager.SetHudVisible(true);
-            }
         }
 
         public override void OnFocus()

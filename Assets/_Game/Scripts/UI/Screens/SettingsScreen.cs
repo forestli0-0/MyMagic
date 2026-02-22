@@ -101,10 +101,6 @@ namespace CombatSystem.UI
         {
             useStackBack = false;
             reopenPauseModalOnBack = false;
-            if (uiManager != null)
-            {
-                uiManager.SetHudVisible(true);
-            }
         }
 
         public void Back()

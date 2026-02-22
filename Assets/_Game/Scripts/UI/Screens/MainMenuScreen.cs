@@ -45,6 +45,14 @@ namespace CombatSystem.UI
             }
         }
 
+        public override void OnFocus()
+        {
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(false);
+            }
+        }
+
         public void OpenSaveSelect()
         {
             if (uiManager != null && saveSelectScreen != null)

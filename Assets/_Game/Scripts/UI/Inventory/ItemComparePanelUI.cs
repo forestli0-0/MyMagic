@@ -28,11 +28,13 @@ namespace CombatSystem.UI
         private readonly List<Text> statEntries = new List<Text>();
         private ItemInstance currentItem;
         private ItemInstance compareItem;
+        private string extraStatusLine;
 
-        public void ShowItem(ItemInstance item, ItemInstance compare)
+        public void ShowItem(ItemInstance item, ItemInstance compare, string statusLine = null)
         {
             currentItem = item;
             compareItem = compare;
+            extraStatusLine = statusLine;
             Refresh();
         }
 
@@ -122,7 +124,14 @@ namespace CombatSystem.UI
                         : compareItem.Definition.DisplayName;
                     description = string.IsNullOrEmpty(description)
                         ? $"对比对象: {compareName}"
-                        : $"{description}\n对比对象: {compareName}";
+                            : $"{description}\n对比对象: {compareName}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(extraStatusLine))
+                {
+                    description = string.IsNullOrEmpty(description)
+                        ? extraStatusLine
+                        : $"{description}\n{extraStatusLine}";
                 }
 
                 descriptionText.text = description;
@@ -428,6 +437,8 @@ namespace CombatSystem.UI
                     return "材料";
                 case ItemCategory.Quest:
                     return "任务";
+                case ItemCategory.Skill:
+                    return "技能";
                 case ItemCategory.General:
                 default:
                     return "通用";

@@ -14,6 +14,39 @@ namespace CombatSystem.Persistence
     {
         private const string LastSlotKey = "CombatSystem.LastSaveSlotId";
 
+        private readonly struct PlayerComponents
+        {
+            public readonly GameObject Player;
+            public readonly HealthComponent Health;
+            public readonly ResourceComponent Resource;
+            public readonly CurrencyComponent Currency;
+            public readonly PlayerProgression Progression;
+            public readonly InventoryComponent Inventory;
+            public readonly EquipmentComponent Equipment;
+
+            public PlayerComponents(GameObject player)
+            {
+                Player = player;
+                if (player == null)
+                {
+                    Health = null;
+                    Resource = null;
+                    Currency = null;
+                    Progression = null;
+                    Inventory = null;
+                    Equipment = null;
+                    return;
+                }
+
+                player.TryGetComponent(out Health);
+                player.TryGetComponent(out Resource);
+                player.TryGetComponent(out Currency);
+                player.TryGetComponent(out Progression);
+                player.TryGetComponent(out Inventory);
+                player.TryGetComponent(out Equipment);
+            }
+        }
+
         [Header("Settings")]
         [SerializeField] private GameDatabase database;
         [SerializeField] private string playerTag = "Player";
@@ -130,91 +163,10 @@ namespace CombatSystem.Persistence
             var player = FindPlayer();
             if (player != null)
             {
-                // 先缓存位姿，再处理属性/背包/装备，避免引用被覆盖时丢失
-                if (savePosition)
-                {
-                    data.player.position = player.transform.position;
-                }
-
-                if (saveRotation)
-                {
-                    data.player.rotation = player.transform.rotation;
-                }
-
-                if (saveHealth)
-                {
-                    var health = player.GetComponent<HealthComponent>();
-                    if (health != null)
-                    {
-                        data.player.health = health.Current;
-                    }
-                }
-
-                if (saveResource)
-                {
-                    var resource = player.GetComponent<ResourceComponent>();
-                    if (resource != null)
-                    {
-                        data.player.hasResource = true;
-                        data.player.resourceType = (int)resource.ResourceType;
-                        data.player.resource = resource.Current;
-                    }
-                }
-
-                if (saveCurrency)
-                {
-                    var currency = player.GetComponent<CurrencyComponent>();
-                    if (currency != null)
-                    {
-                        data.player.hasCurrency = true;
-                        data.player.currency = currency.Amount;
-                    }
-                }
-
-                if (saveProgression)
-                {
-                    var progression = player.GetComponent<PlayerProgression>();
-                    if (progression != null)
-                    {
-                        data.player.hasProgression = true;
-                        data.player.level = progression.Level;
-                        data.player.experience = progression.CurrentExperience;
-                        data.player.attributePoints = progression.UnspentAttributePoints;
-                    }
-
-                    var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
-                    if (characterScreen != null)
-                    {
-                        characterScreen.GetAllocationPoints(
-                            out data.player.allocatedMaxHealthPoints,
-                            out data.player.allocatedAttackPowerPoints,
-                            out data.player.allocatedArmorPoints,
-                            out data.player.allocatedMoveSpeedPoints);
-                    }
-                }
-
-                if (saveInventory)
-                {
-                    var inventory = player.GetComponent<InventoryComponent>();
-                    if (inventory != null)
-                    {
-                        // 固定槽位保存，保证存读后位置一致
-                        data.inventory = CaptureInventory(inventory);
-                    }
-                }
-
-                if (saveEquipment)
-                {
-                    var equipment = player.GetComponent<EquipmentComponent>();
-                    if (equipment != null)
-                    {
-                        // 记录每个装备槽位的索引与物品
-                        data.equipment = CaptureEquipment(equipment);
-                    }
-                }
+                CapturePlayerData(data, player);
             }
 
-            var levelFlow = FindFirstObjectByType<LevelFlowController>();
+            var levelFlow = FindLevelFlowController();
             if (levelFlow != null)
             {
                 data.player.levelId = levelFlow.CurrentLevelId;
@@ -223,7 +175,7 @@ namespace CombatSystem.Persistence
 
             if (saveQuests)
             {
-                var questTracker = FindFirstObjectByType<QuestTracker>();
+                var questTracker = FindQuestTracker();
                 if (questTracker != null)
                 {
                     data.quests = questTracker.CaptureSaveData();
@@ -247,23 +199,145 @@ namespace CombatSystem.Persistence
                 return;
             }
 
-            var spawnApplied = false;
+            var components = new PlayerComponents(player);
+
+            ApplyPlayerTransform(data, player);
+            ApplyPlayerCoreData(data, components);
+
+            var resolvedDatabase = ResolveDatabase();
+            if (saveInventory && data.inventory != null && resolvedDatabase != null)
+            {
+                if (components.Inventory != null)
+                {
+                    // 背包先恢复，再处理装备，确保可在背包中找到替换物
+                    ApplyInventory(data.inventory, components.Inventory, resolvedDatabase);
+                }
+            }
+
+            if (saveEquipment && data.equipment != null && resolvedDatabase != null)
+            {
+                if (components.Equipment != null)
+                {
+                    // 装备恢复会触发属性刷新，放在背包之后
+                    ApplyEquipment(data.equipment, components.Equipment, resolvedDatabase);
+                }
+            }
+
+            if (saveQuests && data.quests != null)
+            {
+                var questTracker = FindQuestTracker();
+                if (questTracker != null)
+                {
+                    questTracker.ApplySaveData(data.quests);
+                }
+            }
+        }
+
+        private void CapturePlayerData(SaveData data, GameObject player)
+        {
+            if (data == null || player == null)
+            {
+                return;
+            }
+
+            var components = new PlayerComponents(player);
+
+            // 先缓存位姿，再处理属性/背包/装备，避免引用被覆盖时丢失
             if (savePosition)
             {
-                // 优先用出生点覆盖位置，避免关卡变化导致掉落到无效位置
-                if (!string.IsNullOrWhiteSpace(data.player.spawnPointId))
-                {
-                    var levelFlow = FindFirstObjectByType<LevelFlowController>();
-                    if (levelFlow != null)
-                    {
-                        spawnApplied = levelFlow.TryApplySpawn(data.player.spawnPointId, player);
-                    }
-                }
+                data.player.position = player.transform.position;
+            }
 
-                if (!spawnApplied)
+            if (saveRotation)
+            {
+                data.player.rotation = player.transform.rotation;
+            }
+
+            if (saveHealth && components.Health != null)
+            {
+                data.player.health = components.Health.Current;
+            }
+
+            if (saveResource && components.Resource != null)
+            {
+                data.player.hasResource = true;
+                data.player.resourceType = (int)components.Resource.ResourceType;
+                data.player.resource = components.Resource.Current;
+            }
+
+            if (saveCurrency && components.Currency != null)
+            {
+                data.player.hasCurrency = true;
+                data.player.currency = components.Currency.Amount;
+            }
+
+            if (saveProgression)
+            {
+                CaptureProgressionData(data, components.Progression);
+            }
+
+            if (saveInventory && components.Inventory != null)
+            {
+                // 固定槽位保存，保证存读后位置一致
+                data.inventory = CaptureInventory(components.Inventory);
+            }
+
+            if (saveEquipment && components.Equipment != null)
+            {
+                // 记录每个装备槽位的索引与物品
+                data.equipment = CaptureEquipment(components.Equipment);
+            }
+        }
+
+        private void CaptureProgressionData(SaveData data, PlayerProgression progression)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (progression != null)
+            {
+                data.player.hasProgression = true;
+                data.player.level = progression.Level;
+                data.player.experience = progression.CurrentExperience;
+                data.player.attributePoints = progression.UnspentAttributePoints;
+            }
+
+            var characterScreen = FindCharacterScreen();
+            if (characterScreen == null)
+            {
+                return;
+            }
+
+            characterScreen.GetAllocationPoints(
+                out data.player.allocatedMaxHealthPoints,
+                out data.player.allocatedAttackPowerPoints,
+                out data.player.allocatedArmorPoints,
+                out data.player.allocatedMoveSpeedPoints);
+        }
+
+        private void ApplyPlayerTransform(SaveData data, GameObject player)
+        {
+            if (data == null || player == null || !savePosition)
+            {
+                return;
+            }
+
+            // 优先用出生点覆盖位置，避免关卡变化导致掉落到无效位置
+            var spawnApplied = false;
+            if (!string.IsNullOrWhiteSpace(data.player.spawnPointId))
+            {
+                var levelFlow = FindLevelFlowController();
+                if (levelFlow != null)
                 {
-                    player.transform.position = data.player.position;
+                    spawnApplied = levelFlow.TryApplySpawn(data.player.spawnPointId, player);
                 }
+            }
+
+            if (!spawnApplied)
+            {
+                player.transform.position = data.player.position;
             }
 
             if (saveRotation && !spawnApplied)
@@ -271,82 +345,61 @@ namespace CombatSystem.Persistence
                 player.transform.rotation = data.player.rotation;
             }
 
-            if (saveHealth)
+        }
+
+        private void ApplyPlayerCoreData(SaveData data, PlayerComponents components)
+        {
+            if (data == null || components.Player == null)
             {
-                var health = player.GetComponent<HealthComponent>();
-                if (health != null)
-                {
-                    health.SetCurrent(data.player.health);
-                }
+                return;
             }
 
-            if (saveResource && data.player.hasResource)
+            if (saveHealth && components.Health != null)
             {
-                var resource = player.GetComponent<ResourceComponent>();
-                if (resource != null && (int)resource.ResourceType == data.player.resourceType)
-                {
-                    resource.SetCurrent(data.player.resource);
-                }
+                components.Health.SetCurrent(data.player.health);
             }
 
-            if (saveCurrency && data.player.hasCurrency)
+            if (saveResource && data.player.hasResource && components.Resource != null &&
+                (int)components.Resource.ResourceType == data.player.resourceType)
             {
-                var currency = player.GetComponent<CurrencyComponent>();
-                if (currency != null)
-                {
-                    currency.SetAmount(data.player.currency);
-                }
+                components.Resource.SetCurrent(data.player.resource);
+            }
+
+            if (saveCurrency && data.player.hasCurrency && components.Currency != null)
+            {
+                components.Currency.SetAmount(data.player.currency);
             }
 
             if (saveProgression && data.player.hasProgression)
             {
-                var progression = player.GetComponent<PlayerProgression>();
-                if (progression != null)
-                {
-                    // 先恢复成长系统，后续装备能拿到正确的基础数值
-                    progression.ApplyState(data.player.level, data.player.experience, data.player.attributePoints, true);
-                }
-
-                var characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
-                if (characterScreen != null)
-                {
-                    characterScreen.SetAllocationPoints(
-                        data.player.allocatedMaxHealthPoints,
-                        data.player.allocatedAttackPowerPoints,
-                        data.player.allocatedArmorPoints,
-                        data.player.allocatedMoveSpeedPoints);
-                }
+                ApplyProgressionData(data, components.Progression);
             }
+        }
 
-            var resolvedDatabase = ResolveDatabase();
-            if (saveInventory && data.inventory != null && resolvedDatabase != null)
+        private void ApplyProgressionData(SaveData data, PlayerProgression progression)
+        {
+            if (data == null)
             {
-                var inventory = player.GetComponent<InventoryComponent>();
-                if (inventory != null)
-                {
-                    // 背包先恢复，再处理装备，确保可在背包中找到替换物
-                    ApplyInventory(data.inventory, inventory, resolvedDatabase);
-                }
+                return;
             }
 
-            if (saveEquipment && data.equipment != null && resolvedDatabase != null)
+            if (progression != null)
             {
-                var equipment = player.GetComponent<EquipmentComponent>();
-                if (equipment != null)
-                {
-                    // 装备恢复会触发属性刷新，放在背包之后
-                    ApplyEquipment(data.equipment, equipment, resolvedDatabase);
-                }
+                // 先恢复成长系统，后续装备能拿到正确的基础数值
+                progression.ApplyState(data.player.level, data.player.experience, data.player.attributePoints, true);
             }
 
-            if (saveQuests && data.quests != null)
+            var characterScreen = FindCharacterScreen();
+            if (characterScreen == null)
             {
-                var questTracker = FindFirstObjectByType<QuestTracker>();
-                if (questTracker != null)
-                {
-                    questTracker.ApplySaveData(data.quests);
-                }
+                return;
             }
+
+            characterScreen.SetAllocationPoints(
+                data.player.allocatedMaxHealthPoints,
+                data.player.allocatedAttackPowerPoints,
+                data.player.allocatedArmorPoints,
+                data.player.allocatedMoveSpeedPoints);
         }
 
         private bool ShouldLoadScene(SaveData data)
@@ -370,7 +423,7 @@ namespace CombatSystem.Persistence
             pendingLoad = data;
             if (data != null && data.player != null)
             {
-                var levelFlow = FindFirstObjectByType<LevelFlowController>();
+                var levelFlow = FindLevelFlowController();
                 if (levelFlow != null)
                 {
                     levelFlow.SkipCachedStateOnNextSceneLoad();
@@ -599,8 +652,23 @@ namespace CombatSystem.Persistence
                 }
             }
 
-            var unit = FindFirstObjectByType<UnitRoot>();
+            var unit = PlayerUnitLocator.FindPlayerUnit();
             return unit != null ? unit.gameObject : null;
+        }
+
+        private static CharacterScreen FindCharacterScreen()
+        {
+            return UnityEngine.Object.FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+        }
+
+        private static LevelFlowController FindLevelFlowController()
+        {
+            return UnityEngine.Object.FindFirstObjectByType<LevelFlowController>();
+        }
+
+        private static QuestTracker FindQuestTracker()
+        {
+            return UnityEngine.Object.FindFirstObjectByType<QuestTracker>();
         }
 
         private void RememberSlot(SaveSlotInfo info)

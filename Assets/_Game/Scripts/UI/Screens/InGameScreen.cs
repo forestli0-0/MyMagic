@@ -31,5 +31,13 @@ namespace CombatSystem.UI
                 uiManager.SetHudVisible(false);
             }
         }
+
+        public override void OnFocus()
+        {
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(true);
+            }
+        }
     }
 }

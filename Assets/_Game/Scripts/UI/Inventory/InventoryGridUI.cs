@@ -18,6 +18,21 @@ namespace CombatSystem.UI
     /// </remarks>
     public class InventoryGridUI : MonoBehaviour
     {
+        public readonly struct SkillEquipState
+        {
+            public readonly bool IsEquipped;
+            public readonly int SlotNumber;
+
+            public SkillEquipState(bool isEquipped, int slotNumber)
+            {
+                IsEquipped = isEquipped && slotNumber > 0;
+                SlotNumber = Mathf.Max(0, slotNumber);
+            }
+
+            public static SkillEquipState None => new SkillEquipState(false, 0);
+            public static SkillEquipState EquippedInSlot(int slotNumber) => new SkillEquipState(true, slotNumber);
+        }
+
         [SerializeField] private RectTransform slotsRoot;
         [SerializeField] private InventorySlotUI slotTemplate;
         [Header("Layout")]
@@ -29,6 +44,7 @@ namespace CombatSystem.UI
         private readonly List<int> customDisplayIndices = new List<int>(32);
         private InventoryComponent inventory;
         private bool useCustomDisplayIndices;
+        private Func<ItemInstance, SkillEquipState> skillEquipStateResolver;
 
         public event Action<int> SlotSelected;
         public event Action<InventorySlotUI, PointerEventData> SlotDragStarted;
@@ -67,6 +83,12 @@ namespace CombatSystem.UI
             {
                 slots[i].SetSelected(slots[i].SlotIndex == index);
             }
+        }
+
+        public void SetSkillEquipStateResolver(Func<ItemInstance, SkillEquipState> resolver)
+        {
+            skillEquipStateResolver = resolver;
+            Refresh();
         }
 
         public void SetDragTargetState(int inventoryIndex, bool valid)
@@ -185,6 +207,8 @@ namespace CombatSystem.UI
                 }
 
                 slot.SetItem(item);
+                var skillEquipState = ResolveSkillEquipState(item);
+                slot.SetSkillEquipState(skillEquipState.IsEquipped, skillEquipState.SlotNumber);
             }
         }
 
@@ -365,6 +389,22 @@ namespace CombatSystem.UI
             }
 
             grid.cellSize = new Vector2(size, size);
+        }
+
+        private SkillEquipState ResolveSkillEquipState(ItemInstance item)
+        {
+            if (item == null || skillEquipStateResolver == null)
+            {
+                return SkillEquipState.None;
+            }
+
+            var state = skillEquipStateResolver.Invoke(item);
+            if (!state.IsEquipped || state.SlotNumber <= 0)
+            {
+                return SkillEquipState.None;
+            }
+
+            return state;
         }
     }
 }

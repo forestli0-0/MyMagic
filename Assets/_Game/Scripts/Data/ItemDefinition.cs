@@ -24,6 +24,10 @@ namespace CombatSystem.Data
         [SerializeField] private List<ModifierDefinition> baseModifiers = new List<ModifierDefinition>();
         [SerializeField] private List<BuffDefinition> equipBuffs = new List<BuffDefinition>();
 
+        [Header("Skill")]
+        [Tooltip("技能类物品可关联一个技能定义，用于拖拽到技能栏时装配")]
+        [SerializeField] private SkillDefinition linkedSkill;
+
         [Header("堆叠属性")]
         [Tooltip("是否支持在同一个格子内堆叠")]
         [SerializeField] private bool stackable;
@@ -64,6 +68,7 @@ namespace CombatSystem.Data
         public ItemCategory Category => economyVersion <= 0 ? ItemCategory.General : itemCategory;
         public IReadOnlyList<ModifierDefinition> BaseModifiers => baseModifiers;
         public IReadOnlyList<BuffDefinition> EquipBuffs => equipBuffs;
+        public SkillDefinition LinkedSkill => linkedSkill;
     }
 
     public enum ItemCategory
@@ -74,6 +79,7 @@ namespace CombatSystem.Data
         Accessory = 3,
         Consumable = 4,
         Material = 5,
-        Quest = 6
+        Quest = 6,
+        Skill = 7
     }
 }

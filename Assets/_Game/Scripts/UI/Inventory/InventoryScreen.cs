@@ -19,7 +19,7 @@ namespace CombatSystem.UI
     /// 
     /// 使用方式：
     /// - 通过 I 键（InventoryHotkey）开关界面
-    /// - 继承 UIScreenBase，进入时隐藏 HUD
+    /// - 继承 UIScreenBase，与底部常驻技能栏协同显示
     /// </remarks>
     public class InventoryScreen : UIScreenBase
     {
@@ -27,6 +27,7 @@ namespace CombatSystem.UI
         [SerializeField] private UIManager uiManager;
         [SerializeField] private InventoryComponent inventory;
         [SerializeField] private EquipmentComponent equipment;
+        [SerializeField] private SkillBarUI skillBar;
 
         [Header("Widgets")]
         [SerializeField] private InventoryGridUI inventoryGrid;
@@ -35,6 +36,7 @@ namespace CombatSystem.UI
         [SerializeField] private Button allFilterButton;
         [SerializeField] private Button equipmentFilterButton;
         [SerializeField] private Button consumableFilterButton;
+        [SerializeField] private Button skillFilterButton;
         [SerializeField] private Button questFilterButton;
         [SerializeField] private InputField searchInputField;
         [SerializeField] private Dropdown sortDropdown;
@@ -65,6 +67,7 @@ namespace CombatSystem.UI
         private string searchKeyword = string.Empty;
         private readonly List<int> filteredDisplayIndices = new List<int>(32);
         private readonly List<int> filteredItemIndices = new List<int>(32);
+        private readonly List<RaycastResult> dropRaycastBuffer = new List<RaycastResult>(24);
         private bool subscribed;
         private bool sortDropdownBindingLogged;
         private Button sortPickerButton;
@@ -87,7 +90,8 @@ namespace CombatSystem.UI
             All = 0,
             Equipment = 1,
             Consumable = 2,
-            Quest = 3
+            Skill = 3,
+            Quest = 4
         }
 
         private enum InventorySortMode
@@ -204,14 +208,14 @@ namespace CombatSystem.UI
         {
             ApplyThemeColors();
             EnsureReferences();
+            if (uiManager != null)
+            {
+                uiManager.SetHudSkillBarOnlyVisible(true);
+            }
+
             EnsureActionProfilesConfigured();
             Subscribe();
             RefreshAll();
-
-            if (uiManager != null)
-            {
-                uiManager.SetHudVisible(false);
-            }
         }
 
         public override void OnExit()
@@ -219,10 +223,6 @@ namespace CombatSystem.UI
             Unsubscribe();
             HideSortPicker();
             EndDrag();
-            if (uiManager != null)
-            {
-                uiManager.SetHudVisible(true);
-            }
         }
 
         private void OnDestroy()
@@ -369,6 +369,11 @@ namespace CombatSystem.UI
             SetFilter(InventoryFilter.Quest);
         }
 
+        public void ShowSkillItems()
+        {
+            SetFilter(InventoryFilter.Skill);
+        }
+
         public void ShowAllRarities()
         {
             SetRarityFilter(RarityQuickFilter.All);
@@ -415,6 +420,77 @@ namespace CombatSystem.UI
             {
                 equipment = FindFirstObjectByType<EquipmentComponent>();
             }
+
+            EnsureSkillBarReference();
+
+            EnsureSkillFilterButton();
+        }
+
+        private void EnsureSkillFilterButton()
+        {
+            if (skillFilterButton != null)
+            {
+                return;
+            }
+
+            if (allFilterButton != null)
+            {
+                skillFilterButton = FindSiblingButtonByName(allFilterButton.transform.parent, "FilterSkillButton");
+                if (skillFilterButton == null)
+                {
+                    skillFilterButton = FindSiblingButtonByName(allFilterButton.transform.parent, "Button_技能");
+                }
+            }
+
+            if (skillFilterButton != null)
+            {
+                return;
+            }
+
+            if (questFilterButton == null || questFilterButton.transform.parent == null)
+            {
+                return;
+            }
+
+            // 兼容旧场景：运行时补齐“技能”筛选按钮，避免必须重建整个 UI。
+            var clone = Instantiate(questFilterButton.gameObject, questFilterButton.transform.parent, false);
+            clone.name = "FilterSkillButton";
+
+            var questIndex = questFilterButton.transform.GetSiblingIndex();
+            clone.transform.SetSiblingIndex(Mathf.Max(0, questIndex));
+
+            var cloneText = clone.GetComponentInChildren<Text>(true);
+            if (cloneText != null)
+            {
+                cloneText.text = "技能";
+            }
+
+            skillFilterButton = clone.GetComponent<Button>();
+        }
+
+        private static Button FindSiblingButtonByName(Transform parent, string name)
+        {
+            if (parent == null || string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (child == null || !string.Equals(child.name, name, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var button = child.GetComponent<Button>();
+                if (button != null)
+                {
+                    return button;
+                }
+            }
+
+            return null;
         }
 
         private void EnsureActionProfilesConfigured()
@@ -541,6 +617,7 @@ namespace CombatSystem.UI
                 inventoryGrid.SlotDragging += HandleInventoryDragging;
                 inventoryGrid.SlotDragEnded += HandleInventoryDragEnded;
                 inventoryGrid.SlotDropped += HandleInventorySlotDropped;
+                inventoryGrid.SetSkillEquipStateResolver(ResolveSkillEquipStateForItem);
             }
 
             if (equipmentPanel != null)
@@ -580,6 +657,11 @@ namespace CombatSystem.UI
             if (questFilterButton != null)
             {
                 questFilterButton.onClick.AddListener(ShowQuestItems);
+            }
+
+            if (skillFilterButton != null)
+            {
+                skillFilterButton.onClick.AddListener(ShowSkillItems);
             }
 
             if (searchInputField != null)
@@ -651,6 +733,7 @@ namespace CombatSystem.UI
                 inventoryGrid.SlotDragging -= HandleInventoryDragging;
                 inventoryGrid.SlotDragEnded -= HandleInventoryDragEnded;
                 inventoryGrid.SlotDropped -= HandleInventorySlotDropped;
+                inventoryGrid.SetSkillEquipStateResolver(null);
             }
 
             if (equipmentPanel != null)
@@ -690,6 +773,11 @@ namespace CombatSystem.UI
             if (questFilterButton != null)
             {
                 questFilterButton.onClick.RemoveListener(ShowQuestItems);
+            }
+
+            if (skillFilterButton != null)
+            {
+                skillFilterButton.onClick.RemoveListener(ShowSkillItems);
             }
 
             if (searchInputField != null)
@@ -849,6 +937,7 @@ namespace CombatSystem.UI
 
         private void HandleInventoryDragEnded(InventorySlotUI slot, PointerEventData eventData)
         {
+            TryHandleSkillSlotDrop(eventData);
             EndDrag();
         }
 
@@ -892,6 +981,184 @@ namespace CombatSystem.UI
             EndDrag();
         }
 
+        private bool TryHandleSkillSlotDrop(PointerEventData eventData)
+        {
+            if (!dragActive || eventData == null || dragPayload.Source != DragSource.Inventory || inventory == null)
+            {
+                return false;
+            }
+
+            if (dragPayload.SourceIndex < 0 || dragPayload.SourceIndex >= inventory.Items.Count)
+            {
+                return false;
+            }
+
+            var sourceItem = inventory.Items[dragPayload.SourceIndex];
+            var targetSlot = ResolveSkillSlotDropTarget(eventData);
+            if (targetSlot == null)
+            {
+                if (TryResolveLinkedSkill(sourceItem, out _))
+                {
+                    UIToast.Info("请拖到下方技能栏槽位。");
+                }
+
+                return false;
+            }
+
+            if (skillBar == null)
+            {
+                skillBar = FindFirstObjectByType<SkillBarUI>(FindObjectsInactive.Include);
+            }
+
+            if (!TryResolveLinkedSkill(sourceItem, out var linkedSkill))
+            {
+                UIToast.Warning("该物品未配置可装配技能。");
+                return false;
+            }
+
+            if (skillBar == null)
+            {
+                UIToast.Warning("技能栏未就绪。");
+                return false;
+            }
+
+            if (!skillBar.CanAssignSkillToSlot(linkedSkill, targetSlot))
+            {
+                UIToast.Warning("该槽位不可装配此技能。");
+                return false;
+            }
+
+            if (!skillBar.TryAssignSkillToSlot(linkedSkill, targetSlot))
+            {
+                UIToast.Warning("技能装配失败。");
+                return false;
+            }
+
+            RefreshInventoryGrid();
+            RefreshSelectionAfterChange();
+            UIToast.Success($"已装配技能：{linkedSkill.DisplayName}");
+            return true;
+        }
+
+        private static bool TryResolveLinkedSkill(ItemInstance item, out SkillDefinition skill)
+        {
+            skill = null;
+            if (item == null || item.Definition == null)
+            {
+                return false;
+            }
+
+            if (item.Definition.Category != ItemCategory.Skill)
+            {
+                return false;
+            }
+
+            skill = item.Definition.LinkedSkill;
+            return skill != null;
+        }
+
+        private SkillSlotUI ResolveSkillSlotDropTarget(PointerEventData eventData)
+        {
+            if (eventData == null)
+            {
+                return null;
+            }
+
+            var target = ResolveSkillSlotFromObject(eventData.pointerCurrentRaycast.gameObject);
+            if (target != null)
+            {
+                return target;
+            }
+
+            target = ResolveSkillSlotFromObject(eventData.pointerEnter);
+            if (target != null)
+            {
+                return target;
+            }
+
+            var eventSystem = EventSystem.current;
+            if (eventSystem != null)
+            {
+                var raycastProbe = new PointerEventData(eventSystem)
+                {
+                    position = eventData.position
+                };
+                dropRaycastBuffer.Clear();
+                eventSystem.RaycastAll(raycastProbe, dropRaycastBuffer);
+                for (int i = 0; i < dropRaycastBuffer.Count; i++)
+                {
+                    target = ResolveSkillSlotFromObject(dropRaycastBuffer[i].gameObject);
+                    if (target != null)
+                    {
+                        return target;
+                    }
+                }
+            }
+
+            EnsureSkillBarReference();
+            if (skillBar != null)
+            {
+                var fallback = skillBar.ResolveSlotAtScreenPoint(eventData.position, eventData.enterEventCamera);
+                if (fallback != null)
+                {
+                    return fallback;
+                }
+            }
+
+            return null;
+        }
+
+        private static SkillSlotUI ResolveSkillSlotFromObject(GameObject source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            return source.GetComponentInParent<SkillSlotUI>();
+        }
+
+        private InventoryGridUI.SkillEquipState ResolveSkillEquipStateForItem(ItemInstance item)
+        {
+            if (!TryResolveLinkedSkill(item, out var linkedSkill))
+            {
+                return InventoryGridUI.SkillEquipState.None;
+            }
+
+            EnsureSkillBarReference();
+            if (skillBar == null)
+            {
+                return InventoryGridUI.SkillEquipState.None;
+            }
+
+            return skillBar.TryGetSkillSlotNumber(linkedSkill, out var slotNumber)
+                ? InventoryGridUI.SkillEquipState.EquippedInSlot(slotNumber)
+                : InventoryGridUI.SkillEquipState.None;
+        }
+
+        private string BuildSkillEquipStatusLine(ItemInstance item)
+        {
+            if (!TryResolveLinkedSkill(item, out _))
+            {
+                return null;
+            }
+
+            var equipState = ResolveSkillEquipStateForItem(item);
+            return equipState.IsEquipped
+                ? $"技能栏：已装配（槽 {equipState.SlotNumber}）"
+                : "技能栏：未装配";
+        }
+
+        private void EnsureSkillBarReference()
+        {
+            if (skillBar != null)
+            {
+                return;
+            }
+
+            skillBar = FindFirstObjectByType<SkillBarUI>(FindObjectsInactive.Include);
+        }
+
         private void HandleEquipmentSlotDropped(EquipmentSlotUI slot, PointerEventData eventData)
         {
             if (!dragActive || slot == null)
@@ -930,7 +1197,10 @@ namespace CombatSystem.UI
             {
                 if (inventoryItem != null)
                 {
-                    comparePanel.ShowItem(inventoryItem, FindEquippedForSlot(inventoryItem));
+                    comparePanel.ShowItem(
+                        inventoryItem,
+                        FindEquippedForSlot(inventoryItem),
+                        BuildSkillEquipStatusLine(inventoryItem));
                 }
                 else if (equipmentItem != null)
                 {
@@ -2098,6 +2368,8 @@ namespace CombatSystem.UI
                            category == ItemCategory.Accessory;
                 case InventoryFilter.Consumable:
                     return category == ItemCategory.Consumable;
+                case InventoryFilter.Skill:
+                    return category == ItemCategory.Skill;
                 case InventoryFilter.Quest:
                     return category == ItemCategory.Quest;
                 default:
@@ -2202,6 +2474,7 @@ namespace CombatSystem.UI
             ApplyFilterButtonState(allFilterButton, activeFilter == InventoryFilter.All);
             ApplyFilterButtonState(equipmentFilterButton, activeFilter == InventoryFilter.Equipment);
             ApplyFilterButtonState(consumableFilterButton, activeFilter == InventoryFilter.Consumable);
+            ApplyFilterButtonState(skillFilterButton, activeFilter == InventoryFilter.Skill);
             ApplyFilterButtonState(questFilterButton, activeFilter == InventoryFilter.Quest);
             ApplyFilterButtonState(rarityAllButton, activeRarityFilter == RarityQuickFilter.All);
             ApplyFilterButtonState(rarityCommonButton, activeRarityFilter == RarityQuickFilter.Common);

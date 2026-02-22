@@ -23,6 +23,11 @@ namespace CombatSystem.Gameplay
         [SerializeField] private float respawnDelay = 2f;
         [SerializeField] private bool verboseLogs;
 
+        [Header("死亡清理")]
+        [SerializeField] private bool autoAttachDespawnOnDeath = true;
+        [SerializeField] private float despawnDelaySeconds = 1.2f;
+        [SerializeField] private bool destroyAfterDespawn;
+
         private readonly List<GameObject> spawnedUnits = new List<GameObject>(32);
         private readonly HashSet<HealthComponent> aliveUnits = new HashSet<HealthComponent>();
         private System.Random random;
@@ -261,6 +266,7 @@ namespace CombatSystem.Gameplay
             }
 
             health.Died += HandleSpawnedUnitDied;
+            EnsureDeathCleanup(instance, health);
         }
 
         private void HandleSpawnedUnitDied(HealthComponent source)
@@ -365,6 +371,22 @@ namespace CombatSystem.Gameplay
                     health.Died -= HandleSpawnedUnitDied;
                 }
             }
+        }
+
+        private void EnsureDeathCleanup(GameObject instance, HealthComponent health)
+        {
+            if (!autoAttachDespawnOnDeath || instance == null || health == null)
+            {
+                return;
+            }
+
+            var despawn = instance.GetComponent<DespawnOnDeath>();
+            if (despawn == null)
+            {
+                despawn = instance.AddComponent<DespawnOnDeath>();
+            }
+
+            despawn.Configure(despawnDelaySeconds, destroyAfterDespawn, health);
         }
     }
 }
