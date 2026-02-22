@@ -830,6 +830,7 @@ namespace CombatSystem.Editor
             }
 
             SetSerialized(manager, "barsRoot", rect);
+            SetSerialized(manager, "showOnDiscover", false);
         }
 
         private static void BuildCombatHUD(Canvas hudCanvas, Sprite sprite, Font font)
@@ -2869,6 +2870,7 @@ namespace CombatSystem.Editor
             var filterAllButton = (Button)null;
             var filterEquipmentButton = (Button)null;
             var filterConsumableButton = (Button)null;
+            var filterSkillButton = (Button)null;
             var filterQuestButton = (Button)null;
             var searchInputField = (InputField)null;
             var sortDropdown = (Dropdown)null;
@@ -2976,11 +2978,13 @@ namespace CombatSystem.Editor
             filterAllButton = CreateButton(inventoryFiltersRow.transform, "全部", sprite, font);
             filterEquipmentButton = CreateButton(inventoryFiltersRow.transform, "装备", sprite, font);
             filterConsumableButton = CreateButton(inventoryFiltersRow.transform, "消耗品", sprite, font);
+            filterSkillButton = CreateButton(inventoryFiltersRow.transform, "技能", sprite, font);
             filterQuestButton = CreateButton(inventoryFiltersRow.transform, "任务", sprite, font);
 
             ConfigureSecondaryFilterButtonLayout(filterAllButton);
             ConfigureSecondaryFilterButtonLayout(filterEquipmentButton);
             ConfigureSecondaryFilterButtonLayout(filterConsumableButton);
+            ConfigureSecondaryFilterButtonLayout(filterSkillButton);
             ConfigureSecondaryFilterButtonLayout(filterQuestButton);
 
             var inventoryToolsRow = CreateUIElement("InventoryToolsRow", inventoryPanel.transform);
@@ -3273,6 +3277,7 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "allFilterButton", filterAllButton);
             SetSerialized(screen, "equipmentFilterButton", filterEquipmentButton);
             SetSerialized(screen, "consumableFilterButton", filterConsumableButton);
+            SetSerialized(screen, "skillFilterButton", filterSkillButton);
             SetSerialized(screen, "questFilterButton", filterQuestButton);
             SetSerialized(screen, "searchInputField", searchInputField);
             SetSerialized(screen, "sortDropdown", sortDropdown);
@@ -4102,16 +4107,34 @@ namespace CombatSystem.Editor
 
         internal static SkillBarUI CreateHudSkillBar(Transform parent, Sprite sprite, Font font, int slots)
         {
-            var root = CreateHudRect("SkillBar", parent, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(320f, 56f), new Vector2(0f, 20f));
+            var slotCount = Mathf.Max(1, slots);
+            const float slotSize = 48f;
+            const float slotSpacing = 6f;
+            const float horizontalPadding = 10f;
+            const float verticalPadding = 8f;
+            var requiredWidth = slotCount * slotSize + Mathf.Max(0, slotCount - 1) * slotSpacing + horizontalPadding * 2f;
+            var requiredHeight = slotSize + verticalPadding * 2f;
+
+            var root = CreateHudRect(
+                "SkillBar",
+                parent,
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(requiredWidth, requiredHeight),
+                new Vector2(0f, 20f));
             var layout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 6f;
+            layout.spacing = slotSpacing;
+            layout.padding = new RectOffset(
+                Mathf.RoundToInt(horizontalPadding),
+                Mathf.RoundToInt(horizontalPadding),
+                Mathf.RoundToInt(verticalPadding),
+                Mathf.RoundToInt(verticalPadding));
             layout.childControlHeight = false;
             layout.childControlWidth = false;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = false;
 
-            var slotCount = Mathf.Max(1, slots);
             for (var i = 0; i < slotCount; i++)
             {
                 var slot = CreateHudRect($"Slot_{i + 1}", root, Vector2.zero, Vector2.zero, new Vector2(48f, 48f), Vector2.zero);

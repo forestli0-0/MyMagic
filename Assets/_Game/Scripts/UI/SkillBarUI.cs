@@ -3,6 +3,7 @@ using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
@@ -24,6 +25,16 @@ namespace CombatSystem.UI
         
         [Tooltip("每个槽位对应的快捷键标签")]
         [SerializeField] private string[] keyLabels = { "1", "2", "3", "4", "5", "6" };
+        [SerializeField] private bool keepEmptySlotsVisible = true;
+
+        [Header("外观")]
+        [SerializeField] private Image barBackground;
+        [SerializeField] private bool autoCreateBarBackground = true;
+        [SerializeField] private Color barBackgroundColor = new Color(0.03f, 0.05f, 0.09f, 0.82f);
+        [SerializeField] private bool addBarOutline = true;
+        [SerializeField] private Color barOutlineColor = new Color(0.26f, 0.46f, 0.82f, 0.85f);
+        [SerializeField] private bool autoApplyLayoutPadding = true;
+        [SerializeField] private Vector2 layoutPadding = new Vector2(10f, 8f);
 
         [Header("普攻槽位")]
         [Tooltip("是否在技能栏中预留首格用于显示普攻")]
@@ -43,11 +54,13 @@ namespace CombatSystem.UI
 
         private int lastMaxSlots;
         private readonly List<SkillDefinition> nonBasicSkills = new List<SkillDefinition>(8);
+        private static Sprite fallbackSprite;
 
         private void Awake()
         {
             // 初始化时收集子节点中的槽位组件
             CollectSlots();
+            EnsureBarVisual();
         }
 
         /// <summary>
@@ -193,6 +206,7 @@ namespace CombatSystem.UI
             var limit = maxSlotsOverride >= 0 ? maxSlotsOverride : maxSlots;
             var displayLimit = Mathf.Min(limit, slots.Count);
             var basicAttack = skillUser.BasicAttack;
+            var reserveBasicSlot = showBasicAttackSlot && displayLimit > 0;
 
             nonBasicSkills.Clear();
             for (int i = 0; i < skills.Count; i++)
@@ -206,34 +220,52 @@ namespace CombatSystem.UI
                 nonBasicSkills.Add(skill);
             }
 
-            var slotCursor = 0;
-            var hasBasicSlot = basicAttack != null && displayLimit > 0;
-            if (hasBasicSlot)
+            if (reserveBasicSlot)
             {
-                slots[slotCursor].BindSkill(basicAttack, basicAttackKeyLabel);
-                slotCursor++;
+                var basicSlot = slots[0];
+                if (basicSlot != null)
+                {
+                    basicSlot.SetSlotVisible(true);
+                    basicSlot.BindSkill(basicAttack, basicAttackKeyLabel);
+                }
             }
 
-            var nonBasicDisplayCount = Mathf.Min(nonBasicSkills.Count, Mathf.Max(0, displayLimit - slotCursor));
-            for (var i = 0; i < nonBasicDisplayCount; i++)
+            var nonBasicBaseIndex = reserveBasicSlot ? 1 : 0;
+            var nonBasicVisibleCount = Mathf.Max(0, displayLimit - nonBasicBaseIndex);
+            for (var i = 0; i < nonBasicVisibleCount; i++)
             {
-                var slot = slots[slotCursor];
+                var slotIndex = i + nonBasicBaseIndex;
+                if (slotIndex < 0 || slotIndex >= slots.Count)
+                {
+                    break;
+                }
+
+                var slot = slots[slotIndex];
                 if (slot == null)
                 {
-                    slotCursor++;
                     continue;
                 }
 
-                var labelIndex = hasBasicSlot ? i : slotCursor;
-                var label = labelIndex >= 0 && labelIndex < keyLabels.Length ? keyLabels[labelIndex] : string.Empty;
-                slot.BindSkill(nonBasicSkills[i], label);
-                slotCursor++;
+                slot.SetSlotVisible(true);
+                var keyLabel = ResolveSkillSlotKeyLabel(i);
+                var skill = i < nonBasicSkills.Count ? nonBasicSkills[i] : null;
+                slot.BindSkill(skill, keyLabel);
             }
 
-            for (int i = slotCursor; i < slots.Count; i++)
+            for (int i = 0; i < slots.Count; i++)
             {
                 var slot = slots[i];
                 if (slot == null)
+                {
+                    continue;
+                }
+
+                var shouldShow = keepEmptySlotsVisible
+                    ? i < displayLimit
+                    : (i < displayLimit && slot.Skill != null);
+                slot.SetSlotVisible(shouldShow);
+
+                if (shouldShow)
                 {
                     continue;
                 }
@@ -246,7 +278,8 @@ namespace CombatSystem.UI
         {
             var skills = skillUser.Skills;
             var limit = maxSlotsOverride >= 0 ? maxSlotsOverride : maxSlots;
-            var count = Mathf.Min(limit, skills.Count, slots.Count);
+            var displayLimit = Mathf.Min(limit, slots.Count);
+            var count = Mathf.Min(displayLimit, skills.Count);
 
             for (int i = 0; i < slots.Count; i++)
             {
@@ -256,16 +289,326 @@ namespace CombatSystem.UI
                     continue;
                 }
 
+                var shouldShow = keepEmptySlotsVisible ? i < displayLimit : i < count;
+                slot.SetSlotVisible(shouldShow);
+                if (!shouldShow)
+                {
+                    slot.BindSkill(null, string.Empty);
+                    continue;
+                }
+
+                var label = i < keyLabels.Length ? keyLabels[i] : string.Empty;
                 if (i < count)
                 {
-                    var label = i < keyLabels.Length ? keyLabels[i] : string.Empty;
                     slot.BindSkill(skills[i], label);
                 }
                 else
                 {
-                    slot.BindSkill(null, string.Empty);
+                    slot.BindSkill(null, label);
                 }
             }
+        }
+
+        private string ResolveSkillSlotKeyLabel(int nonBasicIndex)
+        {
+            if (nonBasicIndex < 0 || nonBasicIndex >= keyLabels.Length)
+            {
+                return string.Empty;
+            }
+
+            return keyLabels[nonBasicIndex] ?? string.Empty;
+        }
+
+        /// <summary>
+        /// 检查指定技能是否可装配到给定的可视化槽位。
+        /// </summary>
+        public bool CanAssignSkillToSlot(SkillDefinition skill, SkillSlotUI targetSlot)
+        {
+            if (targetSlot == null)
+            {
+                return false;
+            }
+
+            var slotIndex = slots.IndexOf(targetSlot);
+            return CanAssignSkillToSlotIndex(skill, slotIndex);
+        }
+
+        /// <summary>
+        /// 将指定技能装配到给定的可视化槽位。
+        /// 会自动处理“普攻首槽保留”的索引映射。
+        /// </summary>
+        public bool TryAssignSkillToSlot(SkillDefinition skill, SkillSlotUI targetSlot)
+        {
+            if (targetSlot == null)
+            {
+                return false;
+            }
+
+            var slotIndex = slots.IndexOf(targetSlot);
+            return TryAssignSkillToSlotIndex(skill, slotIndex);
+        }
+
+        /// <summary>
+        /// 查询某技能当前装配在技能栏的第几号技能槽（不含普攻保留槽）。
+        /// </summary>
+        /// <param name="skill">技能定义</param>
+        /// <param name="slotNumber">返回 1-based 槽位编号；未装配时为 0</param>
+        public bool TryGetSkillSlotNumber(SkillDefinition skill, out int slotNumber)
+        {
+            slotNumber = 0;
+            if (skill == null || slots == null || slots.Count == 0)
+            {
+                return false;
+            }
+
+            var displayLimit = GetDisplayLimit();
+            var searchStart = showBasicAttackSlot ? 1 : 0;
+            var searchEnd = Mathf.Min(displayLimit, slots.Count);
+            for (int visualIndex = searchStart; visualIndex < searchEnd; visualIndex++)
+            {
+                var slot = slots[visualIndex];
+                if (slot == null || slot.Skill != skill)
+                {
+                    continue;
+                }
+
+                slotNumber = showBasicAttackSlot ? visualIndex : visualIndex + 1;
+                return slotNumber > 0;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 根据屏幕坐标解析当前命中的技能槽位。
+        /// 用于拖拽结束时的兜底命中（避免 pointerEnter 丢失）。
+        /// </summary>
+        public SkillSlotUI ResolveSlotAtScreenPoint(Vector2 screenPosition, Camera eventCamera)
+        {
+            if (slots == null || slots.Count == 0)
+            {
+                return null;
+            }
+
+            var displayLimit = GetDisplayLimit();
+            var upperBound = Mathf.Min(displayLimit, slots.Count);
+            for (int i = 0; i < upperBound; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || !slot.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var rect = slot.transform as RectTransform;
+                if (rect == null)
+                {
+                    continue;
+                }
+
+                if (RectTransformUtility.RectangleContainsScreenPoint(rect, screenPosition, eventCamera))
+                {
+                    return slot;
+                }
+            }
+
+            return null;
+        }
+
+        private bool CanAssignSkillToSlotIndex(SkillDefinition skill, int slotIndex)
+        {
+            if (skillUser == null || skill == null || slotIndex < 0)
+            {
+                return false;
+            }
+
+            if (skillUser.IsBasicAttackSkill(skill))
+            {
+                return false;
+            }
+
+            var displayLimit = GetDisplayLimit();
+            if (slotIndex >= displayLimit)
+            {
+                return false;
+            }
+
+            if (showBasicAttackSlot && slotIndex == 0)
+            {
+                return false;
+            }
+
+            var nonBasicCapacity = Mathf.Max(0, displayLimit - (showBasicAttackSlot ? 1 : 0));
+            var targetNonBasicIndex = showBasicAttackSlot ? slotIndex - 1 : slotIndex;
+            return nonBasicCapacity > 0 && targetNonBasicIndex >= 0 && targetNonBasicIndex < nonBasicCapacity;
+        }
+
+        private bool TryAssignSkillToSlotIndex(SkillDefinition skill, int slotIndex)
+        {
+            if (!CanAssignSkillToSlotIndex(skill, slotIndex))
+            {
+                return false;
+            }
+
+            var displayLimit = GetDisplayLimit();
+            var nonBasicCapacity = Mathf.Max(0, displayLimit - (showBasicAttackSlot ? 1 : 0));
+            var targetNonBasicIndex = showBasicAttackSlot ? slotIndex - 1 : slotIndex;
+            if (targetNonBasicIndex < 0 || targetNonBasicIndex >= nonBasicCapacity)
+            {
+                return false;
+            }
+
+            nonBasicSkills.Clear();
+            var skills = skillUser.Skills;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                var current = skills[i];
+                if (current == null || skillUser.IsBasicAttackSkill(current))
+                {
+                    continue;
+                }
+
+                nonBasicSkills.Add(current);
+            }
+
+            // 先去重，避免同一个技能同时占用多个槽位。
+            nonBasicSkills.Remove(skill);
+
+            if (targetNonBasicIndex < nonBasicSkills.Count)
+            {
+                nonBasicSkills[targetNonBasicIndex] = skill;
+            }
+            else
+            {
+                // 当前工程空槽位是连续排列，索引超出时按“追加到最后已占槽位”处理。
+                nonBasicSkills.Add(skill);
+            }
+
+            if (nonBasicSkills.Count > nonBasicCapacity)
+            {
+                nonBasicSkills.RemoveRange(nonBasicCapacity, nonBasicSkills.Count - nonBasicCapacity);
+            }
+
+            skillUser.SetSkills(nonBasicSkills, true);
+            return true;
+        }
+
+        private int GetDisplayLimit()
+        {
+            var baseLimit = maxSlotsOverride >= 0
+                ? maxSlotsOverride
+                : (lastMaxSlots > 0 ? lastMaxSlots : slots.Count);
+            return Mathf.Clamp(baseLimit, 0, slots.Count);
+        }
+
+        private void EnsureBarVisual()
+        {
+            if (barBackground == null)
+            {
+                barBackground = GetComponent<Image>();
+            }
+
+            if (barBackground == null && autoCreateBarBackground)
+            {
+                barBackground = gameObject.AddComponent<Image>();
+            }
+
+            if (barBackground != null)
+            {
+                if (barBackground.sprite == null)
+                {
+                    barBackground.sprite = GetDefaultSprite();
+                }
+
+                barBackground.type = Image.Type.Sliced;
+                barBackground.color = barBackgroundColor;
+                barBackground.raycastTarget = false;
+            }
+
+            if (addBarOutline)
+            {
+                var outline = GetComponent<Outline>();
+                if (outline == null)
+                {
+                    outline = gameObject.AddComponent<Outline>();
+                }
+
+                outline.effectColor = barOutlineColor;
+                outline.effectDistance = new Vector2(1.2f, -1.2f);
+                outline.useGraphicAlpha = true;
+            }
+
+            if (!autoApplyLayoutPadding || slotRoot == null)
+            {
+                return;
+            }
+
+            var layout = slotRoot.GetComponent<HorizontalLayoutGroup>();
+            if (layout == null)
+            {
+                return;
+            }
+
+            var horizontal = Mathf.Max(0, Mathf.RoundToInt(layoutPadding.x));
+            var vertical = Mathf.Max(0, Mathf.RoundToInt(layoutPadding.y));
+            layout.padding = new RectOffset(horizontal, horizontal, vertical, vertical);
+            EnsureSkillBarSize(layout);
+        }
+
+        private void EnsureSkillBarSize(HorizontalLayoutGroup layout)
+        {
+            var barRect = transform as RectTransform;
+            if (barRect == null || slots == null || slots.Count == 0)
+            {
+                return;
+            }
+
+            var firstSlotRect = slots[0] != null ? slots[0].transform as RectTransform : null;
+            if (firstSlotRect == null)
+            {
+                return;
+            }
+
+            var slotSize = firstSlotRect.rect.size;
+            if (slotSize.x <= 0f || slotSize.y <= 0f)
+            {
+                return;
+            }
+
+            var slotCount = slots.Count;
+            var requiredWidth = slotCount * slotSize.x
+                + Mathf.Max(0, slotCount - 1) * layout.spacing
+                + layout.padding.left
+                + layout.padding.right;
+            var requiredHeight = slotSize.y + layout.padding.top + layout.padding.bottom;
+
+            var current = barRect.sizeDelta;
+            if (current.x + 0.1f < requiredWidth || current.y + 0.1f < requiredHeight)
+            {
+                barRect.sizeDelta = new Vector2(
+                    Mathf.Max(current.x, requiredWidth),
+                    Mathf.Max(current.y, requiredHeight));
+            }
+        }
+
+        private static Sprite GetDefaultSprite()
+        {
+            if (fallbackSprite != null)
+            {
+                return fallbackSprite;
+            }
+
+            var texture = Texture2D.whiteTexture;
+            if (texture != null)
+            {
+                fallbackSprite = Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+            }
+
+            return fallbackSprite;
         }
     }
 }
