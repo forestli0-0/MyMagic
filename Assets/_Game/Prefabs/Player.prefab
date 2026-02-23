@@ -153,6 +153,7 @@ MonoBehaviour:
   progression: {fileID: 0}
   team: {fileID: 0}
   initializeOnAwake: 1
+  ensureVisualPresenterOnAwake: 1
 --- !u!114 &547298949749390362
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -339,11 +340,16 @@ MonoBehaviour:
   controller: {fileID: 5961441498853776851}
   skillUser: {fileID: 3203202813011051223}
   buffController: {fileID: 3185935928631741342}
+  health: {fileID: 0}
   stats: {fileID: 547298949749390362}
   baseMoveSpeed: 5
   rotationSpeed: 720
   rotateToMovement: 1
+  navDirectionSmoothing: 14
+  navDirectionDeadZone: 0.08
+  navLowSpeedTurnScale: 0.5
   forcedControlSpeedMultiplier: 1
+  blockMovementWhenDead: 1
 --- !u!114 &847672401604513824
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -358,6 +364,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   movement: {fileID: 4932691524152171117}
   skillUser: {fileID: 3203202813011051223}
+  unitRoot: {fileID: 0}
+  team: {fileID: 0}
+  targetingSystem: {fileID: 0}
   inputReader: {fileID: 0}
   viewCamera: {fileID: 0}
   useCameraYaw: 1
@@ -366,6 +375,11 @@ MonoBehaviour:
     m_Bits: 4294967295
   clickStopDistance: 0.2
   refreshTargetWhileHoldingRightButton: 1
+  refreshAttackTargetWhileHoldingRightButton: 1
+  clearClickDestinationOnCast: 1
+  autoBasicAttackOnRightClick: 1
+  attackRangeBuffer: 0.1
+  loseAttackTargetDistance: 40
   autoSetupGameplayCamera: 1
   gameplayCamera: {fileID: 0}
 --- !u!114 &4080253702839497875
@@ -479,14 +493,10 @@ MonoBehaviour:
     affixes: []
   - definition: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
     stack: 1
-    rarity: 0
-    affixes: []
-  - definition: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
-    stack: 1
-    rarity: 0
+    rarity: 1
     affixes: []
   - definition: {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
-    stack: 5
+    stack: 3
     rarity: 0
     affixes: []
   - definition: {fileID: 11400000, guid: a74cb9169aca4c1b8636c0737f6b11f3, type: 2}
@@ -496,10 +506,6 @@ MonoBehaviour:
   - definition: {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
     stack: 1
     rarity: 0
-    affixes: []
-  - definition: {fileID: 11400000, guid: a74fd086b52e4ae494c9a6250b3ce49c, type: 2}
-    stack: 4
-    rarity: 1
     affixes: []
 --- !u!114 &133478098221999752
 MonoBehaviour:
@@ -578,6 +584,16 @@ MonoBehaviour:
   autoFindAnimatorOnModel: 1
   refreshHitFlashTargetsAfterModelSwap: 1
   enableDebugLog: 0
+  lockModelLocalPositionWhenNoRootMotion: 1
+  modelAnchorTolerance: 0.01
+  logModelAnchorDrift: 0
+  enableHitReaction: 1
+  suppressHitReactionForPlayer: 1
+  suppressHitReactionWhileCasting: 1
+  suppressHitReactionWhileMoving: 1
+  movingSuppressSpeed: 0.2
+  hitReactionCooldown: 1
+  hitMaxHoldSeconds: 0.08
 --- !u!1 &2080525573497573601
 GameObject:
   m_ObjectHideFlags: 0

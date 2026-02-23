@@ -13,21 +13,24 @@ MonoBehaviour:
   m_Name: Item_Weapon_Test
   m_EditorClassIdentifier: 
   id: Item_Weapon_Test
-  displayName: Test Weapon
+  displayName: "\u65B0\u5175\u77ED\u5251"
   icon: {fileID: 21300000, guid: a59d6029d282ea148bf57966b0c2401e, type: 3}
   rarity: 0
-  description: Test weapon for drag/drop.
+  description: "\u8FD1\u6218\u57FA\u7840\u6B66\u5668\uFF0C\u63D0\u5347\u653B\u51FB\u529B\u4E0E\u653B\u901F\u3002"
   slot: 1
   allowAffixes: 1
-  baseModifiers: []
+  baseModifiers:
+  - {fileID: 11400000, guid: fec9aa0922a51d147bd2b9fbd572d768, type: 2}
+  - {fileID: 11400000, guid: a28bd4d4b9266714aad2b9c5d4234f0b, type: 2}
   equipBuffs: []
+  linkedSkill: {fileID: 0}
   stackable: 0
   maxStack: 1
   economyVersion: 1
-  basePrice: 1
+  basePrice: 70
   buyPriceOverride: -1
   sellPriceOverride: -1
   canBuy: 1
   canSell: 1
   itemLevel: 1
-  itemCategory: 0
+  itemCategory: 1

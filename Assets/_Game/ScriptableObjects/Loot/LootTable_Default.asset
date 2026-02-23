@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: LootTable_Default
   m_EditorClassIdentifier: 
   id: LootTable_Default
-  displayName: 
+  displayName: "Act1 \u57FA\u7840\u6389\u843D\u8868"
   minRolls: 1
   maxRolls: 2
   defaultAffixPool: []
   entries:
   - type: 1
-    weight: 4
+    weight: 45
     item: {fileID: 0}
     minStack: 0
     maxStack: 0
@@ -29,15 +29,119 @@ MonoBehaviour:
     minAffixes: 0
     maxAffixes: 0
     affixPool: []
-    minCurrency: 5
-    maxCurrency: 15
+    minCurrency: 8
+    maxCurrency: 24
   - type: 0
-    weight: 6
-    item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+    weight: 30
+    item: {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
+    minStack: 1
+    maxStack: 2
+    overrideRarity: 0
+    rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 7
+    item: {fileID: 11400000, guid: 5b73c8c15d0f4113b262f8fcee9d9abc, type: 2}
     minStack: 1
     maxStack: 1
     overrideRarity: 0
     rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 7
+    item: {fileID: 11400000, guid: 399837dac2784a21af8cae658583dcf7, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 7
+    item: {fileID: 11400000, guid: e3dc3462f5a64d5588fa9a8b0e0bfaad, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 7
+    item: {fileID: 11400000, guid: b518682ceb244effa41df849f62f9443, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 5
+    item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 1
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 3
+    item: {fileID: 11400000, guid: a74cb9169aca4c1b8636c0737f6b11f3, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 1
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 3
+    item: {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 0
+    rollAffixes: 0
+    minAffixes: 0
+    maxAffixes: 0
+    affixPool: []
+    minCurrency: 0
+    maxCurrency: 0
+  - type: 0
+    weight: 3
+    item: {fileID: 11400000, guid: a74fd086b52e4ae494c9a6250b3ce49c, type: 2}
+    minStack: 1
+    maxStack: 1
+    overrideRarity: 0
+    rarity: 1
     rollAffixes: 0
     minAffixes: 0
     maxAffixes: 0

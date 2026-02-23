@@ -28,8 +28,10 @@ MonoBehaviour:
     optional: 0
     hiddenUntilProgress: 0
   reward:
-    currency: 25
-    experience: 45
+    currency: 35
+    experience: 60
     items:
-    - item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+    - item: {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
+      stack: 2
+    - item: {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
       stack: 1

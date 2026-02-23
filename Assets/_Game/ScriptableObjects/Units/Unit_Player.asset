@@ -30,6 +30,16 @@ MonoBehaviour:
     value: 5
   - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
     value: 5
+  - stat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+    value: 10
+  - stat: {fileID: 11400000, guid: 83301ac81240442ebf84e7e14d6f344c, type: 2}
+    value: 0
+  - stat: {fileID: 11400000, guid: 0ec3c9cd3e7b4228a3e413569d7fe5b9, type: 2}
+    value: 0
+  - stat: {fileID: 11400000, guid: 67baa82a57094ad8b7b6d685f327c9fd, type: 2}
+    value: 0
+  - stat: {fileID: 11400000, guid: 7e26bcd9689142afababfc9cfdacd599, type: 2}
+    value: 0
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills:
   - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}

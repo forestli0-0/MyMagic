@@ -13,21 +13,24 @@ MonoBehaviour:
   m_Name: Item_Accessory_Test
   m_EditorClassIdentifier: 
   id: Item_Accessory_Test
-  displayName: Test Accessory
+  displayName: "\u7B26\u6587\u6302\u9970"
   icon: {fileID: 21300000, guid: c9f0cc0739579d541a08ac2c78d3e605, type: 3}
-  rarity: 0
-  description: Test accessory for drag/drop.
+  rarity: 1
+  description: "\u6CD5\u672F\u5F3A\u5316\u9970\u54C1\uFF0C\u63D0\u5347\u6CD5\u5F3A\u4E0E\u6280\u80FD\u6025\u901F\u3002"
   slot: 5
   allowAffixes: 1
-  baseModifiers: []
+  baseModifiers:
+  - {fileID: 11400000, guid: 6afd84406aa671945aad6ecad7420b84, type: 2}
+  - {fileID: 11400000, guid: eab6891b248fbfc4ba4fb30b48c7d607, type: 2}
   equipBuffs: []
+  linkedSkill: {fileID: 0}
   stackable: 0
   maxStack: 1
   economyVersion: 1
-  basePrice: 1
+  basePrice: 96
   buyPriceOverride: -1
   sellPriceOverride: -1
   canBuy: 1
   canSell: 1
   itemLevel: 1
-  itemCategory: 0
+  itemCategory: 3

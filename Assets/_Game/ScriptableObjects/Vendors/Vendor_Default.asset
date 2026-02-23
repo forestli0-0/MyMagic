@@ -13,26 +13,50 @@ MonoBehaviour:
   m_Name: Vendor_Default
   m_EditorClassIdentifier: 
   id: Vendor_Default
-  displayName: 
+  displayName: "\u65C5\u884C\u8865\u7ED9\u5546"
   vendorRuntimeVersion: 1
   buyPriceMultiplier: 1
-  sellPriceMultiplier: 0.5
+  sellPriceMultiplier: 0.55
   items:
-  - item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+  - item: {fileID: 11400000, guid: 7e38371f3ae74c5b9dd2de6b427504d6, type: 2}
     priceOverride: -1
-    stock: 3
+    stock: 20
     infiniteStock: 1
-  - item: {fileID: 11400000, guid: e3dc3462f5a64d5588fa9a8b0e0bfaad, type: 2}
+  - item: {fileID: 11400000, guid: 5b73c8c15d0f4113b262f8fcee9d9abc, type: 2}
     priceOverride: -1
-    stock: 3
+    stock: 5
     infiniteStock: 1
   - item: {fileID: 11400000, guid: 399837dac2784a21af8cae658583dcf7, type: 2}
     priceOverride: -1
-    stock: 3
+    stock: 5
     infiniteStock: 1
+  - item: {fileID: 11400000, guid: e3dc3462f5a64d5588fa9a8b0e0bfaad, type: 2}
+    priceOverride: -1
+    stock: 5
+    infiniteStock: 1
+  - item: {fileID: 11400000, guid: b518682ceb244effa41df849f62f9443, type: 2}
+    priceOverride: -1
+    stock: 5
+    infiniteStock: 1
+  - item: {fileID: 11400000, guid: b0283e1bc10947ddb0e9ab77a6bd9b78, type: 2}
+    priceOverride: -1
+    stock: 4
+    infiniteStock: 1
+  - item: {fileID: 11400000, guid: a74cb9169aca4c1b8636c0737f6b11f3, type: 2}
+    priceOverride: -1
+    stock: 1
+    infiniteStock: 0
+  - item: {fileID: 11400000, guid: 7496e677e0264c88ac373a9486fe3a5f, type: 2}
+    priceOverride: -1
+    stock: 1
+    infiniteStock: 0
+  - item: {fileID: 11400000, guid: a74fd086b52e4ae494c9a6250b3ce49c, type: 2}
+    priceOverride: -1
+    stock: 1
+    infiniteStock: 0
   vendorTag: default
   allowBuyBack: 1
-  maxBuyBackEntries: 12
+  maxBuyBackEntries: 16
   refreshMode: 0
   refreshIntervalMinutes: 30
   restockOnOpen: 0
