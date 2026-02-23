@@ -1,7 +1,10 @@
+using System;
+using System.Text;
 using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CombatSystem.UI
@@ -15,6 +18,8 @@ namespace CombatSystem.UI
         private const string StatAttackPowerId = "Stat_AttackPower";
         private const string StatArmorId = "Stat_Armor";
         private const string StatMoveSpeedId = "Stat_MoveSpeed";
+        private const string HoverShieldId = "__hover_shield";
+        private const string HoverResourceId = "__hover_resource";
 
         [Header("References")]
         [SerializeField] private UIManager uiManager;
@@ -82,6 +87,15 @@ namespace CombatSystem.UI
         [SerializeField] private int allocatedArmorPoints;
         [SerializeField] private int allocatedMoveSpeedPoints;
 
+        [Header("Stat Hover Tooltip")]
+        [SerializeField] private bool enableStatHoverTooltip = true;
+        [SerializeField] private Vector2 statTooltipOffset = new Vector2(20f, -20f);
+        [SerializeField] private Vector2 statTooltipSize = new Vector2(340f, 140f);
+        [SerializeField] private Color statTooltipBackgroundColor = new Color(0.03f, 0.08f, 0.13f, 0.95f);
+        [SerializeField] private Color statTooltipBorderColor = new Color(0.27f, 0.58f, 0.92f, 0.86f);
+        [SerializeField] private Color statTooltipTextColor = new Color(0.9f, 0.95f, 1f, 1f);
+        [SerializeField] private int statTooltipFontSize = 16;
+
         private bool subscribed;
         private string allocationFeedback = string.Empty;
         private bool allocationFeedbackIsError;
@@ -90,6 +104,20 @@ namespace CombatSystem.UI
         private int appliedArmorPoints;
         private int appliedMoveSpeedPoints;
         private int allocationAppliedStatsInstanceId;
+        private bool statHoverTargetsBound;
+        private CharacterStatHoverTarget activeHoverTarget;
+        private RectTransform statTooltipRoot;
+        private CanvasGroup statTooltipCanvasGroup;
+        private Text statTooltipText;
+
+        private struct EquipmentStatContribution
+        {
+            public float Additive;
+            public float Multiplier;
+            public bool HasOverride;
+            public float OverrideValue;
+            public int ItemCount;
+        }
 
         private void Reset()
         {
@@ -102,7 +130,18 @@ namespace CombatSystem.UI
 
         private void OnDisable()
         {
+            HideStatTooltip();
             Unsubscribe();
+        }
+
+        private void Update()
+        {
+            if (!enableStatHoverTooltip || activeHoverTarget == null || statTooltipCanvasGroup == null || statTooltipCanvasGroup.alpha <= 0f)
+            {
+                return;
+            }
+
+            UpdateStatTooltipPosition(UnityEngine.Input.mousePosition);
         }
 
         public override void OnEnter()
@@ -113,12 +152,14 @@ namespace CombatSystem.UI
                 uiManager.SetHudSkillBarOnlyVisible(true);
             }
 
+            EnsureStatHoverTargets();
             Subscribe();
             Refresh();
         }
 
         public override void OnExit()
         {
+            HideStatTooltip();
             Unsubscribe();
         }
 
@@ -584,6 +625,7 @@ namespace CombatSystem.UI
             }
 
             RefreshAllocationSection();
+            RefreshActiveStatTooltipContent();
         }
 
         private string ResolvePlayerName()
@@ -1064,6 +1106,509 @@ namespace CombatSystem.UI
 
             stats.ModifyValue(statDefinition, deltaPoints * deltaPerPoint);
             appliedPoints = safeTargetPoints;
+        }
+
+        internal void HandleStatHoverEnter(CharacterStatHoverTarget target, PointerEventData eventData)
+        {
+            if (!enableStatHoverTooltip || target == null)
+            {
+                return;
+            }
+
+            activeHoverTarget = target;
+            ShowStatTooltip(target, eventData != null ? eventData.position : (Vector2)UnityEngine.Input.mousePosition);
+        }
+
+        internal void HandleStatHoverExit(CharacterStatHoverTarget target, PointerEventData eventData)
+        {
+            if (target != null && activeHoverTarget == target)
+            {
+                HideStatTooltip();
+            }
+        }
+
+        private void EnsureStatHoverTargets()
+        {
+            if (!enableStatHoverTooltip || statHoverTargetsBound)
+            {
+                return;
+            }
+
+            BindStatHoverTarget(healthText, StatMaxHealthId, "最大生命");
+            BindStatHoverTarget(shieldText, HoverShieldId, "护盾");
+            BindStatHoverTarget(resourceText, HoverResourceId, "资源");
+            BindStatHoverTarget(armorText, CombatStatIds.Armor, "护甲");
+            BindStatHoverTarget(moveSpeedText, CombatStatIds.MoveSpeed, "移动速度");
+            BindStatHoverTarget(attackPowerText, StatAttackPowerId, "攻击力");
+            BindStatHoverTarget(magicResistText, CombatStatIds.MagicResist, "魔抗");
+            BindStatHoverTarget(tenacityText, CombatStatIds.Tenacity, "韧性");
+            BindStatHoverTarget(attackSpeedText, CombatStatIds.AttackSpeed, "攻速加成");
+            BindStatHoverTarget(abilityHasteText, CombatStatIds.AbilityHaste, "技能急速");
+            BindStatHoverTarget(lifestealText, CombatStatIds.Lifesteal, "生命偷取");
+            BindStatHoverTarget(omnivampText, CombatStatIds.Omnivamp, "全能吸血");
+            BindStatHoverTarget(armorPenFlatText, CombatStatIds.ArmorPenFlat, "护甲穿透(固定)");
+            BindStatHoverTarget(armorPenPercentText, CombatStatIds.ArmorPenPercent, "护甲穿透(%)");
+            BindStatHoverTarget(magicPenFlatText, CombatStatIds.MagicPenFlat, "法术穿透(固定)");
+            BindStatHoverTarget(magicPenPercentText, CombatStatIds.MagicPenPercent, "法术穿透(%)");
+
+            statHoverTargetsBound = true;
+        }
+
+        private void BindStatHoverTarget(Text targetText, string statId, string statLabel)
+        {
+            if (targetText == null || string.IsNullOrWhiteSpace(statId))
+            {
+                return;
+            }
+
+            var hoverTarget = targetText.GetComponent<CharacterStatHoverTarget>();
+            if (hoverTarget == null)
+            {
+                hoverTarget = targetText.gameObject.AddComponent<CharacterStatHoverTarget>();
+            }
+
+            hoverTarget.Configure(this, statId, statLabel);
+            targetText.raycastTarget = true;
+        }
+
+        private void EnsureStatTooltipVisual()
+        {
+            if (!enableStatHoverTooltip || statTooltipRoot != null)
+            {
+                return;
+            }
+
+            var parentRect = transform as RectTransform;
+            if (parentRect == null)
+            {
+                return;
+            }
+
+            var tooltipObject = new GameObject("CharacterStatTooltip", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Outline));
+            statTooltipRoot = tooltipObject.GetComponent<RectTransform>();
+            statTooltipRoot.SetParent(parentRect, false);
+            statTooltipRoot.anchorMin = new Vector2(0f, 1f);
+            statTooltipRoot.anchorMax = new Vector2(0f, 1f);
+            statTooltipRoot.pivot = new Vector2(0f, 1f);
+            statTooltipRoot.sizeDelta = new Vector2(Mathf.Max(220f, statTooltipSize.x), Mathf.Max(96f, statTooltipSize.y));
+            statTooltipRoot.anchoredPosition = new Vector2(-5000f, -5000f);
+
+            statTooltipCanvasGroup = tooltipObject.GetComponent<CanvasGroup>();
+            statTooltipCanvasGroup.alpha = 0f;
+            statTooltipCanvasGroup.interactable = false;
+            statTooltipCanvasGroup.blocksRaycasts = false;
+
+            var background = tooltipObject.GetComponent<Image>();
+            background.color = statTooltipBackgroundColor;
+            background.raycastTarget = false;
+
+            var outline = tooltipObject.GetComponent<Outline>();
+            outline.effectColor = statTooltipBorderColor;
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var contentObject = new GameObject("Content", typeof(RectTransform), typeof(Text));
+            var contentRect = contentObject.GetComponent<RectTransform>();
+            contentRect.SetParent(statTooltipRoot, false);
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.offsetMin = new Vector2(10f, 8f);
+            contentRect.offsetMax = new Vector2(-10f, -8f);
+
+            statTooltipText = contentObject.GetComponent<Text>();
+            statTooltipText.font = ResolveTooltipFont();
+            statTooltipText.fontSize = Mathf.Max(12, statTooltipFontSize);
+            statTooltipText.alignment = TextAnchor.UpperLeft;
+            statTooltipText.color = statTooltipTextColor;
+            statTooltipText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            statTooltipText.verticalOverflow = VerticalWrapMode.Overflow;
+            statTooltipText.lineSpacing = 1f;
+            statTooltipText.raycastTarget = false;
+            statTooltipText.text = string.Empty;
+        }
+
+        private Font ResolveTooltipFont()
+        {
+            if (nameText != null && nameText.font != null)
+            {
+                return nameText.font;
+            }
+
+            if (armorText != null && armorText.font != null)
+            {
+                return armorText.font;
+            }
+
+            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
+        private void ShowStatTooltip(CharacterStatHoverTarget target, Vector2 pointerScreenPosition)
+        {
+            if (!enableStatHoverTooltip || target == null)
+            {
+                return;
+            }
+
+            EnsureStatTooltipVisual();
+            if (statTooltipRoot == null || statTooltipText == null || statTooltipCanvasGroup == null)
+            {
+                return;
+            }
+
+            if (!TryBuildStatTooltipContent(target.StatId, target.StatLabel, out var content))
+            {
+                HideStatTooltip();
+                return;
+            }
+
+            statTooltipText.text = content;
+            ResizeStatTooltip();
+            UpdateStatTooltipPosition(pointerScreenPosition);
+            statTooltipCanvasGroup.alpha = 1f;
+        }
+
+        private void RefreshActiveStatTooltipContent()
+        {
+            if (activeHoverTarget == null || statTooltipText == null || statTooltipCanvasGroup == null || statTooltipCanvasGroup.alpha <= 0f)
+            {
+                return;
+            }
+
+            if (!TryBuildStatTooltipContent(activeHoverTarget.StatId, activeHoverTarget.StatLabel, out var content))
+            {
+                HideStatTooltip();
+                return;
+            }
+
+            statTooltipText.text = content;
+            ResizeStatTooltip();
+        }
+
+        private void HideStatTooltip()
+        {
+            activeHoverTarget = null;
+            if (statTooltipCanvasGroup != null)
+            {
+                statTooltipCanvasGroup.alpha = 0f;
+            }
+        }
+
+        private void ResizeStatTooltip()
+        {
+            if (statTooltipRoot == null || statTooltipText == null)
+            {
+                return;
+            }
+
+            var width = Mathf.Max(220f, statTooltipSize.x);
+            var minHeight = Mathf.Max(88f, statTooltipSize.y);
+            var preferredHeight = statTooltipText.preferredHeight + 20f;
+            var clampedHeight = Mathf.Clamp(preferredHeight, minHeight, 300f);
+            statTooltipRoot.sizeDelta = new Vector2(width, clampedHeight);
+        }
+
+        private void UpdateStatTooltipPosition(Vector2 pointerScreenPosition)
+        {
+            if (statTooltipRoot == null)
+            {
+                return;
+            }
+
+            var size = statTooltipRoot.sizeDelta;
+            var x = pointerScreenPosition.x + statTooltipOffset.x;
+            var y = pointerScreenPosition.y + statTooltipOffset.y;
+            const float padding = 8f;
+
+            if (x + size.x > Screen.width - padding)
+            {
+                x = Screen.width - size.x - padding;
+            }
+
+            if (x < padding)
+            {
+                x = padding;
+            }
+
+            if (y - size.y < padding)
+            {
+                y = size.y + padding;
+            }
+
+            if (y > Screen.height - padding)
+            {
+                y = Screen.height - padding;
+            }
+
+            statTooltipRoot.position = new Vector3(x, y, 0f);
+        }
+
+        private bool TryBuildStatTooltipContent(string statId, string statLabel, out string content)
+        {
+            content = string.Empty;
+            if (string.IsNullOrWhiteSpace(statId))
+            {
+                return false;
+            }
+
+            if (string.Equals(statId, HoverShieldId, StringComparison.Ordinal))
+            {
+                return TryBuildShieldTooltipContent(statLabel, out content);
+            }
+
+            if (string.Equals(statId, HoverResourceId, StringComparison.Ordinal))
+            {
+                return TryBuildResourceTooltipContent(statLabel, out content);
+            }
+
+            if (stats == null)
+            {
+                return false;
+            }
+
+            var current = GetStatValue(statId, 0f);
+            var baseValue = GetDefinitionBaseStatValue(statId);
+            var allocation = GetAllocationContribution(statId);
+            var equipmentContribution = CollectEquipmentContribution(statId);
+
+            var predicted = baseValue + allocation + equipmentContribution.Additive;
+            predicted *= 1f + equipmentContribution.Multiplier;
+            if (equipmentContribution.HasOverride)
+            {
+                predicted = equipmentContribution.OverrideValue;
+            }
+
+            var otherContribution = current - predicted;
+
+            var builder = new StringBuilder(256);
+            builder.AppendLine($"{statLabel} 构成");
+            builder.AppendLine($"基础值: {FormatNumber(baseValue)}");
+
+            if (!IsNearlyZero(allocation))
+            {
+                builder.AppendLine($"加点贡献: {FormatSignedNumber(allocation)}");
+            }
+
+            if (!IsNearlyZero(equipmentContribution.Additive))
+            {
+                builder.AppendLine($"装备(加法): {FormatSignedNumber(equipmentContribution.Additive)}");
+            }
+
+            if (!IsNearlyZero(equipmentContribution.Multiplier))
+            {
+                builder.AppendLine($"装备(乘算): {FormatSignedPercent(equipmentContribution.Multiplier)}");
+            }
+
+            if (equipmentContribution.HasOverride)
+            {
+                builder.AppendLine($"装备(覆盖): {FormatNumber(equipmentContribution.OverrideValue)}");
+            }
+
+            if (!IsNearlyZero(otherContribution))
+            {
+                builder.AppendLine($"其它来源: {FormatSignedNumber(otherContribution)}");
+            }
+
+            builder.Append($"当前值: {FormatNumber(current)}");
+            if (equipmentContribution.ItemCount > 0)
+            {
+                builder.Append($"  (装备来源 {equipmentContribution.ItemCount} 件)");
+            }
+
+            content = builder.ToString();
+            return true;
+        }
+
+        private bool TryBuildShieldTooltipContent(string statLabel, out string content)
+        {
+            content = string.Empty;
+            if (health == null)
+            {
+                return false;
+            }
+
+            var shield = Mathf.Max(0f, health.Shield);
+            var hpCurrent = Mathf.Max(0f, health.Current);
+            var hpMax = Mathf.Max(0f, health.Max);
+            var ratio = hpMax > 0.01f ? shield / hpMax : 0f;
+
+            var title = string.IsNullOrWhiteSpace(statLabel) ? "护盾" : statLabel;
+            var builder = new StringBuilder(192);
+            builder.AppendLine($"{title} 说明");
+            builder.AppendLine($"当前护盾: {Mathf.RoundToInt(shield)}");
+            builder.AppendLine($"当前生命: {Mathf.RoundToInt(hpCurrent)}/{Mathf.RoundToInt(hpMax)}");
+            builder.Append($"等效额外生命占比: {(ratio * 100f):0.#}%");
+
+            content = builder.ToString();
+            return true;
+        }
+
+        private bool TryBuildResourceTooltipContent(string statLabel, out string content)
+        {
+            content = string.Empty;
+            if (resource == null)
+            {
+                return false;
+            }
+
+            var current = Mathf.Max(0f, resource.Current);
+            var max = Mathf.Max(0f, resource.Max);
+            var ratio = max > 0.01f ? current / max : 0f;
+
+            var title = string.IsNullOrWhiteSpace(statLabel) ? "资源" : statLabel;
+            var builder = new StringBuilder(192);
+            builder.AppendLine($"{title} 说明");
+            builder.AppendLine($"资源类型: {resource.ResourceType}");
+            builder.AppendLine($"当前值: {Mathf.RoundToInt(current)}");
+            builder.AppendLine($"最大值: {Mathf.RoundToInt(max)}");
+            builder.Append($"当前占比: {(ratio * 100f):0.#}%");
+
+            content = builder.ToString();
+            return true;
+        }
+
+        private float GetDefinitionBaseStatValue(string statId)
+        {
+            if (string.IsNullOrWhiteSpace(statId) || playerUnit == null || playerUnit.Definition == null || playerUnit.Definition.BaseStats == null)
+            {
+                return 0f;
+            }
+
+            var baseStats = playerUnit.Definition.BaseStats;
+            for (int i = 0; i < baseStats.Count; i++)
+            {
+                var stat = baseStats[i].stat;
+                if (stat != null && string.Equals(stat.Id, statId, StringComparison.Ordinal))
+                {
+                    return baseStats[i].value;
+                }
+            }
+
+            return 0f;
+        }
+
+        private float GetAllocationContribution(string statId)
+        {
+            if (string.IsNullOrWhiteSpace(statId))
+            {
+                return 0f;
+            }
+
+            if (string.Equals(statId, StatMaxHealthId, StringComparison.Ordinal))
+            {
+                return Mathf.Max(0, allocatedMaxHealthPoints) * Mathf.Max(0f, maxHealthPerPoint);
+            }
+
+            if (string.Equals(statId, StatAttackPowerId, StringComparison.Ordinal))
+            {
+                return Mathf.Max(0, allocatedAttackPowerPoints) * Mathf.Max(0f, attackPowerPerPoint);
+            }
+
+            if (string.Equals(statId, StatArmorId, StringComparison.Ordinal))
+            {
+                return Mathf.Max(0, allocatedArmorPoints) * Mathf.Max(0f, armorPerPoint);
+            }
+
+            if (string.Equals(statId, StatMoveSpeedId, StringComparison.Ordinal))
+            {
+                return Mathf.Max(0, allocatedMoveSpeedPoints) * Mathf.Max(0f, moveSpeedPerPoint);
+            }
+
+            return 0f;
+        }
+
+        private EquipmentStatContribution CollectEquipmentContribution(string statId)
+        {
+            var result = new EquipmentStatContribution();
+            if (string.IsNullOrWhiteSpace(statId) || equipment == null || equipment.Slots == null)
+            {
+                return result;
+            }
+
+            var slots = equipment.Slots;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || slot.Item == null || slot.AppliedBuffs == null)
+                {
+                    continue;
+                }
+
+                var contributedByCurrentItem = false;
+                var buffs = slot.AppliedBuffs;
+                for (int b = 0; b < buffs.Count; b++)
+                {
+                    var buff = buffs[b];
+                    if (buff == null || buff.Modifiers == null)
+                    {
+                        continue;
+                    }
+
+                    var modifiers = buff.Modifiers;
+                    for (int m = 0; m < modifiers.Count; m++)
+                    {
+                        var modifier = modifiers[m];
+                        if (modifier == null || modifier.Target != ModifierTargetType.Stat || modifier.Scope == ModifierScope.Target)
+                        {
+                            continue;
+                        }
+
+                        var modifierStat = modifier.Stat;
+                        if (modifierStat == null || !string.Equals(modifierStat.Id, statId, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        switch (modifier.Operation)
+                        {
+                            case ModifierOperation.Add:
+                                result.Additive += modifier.Value;
+                                break;
+                            case ModifierOperation.Multiply:
+                                result.Multiplier += modifier.Value;
+                                break;
+                            case ModifierOperation.Override:
+                                result.HasOverride = true;
+                                result.OverrideValue = modifier.Value;
+                                break;
+                        }
+
+                        contributedByCurrentItem = true;
+                    }
+                }
+
+                if (contributedByCurrentItem)
+                {
+                    result.ItemCount++;
+                }
+            }
+
+            return result;
+        }
+
+        private static bool IsNearlyZero(float value)
+        {
+            return Mathf.Abs(value) <= 0.01f;
+        }
+
+        private static string FormatSignedNumber(float value)
+        {
+            var formatted = FormatNumber(value);
+            if (value > 0f)
+            {
+                return $"+{formatted}";
+            }
+
+            return formatted;
+        }
+
+        private static string FormatSignedPercent(float value)
+        {
+            var formatted = FormatPercent(value);
+            if (value > 0f)
+            {
+                return $"+{formatted}";
+            }
+
+            return formatted;
         }
 
         public override string GetFooterHintText()

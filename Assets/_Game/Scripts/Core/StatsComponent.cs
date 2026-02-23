@@ -250,6 +250,9 @@ namespace CombatSystem.Core
         /// </summary>
         public void RefreshModifiers()
         {
+            // Ensure stats that are referenced by active buffs/modifiers exist at runtime.
+            EnsureStatsFromActiveBuffs();
+
             if (runtimeStats.Count == 0)
             {
                 return;
@@ -269,6 +272,47 @@ namespace CombatSystem.Core
                     data.value = newValue;
                     runtimeStats[i] = data;
                     RaiseStatChanged(data.stat, oldValue, newValue);
+                }
+            }
+        }
+
+        private void EnsureStatsFromActiveBuffs()
+        {
+            if (buffController == null || buffController.ActiveBuffs.Count == 0)
+            {
+                return;
+            }
+
+            var buffs = buffController.ActiveBuffs;
+            for (int i = 0; i < buffs.Count; i++)
+            {
+                var buffDef = buffs[i].Definition;
+                if (buffDef == null)
+                {
+                    continue;
+                }
+
+                var modifiers = buffDef.Modifiers;
+                if (modifiers == null || modifiers.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < modifiers.Count; j++)
+                {
+                    var modifier = modifiers[j];
+                    if (modifier == null || modifier.Target != ModifierTargetType.Stat || modifier.Scope == ModifierScope.Target)
+                    {
+                        continue;
+                    }
+
+                    var stat = modifier.Stat;
+                    if (stat == null || indexByStat.ContainsKey(stat))
+                    {
+                        continue;
+                    }
+
+                    AddOrSet(stat, stat.DefaultValue, false);
                 }
             }
         }
