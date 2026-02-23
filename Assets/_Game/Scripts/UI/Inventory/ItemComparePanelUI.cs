@@ -24,17 +24,34 @@ namespace CombatSystem.UI
         [SerializeField] private Text descriptionText;
         [SerializeField] private RectTransform statsRoot;
         [SerializeField] private Text statTemplate;
+        [SerializeField] private Color projectedHeaderColor = new Color(0.78f, 0.84f, 0.95f, 1f);
 
         private readonly List<Text> statEntries = new List<Text>();
         private ItemInstance currentItem;
         private ItemInstance compareItem;
         private string extraStatusLine;
+        private Func<string, float> currentStatValueResolver;
+
+        private struct StatDeltaAggregate
+        {
+            public float Additive;
+            public float Multiplier;
+            public bool HasSelectedOverride;
+            public float SelectedOverrideValue;
+            public bool HasCompareOverride;
+        }
 
         public void ShowItem(ItemInstance item, ItemInstance compare, string statusLine = null)
         {
             currentItem = item;
             compareItem = compare;
             extraStatusLine = statusLine;
+            Refresh();
+        }
+
+        public void SetCurrentStatValueResolver(Func<string, float> resolver)
+        {
+            currentStatValueResolver = resolver;
             Refresh();
         }
 
@@ -158,6 +175,8 @@ namespace CombatSystem.UI
                 var color = ResolveCompareColor(diff, compareItem != null);
                 AddStatLine(line, color);
             }
+
+            AddProjectedCharacterPreview(selectedStats, compareStats);
         }
 
         private void ClearStats()
@@ -286,6 +305,211 @@ namespace CombatSystem.UI
             }
 
             return result;
+        }
+
+        private void AddProjectedCharacterPreview(
+            Dictionary<StatKey, float> selectedStats,
+            Dictionary<StatKey, float> compareStats)
+        {
+            if (currentStatValueResolver == null)
+            {
+                return;
+            }
+
+            var aggregated = BuildAggregatedDelta(selectedStats, compareStats);
+            if (aggregated.Count == 0)
+            {
+                return;
+            }
+
+            var projectedLines = BuildProjectedStatLines(aggregated);
+            if (projectedLines.Count == 0)
+            {
+                return;
+            }
+
+            AddStatLine("---- 装备后角色属性 ----", projectedHeaderColor);
+            for (int i = 0; i < projectedLines.Count; i++)
+            {
+                var line = projectedLines[i];
+                AddStatLine(line.Text, line.Color);
+            }
+        }
+
+        private Dictionary<StatDefinition, StatDeltaAggregate> BuildAggregatedDelta(
+            Dictionary<StatKey, float> selectedStats,
+            Dictionary<StatKey, float> compareStats)
+        {
+            var result = new Dictionary<StatDefinition, StatDeltaAggregate>();
+
+            AccumulateModifiers(result, selectedStats, true);
+            AccumulateModifiers(result, compareStats, false);
+
+            return result;
+        }
+
+        private static void AccumulateModifiers(
+            Dictionary<StatDefinition, StatDeltaAggregate> aggregate,
+            Dictionary<StatKey, float> modifiers,
+            bool isSelectedItem)
+        {
+            if (aggregate == null || modifiers == null)
+            {
+                return;
+            }
+
+            foreach (var pair in modifiers)
+            {
+                var stat = pair.Key.Stat;
+                if (stat == null)
+                {
+                    continue;
+                }
+
+                if (!aggregate.TryGetValue(stat, out var bucket))
+                {
+                    bucket = new StatDeltaAggregate();
+                }
+
+                var value = pair.Value;
+                if (!isSelectedItem)
+                {
+                    value = -value;
+                }
+
+                switch (pair.Key.Operation)
+                {
+                    case ModifierOperation.Add:
+                        bucket.Additive += value;
+                        break;
+                    case ModifierOperation.Multiply:
+                        bucket.Multiplier += value;
+                        break;
+                    case ModifierOperation.Override:
+                        if (isSelectedItem)
+                        {
+                            bucket.HasSelectedOverride = true;
+                            bucket.SelectedOverrideValue = pair.Value;
+                        }
+                        else
+                        {
+                            bucket.HasCompareOverride = true;
+                        }
+
+                        break;
+                }
+
+                aggregate[stat] = bucket;
+            }
+        }
+
+        private List<ProjectedStatLine> BuildProjectedStatLines(Dictionary<StatDefinition, StatDeltaAggregate> aggregated)
+        {
+            var list = new List<ProjectedStatLine>();
+            if (aggregated == null || aggregated.Count == 0)
+            {
+                return list;
+            }
+
+            var orderedStats = new List<StatDefinition>(aggregated.Keys);
+            orderedStats.Sort((left, right) =>
+            {
+                var leftName = ResolveStatName(left);
+                var rightName = ResolveStatName(right);
+                return string.CompareOrdinal(leftName, rightName);
+            });
+
+            for (int i = 0; i < orderedStats.Count; i++)
+            {
+                var stat = orderedStats[i];
+                if (stat == null || string.IsNullOrWhiteSpace(stat.Id))
+                {
+                    continue;
+                }
+
+                var current = currentStatValueResolver.Invoke(stat.Id);
+                if (float.IsNaN(current) || float.IsInfinity(current))
+                {
+                    continue;
+                }
+
+                var bucket = aggregated[stat];
+                if (bucket.HasCompareOverride && !bucket.HasSelectedOverride)
+                {
+                    // 旧装备使用覆盖值，而新装备没有覆盖时，仅靠净变化无法可靠推导总值。
+                    continue;
+                }
+
+                var predicted = current;
+                if (bucket.HasSelectedOverride)
+                {
+                    predicted = bucket.SelectedOverrideValue;
+                }
+                else
+                {
+                    predicted += bucket.Additive;
+                    if (!Mathf.Approximately(bucket.Multiplier, 0f))
+                    {
+                        predicted *= 1f + bucket.Multiplier;
+                    }
+                }
+
+                var delta = predicted - current;
+                if (Mathf.Abs(delta) <= 0.0001f && !bucket.HasSelectedOverride)
+                {
+                    continue;
+                }
+
+                var text = $"{ResolveStatName(stat)}: {FormatTotalStatValue(current, stat)} -> {FormatTotalStatValue(predicted, stat)} ({FormatSignedTotalStatValue(delta, stat)})";
+                var color = ResolveCompareColor(delta, true);
+                list.Add(new ProjectedStatLine(text, color));
+            }
+
+            return list;
+        }
+
+        private static string FormatTotalStatValue(float value, StatDefinition stat)
+        {
+            if (stat != null && stat.IsPercentage)
+            {
+                return $"{(value * 100f):0.##}%";
+            }
+
+            if (stat != null && stat.IsInteger)
+            {
+                return Mathf.RoundToInt(value).ToString();
+            }
+
+            return value.ToString("0.##");
+        }
+
+        private static string FormatSignedTotalStatValue(float value, StatDefinition stat)
+        {
+            var sign = value >= 0f ? "+" : "-";
+            var absolute = Mathf.Abs(value);
+            if (stat != null && stat.IsPercentage)
+            {
+                return $"{sign}{(absolute * 100f):0.##}%";
+            }
+
+            if (stat != null && stat.IsInteger)
+            {
+                return $"{sign}{Mathf.RoundToInt(absolute)}";
+            }
+
+            return $"{sign}{absolute:0.##}";
+        }
+
+        private readonly struct ProjectedStatLine
+        {
+            public readonly string Text;
+            public readonly Color Color;
+
+            public ProjectedStatLine(string text, Color color)
+            {
+                Text = text;
+                Color = color;
+            }
         }
 
         private static void AddEquipBuffModifiers(Dictionary<StatKey, float> result, IReadOnlyList<BuffDefinition> buffs)

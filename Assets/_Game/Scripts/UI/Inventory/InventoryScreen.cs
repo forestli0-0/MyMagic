@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace CombatSystem.UI
         [SerializeField] private InventoryComponent inventory;
         [SerializeField] private EquipmentComponent equipment;
         [SerializeField] private SkillBarUI skillBar;
+        [SerializeField] private StatsComponent playerStats;
 
         [Header("Widgets")]
         [SerializeField] private InventoryGridUI inventoryGrid;
@@ -54,6 +56,8 @@ namespace CombatSystem.UI
         [SerializeField] private Color filterInactiveColor = new Color(0.2f, 0.22f, 0.26f, 1f);
         [SerializeField] private Color filterActiveTextColor = new Color(0.97f, 0.98f, 1f, 1f);
         [SerializeField] private Color filterInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
+        [Header("Quick Action")]
+        [SerializeField, Range(0.12f, 0.5f)] private float equipDoubleClickWindow = 0.28f;
 
         [Header("Action Profiles")]
         [SerializeField] private List<InventoryActionProfile> actionProfiles = new List<InventoryActionProfile>(8);
@@ -84,6 +88,8 @@ namespace CombatSystem.UI
         private EquipmentSlotUI currentDragEquipmentTarget;
         private InventoryActionCommand currentPrimaryAction = InventoryActionCommand.None;
         private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
+        private int lastInventoryClickIndex = -1;
+        private float lastInventoryClickAt = -999f;
 
         private enum InventoryFilter
         {
@@ -223,6 +229,7 @@ namespace CombatSystem.UI
             Unsubscribe();
             HideSortPicker();
             EndDrag();
+            ResetDoubleClickState();
         }
 
         private void OnDestroy()
@@ -421,9 +428,39 @@ namespace CombatSystem.UI
                 equipment = FindFirstObjectByType<EquipmentComponent>();
             }
 
+            if (playerStats == null && inventory != null)
+            {
+                playerStats = inventory.GetComponent<StatsComponent>();
+            }
+
+            if (playerStats == null && equipment != null)
+            {
+                playerStats = equipment.GetComponent<StatsComponent>();
+            }
+
+            if (playerStats == null)
+            {
+                playerStats = FindFirstObjectByType<StatsComponent>();
+            }
+
             EnsureSkillBarReference();
 
+            if (comparePanel != null)
+            {
+                comparePanel.SetCurrentStatValueResolver(ResolveCurrentStatValueForPreview);
+            }
+
             EnsureSkillFilterButton();
+        }
+
+        private float ResolveCurrentStatValueForPreview(string statId)
+        {
+            if (string.IsNullOrWhiteSpace(statId) || playerStats == null)
+            {
+                return float.NaN;
+            }
+
+            return playerStats.GetValueById(statId, float.NaN);
         }
 
         private void EnsureSkillFilterButton()
@@ -895,6 +932,11 @@ namespace CombatSystem.UI
 
         private void HandleInventorySlotSelected(int index)
         {
+            var now = Time.unscaledTime;
+            var isDoubleClick = index == lastInventoryClickIndex && now - lastInventoryClickAt <= equipDoubleClickWindow;
+            lastInventoryClickIndex = index;
+            lastInventoryClickAt = now;
+
             selectedInventoryIndex = index;
             selectedEquipmentIndex = -1;
 
@@ -904,12 +946,18 @@ namespace CombatSystem.UI
             }
 
             RefreshSelectionAfterChange();
+
+            if (isDoubleClick)
+            {
+                TryExecuteInventoryDoubleClickAction();
+            }
         }
 
         private void HandleEquipmentSlotSelected(int index)
         {
             selectedEquipmentIndex = index;
             selectedInventoryIndex = -1;
+            ResetDoubleClickState();
 
             if (inventoryGrid != null)
             {
@@ -926,6 +974,7 @@ namespace CombatSystem.UI
                 return;
             }
 
+            ResetDoubleClickState();
             BeginDrag(DragSource.Inventory, slot.SlotIndex, slot.Item, eventData);
         }
 
@@ -967,7 +1016,24 @@ namespace CombatSystem.UI
                 return;
             }
 
+            ResetDoubleClickState();
             BeginDrag(DragSource.Equipment, slot.SlotIndex, slot.Item, eventData);
+        }
+
+        private void TryExecuteInventoryDoubleClickAction()
+        {
+            if (currentPrimaryAction != InventoryActionCommand.EquipSelected)
+            {
+                return;
+            }
+
+            _ = ExecuteActionCommand(currentPrimaryAction);
+        }
+
+        private void ResetDoubleClickState()
+        {
+            lastInventoryClickIndex = -1;
+            lastInventoryClickAt = -999f;
         }
 
         private void HandleEquipmentDragging(EquipmentSlotUI slot, PointerEventData eventData)
