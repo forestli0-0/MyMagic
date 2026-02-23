@@ -40,9 +40,16 @@ namespace CombatSystem.Persistence
     {
         public SaveSlotInfo slotInfo = new SaveSlotInfo();
         public PlayerSaveData player = new PlayerSaveData();
+        public SkillLoadoutSaveData skillLoadout = new SkillLoadoutSaveData();
         public InventorySaveData inventory = new InventorySaveData();
         public EquipmentSaveData equipment = new EquipmentSaveData();
         public QuestSaveData quests = new QuestSaveData();
+    }
+
+    [Serializable]
+    public class SkillLoadoutSaveData
+    {
+        public string[] skillIds;
     }
 
     [Serializable]

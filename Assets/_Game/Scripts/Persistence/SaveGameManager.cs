@@ -21,6 +21,7 @@ namespace CombatSystem.Persistence
             public readonly ResourceComponent Resource;
             public readonly CurrencyComponent Currency;
             public readonly PlayerProgression Progression;
+            public readonly SkillUserComponent SkillUser;
             public readonly InventoryComponent Inventory;
             public readonly EquipmentComponent Equipment;
 
@@ -33,6 +34,7 @@ namespace CombatSystem.Persistence
                     Resource = null;
                     Currency = null;
                     Progression = null;
+                    SkillUser = null;
                     Inventory = null;
                     Equipment = null;
                     return;
@@ -42,6 +44,7 @@ namespace CombatSystem.Persistence
                 player.TryGetComponent(out Resource);
                 player.TryGetComponent(out Currency);
                 player.TryGetComponent(out Progression);
+                player.TryGetComponent(out SkillUser);
                 player.TryGetComponent(out Inventory);
                 player.TryGetComponent(out Equipment);
             }
@@ -56,6 +59,7 @@ namespace CombatSystem.Persistence
         [SerializeField] private bool saveResource = true;
         [SerializeField] private bool saveCurrency = true;
         [SerializeField] private bool saveProgression = true;
+        [SerializeField] private bool saveSkills = true;
         [SerializeField] private bool saveInventory = true;
         [SerializeField] private bool saveEquipment = true;
         [SerializeField] private bool saveQuests = true;
@@ -223,6 +227,14 @@ namespace CombatSystem.Persistence
                 }
             }
 
+            if (saveSkills && data.skillLoadout != null && resolvedDatabase != null)
+            {
+                if (components.SkillUser != null)
+                {
+                    ApplySkillLoadout(data.skillLoadout, components.SkillUser, resolvedDatabase);
+                }
+            }
+
             if (saveQuests && data.quests != null)
             {
                 var questTracker = FindQuestTracker();
@@ -274,6 +286,11 @@ namespace CombatSystem.Persistence
             if (saveProgression)
             {
                 CaptureProgressionData(data, components.Progression);
+            }
+
+            if (saveSkills && components.SkillUser != null)
+            {
+                data.skillLoadout = CaptureSkillLoadout(components.SkillUser);
             }
 
             if (saveInventory && components.Inventory != null)
@@ -517,6 +534,34 @@ namespace CombatSystem.Persistence
             return data;
         }
 
+        private static SkillLoadoutSaveData CaptureSkillLoadout(SkillUserComponent skillUser)
+        {
+            var data = new SkillLoadoutSaveData();
+            if (skillUser == null)
+            {
+                return data;
+            }
+
+            var skills = skillUser.Skills;
+            if (skills == null || skills.Count == 0)
+            {
+                return data;
+            }
+
+            var ids = new List<string>(skills.Count);
+            for (int i = 0; i < skills.Count; i++)
+            {
+                var skill = skills[i];
+                if (skill != null && !string.IsNullOrWhiteSpace(skill.Id))
+                {
+                    ids.Add(skill.Id);
+                }
+            }
+
+            data.skillIds = ids.Count > 0 ? ids.ToArray() : null;
+            return data;
+        }
+
         private static ItemInstanceSaveData BuildItemSaveData(ItemInstance item)
         {
             var data = new ItemInstanceSaveData();
@@ -638,6 +683,36 @@ namespace CombatSystem.Persistence
                 {
                     equipment.TryEquipToSlot(instance, slotData.slotIndex, null);
                 }
+            }
+        }
+
+        private static void ApplySkillLoadout(SkillLoadoutSaveData data, SkillUserComponent skillUser, GameDatabase database)
+        {
+            if (data == null || skillUser == null || database == null || data.skillIds == null || data.skillIds.Length == 0)
+            {
+                return;
+            }
+
+            var skills = new List<SkillDefinition>(data.skillIds.Length);
+            for (int i = 0; i < data.skillIds.Length; i++)
+            {
+                var id = data.skillIds[i];
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                var skill = database.GetSkill(id);
+                if (skill != null && !skills.Contains(skill))
+                {
+                    skills.Add(skill);
+                }
+            }
+
+            if (skills.Count > 0)
+            {
+                // 保存的是完整顺序（包含普攻槽），读档时按相同顺序覆盖。
+                skillUser.SetSkills(skills, false);
             }
         }
 
