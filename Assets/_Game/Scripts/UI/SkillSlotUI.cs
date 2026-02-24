@@ -51,11 +51,15 @@ namespace CombatSystem.UI
         /// 上一次显示的冷却秒数（用于减少文本更新频率）
         /// </summary>
         private int lastCooldownSeconds = -1;
+        private float lastCooldownFillAmount = -1f;
+        private bool cooldownVisualVisible;
         private RectTransform rectTransform;
         private Vector3 baseScale = Vector3.one;
         private Color baseIconColor = Color.white;
         private Color baseSlotColor = Color.white;
         private Coroutine castPulseRoutine;
+        private const float CooldownEndThreshold = 0.02f;
+        private const float FillUpdateEpsilon = 0.001f;
 
         /// <summary>
         /// 当前绑定的技能定义（只读）
@@ -69,6 +73,8 @@ namespace CombatSystem.UI
             {
                 baseScale = rectTransform.localScale;
             }
+
+            EnsureCooldownFillConfigured();
 
             if (icon != null)
             {
@@ -97,9 +103,9 @@ namespace CombatSystem.UI
         /// <param name="keyLabel">显示的快捷键标签</param>
         public void BindSkill(SkillDefinition skillDef, string keyLabel)
         {
+            var previousSkill = skill;
+            var skillChanged = previousSkill != skillDef;
             skill = skillDef;
-            cooldownDuration = 0f;
-            lastCooldownSeconds = -1;
             ResetCastPulseVisual();
 
             // 设置技能图标
@@ -116,17 +122,11 @@ namespace CombatSystem.UI
                 keyText.enabled = !string.IsNullOrEmpty(keyLabel);
             }
 
-            // 重置冷却显示
-            if (cooldownFill != null)
+            // 仅在技能变更时重置冷却，避免 HUD 重绑时出现闪烁/进度条跳变。
+            if (skillChanged)
             {
-                cooldownFill.fillAmount = 0f;
-                cooldownFill.enabled = false;
-            }
-
-            if (cooldownText != null)
-            {
-                cooldownText.text = string.Empty;
-                cooldownText.enabled = false;
+                cooldownDuration = 0f;
+                ResetCooldownVisuals(true);
             }
 
             if (slotBackground != null)
@@ -174,7 +174,7 @@ namespace CombatSystem.UI
             {
                 // 冷却结束，重置状态
                 cooldownDuration = 0f;
-                lastCooldownSeconds = -1;
+                ResetCooldownVisuals();
                 return;
             }
 
@@ -200,6 +200,20 @@ namespace CombatSystem.UI
             }
 
             var remaining = cooldown.GetRemaining(skill);
+            RefreshCooldown(remaining);
+        }
+
+        /// <summary>
+        /// 直接使用剩余冷却时间刷新（由 SkillBarUI 在批量轮询时调用，避免重复查询）。
+        /// </summary>
+        /// <param name="remaining">剩余冷却时间</param>
+        public void RefreshCooldown(float remaining)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
             UpdateCooldownVisuals(remaining);
         }
 
@@ -214,48 +228,112 @@ namespace CombatSystem.UI
                 return;
             }
 
+            EnsureCooldownFillConfigured();
+
             // 冷却结束：隐藏所有冷却元素
-            if (remaining <= 0f)
+            if (remaining <= CooldownEndThreshold)
             {
-                if (cooldownFill != null)
-                {
-                    cooldownFill.fillAmount = 0f;
-                    cooldownFill.enabled = false;
-                }
-
-                if (cooldownText != null)
-                {
-                    cooldownText.text = string.Empty;
-                    cooldownText.enabled = false;
-                }
-
-                lastCooldownSeconds = -1;
+                ResetCooldownVisuals();
                 return;
             }
 
             // 计算填充比例（剩余时间 / 总时间）
+            if (cooldownDuration <= CooldownEndThreshold)
+            {
+                // UI 中途绑定时事件可能已经错过，这里兜底用当前剩余值初始化总时长。
+                cooldownDuration = remaining;
+            }
+
             var duration = cooldownDuration > 0f ? cooldownDuration : remaining;
             var fillAmount = duration > 0f ? Mathf.Clamp01(remaining / duration) : 1f;
+            SetCooldownVisualVisible(true);
 
             // 更新冷却遮罩
             if (cooldownFill != null)
             {
-                cooldownFill.fillAmount = fillAmount;
-                cooldownFill.enabled = true;
+                if (Mathf.Abs(fillAmount - lastCooldownFillAmount) > FillUpdateEpsilon)
+                {
+                    cooldownFill.fillAmount = fillAmount;
+                    lastCooldownFillAmount = fillAmount;
+                }
             }
 
             // 更新冷却倒计时文本（仅当秒数变化时更新，减少文本重绘）
             if (cooldownText != null)
             {
-                var seconds = Mathf.CeilToInt(remaining);
+                var seconds = Mathf.Max(1, Mathf.CeilToInt(remaining));
                 if (seconds != lastCooldownSeconds)
                 {
                     cooldownText.text = seconds.ToString();
                     lastCooldownSeconds = seconds;
                 }
-
-                cooldownText.enabled = true;
             }
+        }
+
+        private void SetCooldownVisualVisible(bool visible, bool force = false)
+        {
+            if (!force && cooldownVisualVisible == visible)
+            {
+                return;
+            }
+
+            cooldownVisualVisible = visible;
+            if (cooldownFill != null)
+            {
+                cooldownFill.enabled = visible;
+            }
+
+            if (cooldownText != null)
+            {
+                cooldownText.enabled = visible;
+            }
+        }
+
+        private void ResetCooldownVisuals(bool force = false)
+        {
+            if (cooldownFill != null)
+            {
+                if (force || cooldownFill.fillAmount > 0f)
+                {
+                    cooldownFill.fillAmount = 0f;
+                }
+            }
+
+            if (cooldownText != null)
+            {
+                if (force || !string.IsNullOrEmpty(cooldownText.text))
+                {
+                    cooldownText.text = string.Empty;
+                }
+            }
+
+            SetCooldownVisualVisible(false, force);
+            lastCooldownSeconds = -1;
+            lastCooldownFillAmount = -1f;
+        }
+
+        private void EnsureCooldownFillConfigured()
+        {
+            if (cooldownFill == null)
+            {
+                return;
+            }
+
+            // 主题替换/动态构建后可能被改回 Simple，导致 fillAmount 无效。
+            if (cooldownFill.type != Image.Type.Filled)
+            {
+                cooldownFill.type = Image.Type.Filled;
+            }
+
+            if (cooldownFill.fillMethod != Image.FillMethod.Radial360)
+            {
+                cooldownFill.fillMethod = Image.FillMethod.Radial360;
+            }
+
+            // 视觉上从上方向逆时针收缩，接近常见 ARPG/MOBA 反馈。
+            cooldownFill.fillOrigin = (int)Image.Origin360.Top;
+            cooldownFill.fillClockwise = false;
+            cooldownFill.fillCenter = true;
         }
 
         private IEnumerator PlayCastPulseRoutine()

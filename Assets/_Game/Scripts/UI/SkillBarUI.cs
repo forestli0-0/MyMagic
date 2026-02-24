@@ -71,6 +71,13 @@ namespace CombatSystem.UI
         /// <param name="maxSlots">最大槽位数量</param>
         public void Bind(SkillUserComponent user, CooldownComponent cooldownComponent, int maxSlots)
         {
+            var sameBinding = skillUser == user && cooldown == cooldownComponent && lastMaxSlots == maxSlots;
+            if (sameBinding)
+            {
+                CollectSlots();
+                return;
+            }
+
             if (skillUser != null)
             {
                 skillUser.SkillsChanged -= HandleSkillsChanged;
@@ -144,13 +151,25 @@ namespace CombatSystem.UI
                 return;
             }
 
+            // 没有任何技能处于冷却时，跳过整栏轮询刷新。
+            if (cooldown.ActiveCooldownCount <= 0)
+            {
+                return;
+            }
+
             // 每帧刷新所有槽位的冷却显示（用于平滑更新进度条）
             for (int i = 0; i < slots.Count; i++)
             {
                 var slot = slots[i];
                 if (slot != null && slot.Skill != null)
                 {
-                    slot.RefreshCooldown(cooldown);
+                    var remaining = cooldown.GetRemaining(slot.Skill);
+                    if (remaining <= 0f)
+                    {
+                        continue;
+                    }
+
+                    slot.RefreshCooldown(remaining);
                 }
             }
         }
