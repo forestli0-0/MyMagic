@@ -24,6 +24,12 @@ namespace CombatSystem.UI
     /// </remarks>
     public class InventoryScreen : UIScreenBase
     {
+        private const int InvalidSelectionIndex = -1;
+        private const float NoHoverClearPending = -1f;
+        private const float InvalidClickTimestamp = -999f;
+        private const float DefaultEquipmentSectionHeight = 390f;
+        private const int LayoutLookupDepth = 8;
+
         [Header("References")]
         [SerializeField] private UIManager uiManager;
         [SerializeField] private InventoryComponent inventory;
@@ -65,8 +71,8 @@ namespace CombatSystem.UI
         [SerializeField] private List<InventoryActionProfile> actionProfiles = new List<InventoryActionProfile>(8);
         [SerializeField] private List<InventoryCategoryActionOverride> categoryActionOverrides = new List<InventoryCategoryActionOverride>(4);
 
-        private int selectedInventoryIndex = -1;
-        private int selectedEquipmentIndex = -1;
+        private int selectedInventoryIndex = InvalidSelectionIndex;
+        private int selectedEquipmentIndex = InvalidSelectionIndex;
         private InventoryFilter activeFilter = InventoryFilter.All;
         private InventorySortMode activeSortMode = InventorySortMode.Default;
         private RarityQuickFilter activeRarityFilter = RarityQuickFilter.All;
@@ -88,12 +94,12 @@ namespace CombatSystem.UI
         private Canvas dragCanvas;
         private InventorySlotUI currentDragInventoryTarget;
         private EquipmentSlotUI currentDragEquipmentTarget;
-        private int hoveredEquipmentIndex = -1;
-        private float hoveredEquipmentClearAt = -1f;
+        private int hoveredEquipmentIndex = InvalidSelectionIndex;
+        private float hoveredEquipmentClearAt = NoHoverClearPending;
         private InventoryActionCommand currentPrimaryAction = InventoryActionCommand.None;
         private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
-        private int lastInventoryClickIndex = -1;
-        private float lastInventoryClickAt = -999f;
+        private int lastInventoryClickIndex = InvalidSelectionIndex;
+        private float lastInventoryClickAt = InvalidClickTimestamp;
 
         private enum InventoryFilter
         {
@@ -235,8 +241,7 @@ namespace CombatSystem.UI
             HideSortPicker();
             EndDrag();
             ResetDoubleClickState();
-            hoveredEquipmentIndex = -1;
-            hoveredEquipmentClearAt = -1f;
+            ClearHoveredEquipmentState();
         }
 
         private void OnDestroy()
@@ -327,7 +332,7 @@ namespace CombatSystem.UI
 
             if (equipment.TryEquip(item, inventory))
             {
-                selectedInventoryIndex = -1;
+                ClearInventorySelection();
                 RefreshSelectionAfterChange();
                 UIToast.Success($"已装备：{ResolveItemName(item)}");
                 return;
@@ -355,7 +360,7 @@ namespace CombatSystem.UI
                 : null;
             if (equipment.TryUnequip(selectedEquipmentIndex, inventory))
             {
-                selectedEquipmentIndex = -1;
+                ClearEquipmentSelection();
                 RefreshSelectionAfterChange();
                 UIToast.Success(slotItem != null
                     ? $"已卸下：{ResolveItemName(slotItem)}"
@@ -478,7 +483,7 @@ namespace CombatSystem.UI
                 return;
             }
 
-            LockLayoutElementHeight(equipmentSection, 390f);
+            LockLayoutElementHeight(equipmentSection, DefaultEquipmentSectionHeight);
 
             var detailsSection = ResolveDetailsSectionTransform(equipmentSection);
             if (detailsSection != null)
@@ -490,7 +495,7 @@ namespace CombatSystem.UI
         private Transform ResolveEquipmentSectionTransform()
         {
             var anchor = equipmentPanel != null ? equipmentPanel.transform : null;
-            for (int i = 0; i < 8 && anchor != null; i++)
+            for (int i = 0; i < LayoutLookupDepth && anchor != null; i++)
             {
                 if (string.Equals(anchor.name, "EquipmentSection", StringComparison.Ordinal))
                 {
@@ -501,7 +506,7 @@ namespace CombatSystem.UI
             }
 
             anchor = equipmentPanel != null ? equipmentPanel.transform : null;
-            for (int i = 0; i < 8 && anchor != null; i++)
+            for (int i = 0; i < LayoutLookupDepth && anchor != null; i++)
             {
                 if (anchor.GetComponent<LayoutElement>() != null)
                 {
@@ -1088,9 +1093,8 @@ namespace CombatSystem.UI
             lastInventoryClickAt = now;
 
             selectedInventoryIndex = index;
-            selectedEquipmentIndex = -1;
-            hoveredEquipmentIndex = -1;
-            hoveredEquipmentClearAt = -1f;
+            ClearEquipmentSelection();
+            ClearHoveredEquipmentState();
 
             if (equipmentPanel != null)
             {
@@ -1108,9 +1112,8 @@ namespace CombatSystem.UI
         private void HandleEquipmentSlotSelected(int index)
         {
             selectedEquipmentIndex = index;
-            selectedInventoryIndex = -1;
-            hoveredEquipmentIndex = -1;
-            hoveredEquipmentClearAt = -1f;
+            ClearInventorySelection();
+            ClearHoveredEquipmentState();
             ResetDoubleClickState();
 
             if (inventoryGrid != null)
@@ -1126,7 +1129,7 @@ namespace CombatSystem.UI
             if (hovered)
             {
                 hoveredEquipmentIndex = index;
-                hoveredEquipmentClearAt = -1f;
+                hoveredEquipmentClearAt = NoHoverClearPending;
             }
             else if (hoveredEquipmentIndex == index)
             {
@@ -1138,7 +1141,7 @@ namespace CombatSystem.UI
                 hoveredEquipmentClearAt = Time.unscaledTime + equipmentHoverClearDelay;
             }
 
-            if (selectedInventoryIndex >= 0 || selectedEquipmentIndex >= 0)
+            if (HasExplicitSelection())
             {
                 return;
             }
@@ -1164,14 +1167,14 @@ namespace CombatSystem.UI
                 return;
             }
 
-            hoveredEquipmentClearAt = -1f;
+            hoveredEquipmentClearAt = NoHoverClearPending;
             if (hoveredEquipmentIndex < 0)
             {
                 return;
             }
 
-            hoveredEquipmentIndex = -1;
-            if (selectedInventoryIndex >= 0 || selectedEquipmentIndex >= 0)
+            hoveredEquipmentIndex = InvalidSelectionIndex;
+            if (HasExplicitSelection())
             {
                 return;
             }
@@ -1249,8 +1252,29 @@ namespace CombatSystem.UI
 
         private void ResetDoubleClickState()
         {
-            lastInventoryClickIndex = -1;
-            lastInventoryClickAt = -999f;
+            lastInventoryClickIndex = InvalidSelectionIndex;
+            lastInventoryClickAt = InvalidClickTimestamp;
+        }
+
+        private void ClearInventorySelection()
+        {
+            selectedInventoryIndex = InvalidSelectionIndex;
+        }
+
+        private void ClearEquipmentSelection()
+        {
+            selectedEquipmentIndex = InvalidSelectionIndex;
+        }
+
+        private void ClearHoveredEquipmentState()
+        {
+            hoveredEquipmentIndex = InvalidSelectionIndex;
+            hoveredEquipmentClearAt = NoHoverClearPending;
+        }
+
+        private bool HasExplicitSelection()
+        {
+            return selectedInventoryIndex >= 0 || selectedEquipmentIndex >= 0;
         }
 
         private void HandleEquipmentDragging(EquipmentSlotUI slot, PointerEventData eventData)
@@ -1507,20 +1531,20 @@ namespace CombatSystem.UI
         {
             if (inventory == null)
             {
-                selectedInventoryIndex = -1;
+                ClearInventorySelection();
                 return null;
             }
 
             if (selectedInventoryIndex < 0 || selectedInventoryIndex >= inventory.Items.Count)
             {
-                selectedInventoryIndex = -1;
+                ClearInventorySelection();
                 return null;
             }
 
             var selected = inventory.Items[selectedInventoryIndex];
             if (selected != null && !MatchesCurrentQuery(selected))
             {
-                selectedInventoryIndex = -1;
+                ClearInventorySelection();
                 return null;
             }
 
@@ -1531,13 +1555,13 @@ namespace CombatSystem.UI
         {
             if (equipment == null)
             {
-                selectedEquipmentIndex = -1;
+                ClearEquipmentSelection();
                 return null;
             }
 
             if (selectedEquipmentIndex < 0 || selectedEquipmentIndex >= equipment.Slots.Count)
             {
-                selectedEquipmentIndex = -1;
+                ClearEquipmentSelection();
                 return null;
             }
 
@@ -1548,13 +1572,13 @@ namespace CombatSystem.UI
         {
             if (equipment == null)
             {
-                hoveredEquipmentIndex = -1;
+                hoveredEquipmentIndex = InvalidSelectionIndex;
                 return null;
             }
 
             if (hoveredEquipmentIndex < 0 || hoveredEquipmentIndex >= equipment.Slots.Count)
             {
-                hoveredEquipmentIndex = -1;
+                hoveredEquipmentIndex = InvalidSelectionIndex;
                 return null;
             }
 
@@ -1808,10 +1832,9 @@ namespace CombatSystem.UI
 
             HideSortPicker();
             EndDrag();
-            selectedInventoryIndex = -1;
-            selectedEquipmentIndex = -1;
-            hoveredEquipmentIndex = -1;
-            hoveredEquipmentClearAt = -1f;
+            ClearInventorySelection();
+            ClearEquipmentSelection();
+            ClearHoveredEquipmentState();
             if (inventory.TryAutoOrganize(CompareOrganizeItems, true))
             {
                 UIToast.Success("背包已整理。");
@@ -2000,7 +2023,7 @@ namespace CombatSystem.UI
             }
 
             activeFilter = filter;
-            selectedInventoryIndex = -1;
+            ClearInventorySelection();
             RefreshAll();
         }
 
@@ -2012,7 +2035,7 @@ namespace CombatSystem.UI
             }
 
             activeRarityFilter = filter;
-            selectedInventoryIndex = -1;
+            ClearInventorySelection();
             RefreshAll();
         }
 
@@ -2025,7 +2048,7 @@ namespace CombatSystem.UI
             }
 
             searchKeyword = normalized;
-            selectedInventoryIndex = -1;
+            ClearInventorySelection();
             RefreshAll();
         }
 
@@ -2069,7 +2092,7 @@ namespace CombatSystem.UI
             }
 
             activeSortMode = mode;
-            selectedInventoryIndex = -1;
+            ClearInventorySelection();
             RefreshAll();
             RefreshSortPickerOptionStates();
         }
@@ -2185,7 +2208,7 @@ namespace CombatSystem.UI
                 return;
             }
 
-            sortPickerFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            sortPickerFont = ResolveBuiltinFallbackFont();
         }
 
         private void EnsureSortPickerPanel()
@@ -3417,7 +3440,31 @@ namespace CombatSystem.UI
                 return;
             }
 
-            fallbackFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            fallbackFont = ResolveBuiltinFallbackFont();
+        }
+
+        private static Font ResolveBuiltinFallbackFont()
+        {
+            try
+            {
+                var legacyFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (legacyFont != null)
+                {
+                    return legacyFont;
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                return Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private void PatchRuntimeOptionLabels(RectTransform listRect)
