@@ -15,7 +15,7 @@ namespace CombatSystem.UI
     /// - 显示槽位类型标签、物品图标、物品名称
     /// - 通过 Clicked 事件通知上层选中变化
     /// </remarks>
-    public class EquipmentSlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
+    public class EquipmentSlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IPointerEnterHandler, IPointerExitHandler
     {
         public enum DragTargetVisualState
         {
@@ -36,6 +36,7 @@ namespace CombatSystem.UI
         private ItemInstance item;
         private bool selected;
         private DragTargetVisualState dragTargetVisualState;
+        private bool compactMode;
 
         public int SlotIndex => slotIndex;
         public ItemSlot SlotType => slotType;
@@ -46,6 +47,7 @@ namespace CombatSystem.UI
         public event Action<EquipmentSlotUI, PointerEventData> Dragging;
         public event Action<EquipmentSlotUI, PointerEventData> DragEnded;
         public event Action<EquipmentSlotUI, PointerEventData> Dropped;
+        public event Action<EquipmentSlotUI, bool> HoverChanged;
 
         private void Awake()
         {
@@ -99,6 +101,8 @@ namespace CombatSystem.UI
                     itemLabel.text = "空";
                 }
             }
+
+            ApplyCompactVisuals();
         }
 
         public void SetSelected(bool selected)
@@ -158,6 +162,27 @@ namespace CombatSystem.UI
             Dropped?.Invoke(this, eventData);
         }
 
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            HoverChanged?.Invoke(this, true);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            HoverChanged?.Invoke(this, false);
+        }
+
+        public void SetCompactMode(bool compact)
+        {
+            if (compactMode == compact)
+            {
+                return;
+            }
+
+            compactMode = compact;
+            ApplyCompactVisuals();
+        }
+
         private void RefreshVisualState()
         {
             var baseColor = new Color(0.14f, 0.16f, 0.2f, 1f);
@@ -205,6 +230,35 @@ namespace CombatSystem.UI
             }
 
             background.color = selected ? selectedColor : baseColor;
+        }
+
+        private void ApplyCompactVisuals()
+        {
+            if (slotLabel != null)
+            {
+                slotLabel.gameObject.SetActive(!compactMode);
+            }
+
+            if (itemLabel != null)
+            {
+                itemLabel.gameObject.SetActive(!compactMode);
+            }
+
+            var rowLayout = GetComponent<HorizontalLayoutGroup>();
+            if (rowLayout != null)
+            {
+                rowLayout.enabled = !compactMode;
+            }
+
+            if (icon != null && compactMode)
+            {
+                var iconRect = icon.rectTransform;
+                iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+                iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+                iconRect.pivot = new Vector2(0.5f, 0.5f);
+                iconRect.anchoredPosition = Vector2.zero;
+                iconRect.sizeDelta = new Vector2(50f, 50f);
+            }
         }
     }
 }

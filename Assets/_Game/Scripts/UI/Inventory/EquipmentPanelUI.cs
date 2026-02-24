@@ -4,6 +4,7 @@ using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace CombatSystem.UI
 {
@@ -20,11 +21,17 @@ namespace CombatSystem.UI
     {
         [SerializeField] private RectTransform slotsRoot;
         [SerializeField] private EquipmentSlotUI slotTemplate;
+        [Header("Layout")]
+        [SerializeField] private bool useCharacterLayout = true;
+        [SerializeField] private Vector2 slotSize = new Vector2(82f, 82f);
+        [SerializeField] private Vector2 layoutOffset = Vector2.zero;
+        [SerializeField] private RectTransform silhouetteRoot;
 
         private readonly List<EquipmentSlotUI> slots = new List<EquipmentSlotUI>();
         private EquipmentComponent equipment;
 
         public event Action<int> SlotSelected;
+        public event Action<int, bool> SlotHoverChanged;
         public event Action<EquipmentSlotUI, PointerEventData> SlotDragStarted;
         public event Action<EquipmentSlotUI, PointerEventData> SlotDragging;
         public event Action<EquipmentSlotUI, PointerEventData> SlotDragEnded;
@@ -89,6 +96,16 @@ namespace CombatSystem.UI
             }
         }
 
+        public bool ContainsScreenPoint(Vector2 screenPosition, Camera eventCamera = null)
+        {
+            if (slotsRoot == null)
+            {
+                return false;
+            }
+
+            return RectTransformUtility.RectangleContainsScreenPoint(slotsRoot, screenPosition, eventCamera);
+        }
+
         private void Unbind()
         {
             if (equipment != null)
@@ -110,12 +127,15 @@ namespace CombatSystem.UI
                 return;
             }
 
+            ApplyRootLayoutMode();
+
             var targetCount = equipment.Slots != null ? equipment.Slots.Count : 0;
             while (slots.Count < targetCount)
             {
                 var instance = Instantiate(slotTemplate, slotsRoot);
                 instance.gameObject.SetActive(true);
                 instance.Clicked += HandleSlotClicked;
+                instance.HoverChanged += HandleSlotHoverChanged;
                 instance.DragStarted += HandleSlotDragStarted;
                 instance.Dragging += HandleSlotDragging;
                 instance.DragEnded += HandleSlotDragEnded;
@@ -128,6 +148,8 @@ namespace CombatSystem.UI
             {
                 slots[i].Clicked -= HandleSlotClicked;
                 slots[i].Clicked += HandleSlotClicked;
+                slots[i].HoverChanged -= HandleSlotHoverChanged;
+                slots[i].HoverChanged += HandleSlotHoverChanged;
                 slots[i].DragStarted -= HandleSlotDragStarted;
                 slots[i].DragStarted += HandleSlotDragStarted;
                 slots[i].Dragging -= HandleSlotDragging;
@@ -156,6 +178,8 @@ namespace CombatSystem.UI
                 }
 
                 slots[i].Configure(i, slotType, label);
+                slots[i].SetCompactMode(useCharacterLayout);
+                ApplySlotLayout(slots[i], slotType, accessoryIndex);
             }
         }
 
@@ -180,6 +204,16 @@ namespace CombatSystem.UI
             }
 
             SlotSelected?.Invoke(slot.SlotIndex);
+        }
+
+        private void HandleSlotHoverChanged(EquipmentSlotUI slot, bool hovered)
+        {
+            if (slot == null)
+            {
+                return;
+            }
+
+            SlotHoverChanged?.Invoke(slot.SlotIndex, hovered);
         }
 
         private void HandleSlotDragStarted(EquipmentSlotUI slot, PointerEventData eventData)
@@ -207,6 +241,7 @@ namespace CombatSystem.UI
             for (int i = 0; i < slots.Count; i++)
             {
                 slots[i].Clicked -= HandleSlotClicked;
+                slots[i].HoverChanged -= HandleSlotHoverChanged;
                 slots[i].DragStarted -= HandleSlotDragStarted;
                 slots[i].Dragging -= HandleSlotDragging;
                 slots[i].DragEnded -= HandleSlotDragEnded;
@@ -236,6 +271,111 @@ namespace CombatSystem.UI
             }
 
             return null;
+        }
+
+        private void ApplyRootLayoutMode()
+        {
+            if (slotsRoot == null)
+            {
+                return;
+            }
+
+            if (silhouetteRoot != null)
+            {
+                silhouetteRoot.gameObject.SetActive(useCharacterLayout);
+            }
+
+            var vertical = slotsRoot.GetComponent<VerticalLayoutGroup>();
+            if (vertical != null)
+            {
+                vertical.enabled = !useCharacterLayout;
+            }
+
+            var horizontal = slotsRoot.GetComponent<HorizontalLayoutGroup>();
+            if (horizontal != null)
+            {
+                horizontal.enabled = !useCharacterLayout;
+            }
+
+            var grid = slotsRoot.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                grid.enabled = !useCharacterLayout;
+            }
+        }
+
+        private void ApplySlotLayout(EquipmentSlotUI slot, ItemSlot slotType, int accessoryIndex)
+        {
+            if (slot == null)
+            {
+                return;
+            }
+
+            var rect = slot.transform as RectTransform;
+            if (rect == null)
+            {
+                return;
+            }
+
+            var layoutElement = slot.GetComponent<LayoutElement>();
+            if (layoutElement == null)
+            {
+                layoutElement = slot.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layoutElement.ignoreLayout = useCharacterLayout;
+            if (!useCharacterLayout)
+            {
+                return;
+            }
+
+            var anchored = ResolveSlotPosition(slotType, accessoryIndex) + layoutOffset;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = slotSize;
+            rect.anchoredPosition = anchored;
+
+            layoutElement.minWidth = slotSize.x;
+            layoutElement.preferredWidth = slotSize.x;
+            layoutElement.minHeight = slotSize.y;
+            layoutElement.preferredHeight = slotSize.y;
+            layoutElement.flexibleWidth = 0f;
+            layoutElement.flexibleHeight = 0f;
+        }
+
+        private static Vector2 ResolveSlotPosition(ItemSlot slotType, int accessoryIndex)
+        {
+            switch (slotType)
+            {
+                case ItemSlot.Weapon:
+                    return new Vector2(-118f, 30f);
+                case ItemSlot.Headband:
+                    return new Vector2(0f, 126f);
+                case ItemSlot.Clothes:
+                    return new Vector2(0f, 30f);
+                case ItemSlot.Shoes:
+                    return new Vector2(0f, -106f);
+                case ItemSlot.Accessory:
+                    return ResolveAccessoryPosition(accessoryIndex);
+                default:
+                    return new Vector2(0f, -186f);
+            }
+        }
+
+        private static Vector2 ResolveAccessoryPosition(int accessoryIndex)
+        {
+            switch (accessoryIndex)
+            {
+                case 1:
+                    return new Vector2(118f, 30f);
+                case 2:
+                    return new Vector2(-118f, -106f);
+                case 3:
+                    return new Vector2(118f, -106f);
+                default:
+                    return new Vector2(118f, -186f - (accessoryIndex - 4) * 46f);
+            }
         }
     }
 }

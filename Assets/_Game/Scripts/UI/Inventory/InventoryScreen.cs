@@ -58,6 +58,8 @@ namespace CombatSystem.UI
         [SerializeField] private Color filterInactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
         [Header("Quick Action")]
         [SerializeField, Range(0.12f, 0.5f)] private float equipDoubleClickWindow = 0.28f;
+        [Header("Hover")]
+        [SerializeField, Range(0f, 0.25f)] private float equipmentHoverClearDelay = 0.08f;
 
         [Header("Action Profiles")]
         [SerializeField] private List<InventoryActionProfile> actionProfiles = new List<InventoryActionProfile>(8);
@@ -86,6 +88,8 @@ namespace CombatSystem.UI
         private Canvas dragCanvas;
         private InventorySlotUI currentDragInventoryTarget;
         private EquipmentSlotUI currentDragEquipmentTarget;
+        private int hoveredEquipmentIndex = -1;
+        private float hoveredEquipmentClearAt = -1f;
         private InventoryActionCommand currentPrimaryAction = InventoryActionCommand.None;
         private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
         private int lastInventoryClickIndex = -1;
@@ -214,6 +218,7 @@ namespace CombatSystem.UI
         {
             ApplyThemeColors();
             EnsureReferences();
+            EnsureStableEquipmentPanelHeight();
             if (uiManager != null)
             {
                 uiManager.SetHudSkillBarOnlyVisible(true);
@@ -230,6 +235,8 @@ namespace CombatSystem.UI
             HideSortPicker();
             EndDrag();
             ResetDoubleClickState();
+            hoveredEquipmentIndex = -1;
+            hoveredEquipmentClearAt = -1f;
         }
 
         private void OnDestroy()
@@ -245,6 +252,7 @@ namespace CombatSystem.UI
 
         public override void OnFocus()
         {
+            EnsureStableEquipmentPanelHeight();
             RefreshAll();
         }
 
@@ -262,6 +270,8 @@ namespace CombatSystem.UI
 
         private void Update()
         {
+            TickHoveredEquipmentClear();
+
             if (UnityEngine.Input.GetKeyDown(KeyCode.R) && !IsTextInputFocused())
             {
                 HandleOrganizeClicked();
@@ -451,6 +461,144 @@ namespace CombatSystem.UI
             }
 
             EnsureSkillFilterButton();
+        }
+
+        private void EnsureStableEquipmentPanelHeight()
+        {
+            if (equipmentPanel == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+
+            var equipmentSection = ResolveEquipmentSectionTransform();
+            if (equipmentSection == null)
+            {
+                return;
+            }
+
+            LockLayoutElementHeight(equipmentSection, 390f);
+
+            var detailsSection = ResolveDetailsSectionTransform(equipmentSection);
+            if (detailsSection != null)
+            {
+                ResetDetailsSectionLayout(detailsSection);
+            }
+        }
+
+        private Transform ResolveEquipmentSectionTransform()
+        {
+            var anchor = equipmentPanel != null ? equipmentPanel.transform : null;
+            for (int i = 0; i < 8 && anchor != null; i++)
+            {
+                if (string.Equals(anchor.name, "EquipmentSection", StringComparison.Ordinal))
+                {
+                    return anchor;
+                }
+
+                anchor = anchor.parent;
+            }
+
+            anchor = equipmentPanel != null ? equipmentPanel.transform : null;
+            for (int i = 0; i < 8 && anchor != null; i++)
+            {
+                if (anchor.GetComponent<LayoutElement>() != null)
+                {
+                    return anchor;
+                }
+
+                anchor = anchor.parent;
+            }
+
+            return null;
+        }
+
+        private static Transform ResolveDetailsSectionTransform(Transform equipmentSection)
+        {
+            if (equipmentSection == null || equipmentSection.parent == null)
+            {
+                return null;
+            }
+
+            var sidePanel = equipmentSection.parent;
+            for (int i = 0; i < sidePanel.childCount; i++)
+            {
+                var child = sidePanel.GetChild(i);
+                if (child == null || child == equipmentSection)
+                {
+                    continue;
+                }
+
+                if (string.Equals(child.name, "DetailsSection", StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+
+            for (int i = 0; i < sidePanel.childCount; i++)
+            {
+                var child = sidePanel.GetChild(i);
+                if (child == null || child == equipmentSection)
+                {
+                    continue;
+                }
+
+                if (child.GetComponentInChildren<ItemComparePanelUI>(true) != null)
+                {
+                    return child;
+                }
+            }
+
+            return null;
+        }
+
+        private static void LockLayoutElementHeight(Transform target, float fallbackHeight)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var layout = target.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = target.gameObject.AddComponent<LayoutElement>();
+            }
+
+            var preferred = layout.preferredHeight;
+            if (preferred <= 1f && target is RectTransform targetRect)
+            {
+                preferred = targetRect.rect.height;
+            }
+
+            if (preferred <= 1f)
+            {
+                preferred = fallbackHeight;
+            }
+
+            layout.preferredHeight = preferred;
+            layout.minHeight = Mathf.Max(layout.minHeight, preferred);
+            layout.flexibleHeight = 0f;
+        }
+
+        private static void ResetDetailsSectionLayout(Transform target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var layout = target.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = target.gameObject.AddComponent<LayoutElement>();
+            }
+
+            // 详情区保持弹性填充，避免固定高度把整页布局顶坏。
+            layout.preferredHeight = -1f;
+            layout.minHeight = 0f;
+            layout.flexibleHeight = 1f;
         }
 
         private float ResolveCurrentStatValueForPreview(string statId)
@@ -660,6 +808,7 @@ namespace CombatSystem.UI
             if (equipmentPanel != null)
             {
                 equipmentPanel.SlotSelected += HandleEquipmentSlotSelected;
+                equipmentPanel.SlotHoverChanged += HandleEquipmentSlotHoverChanged;
                 equipmentPanel.SlotDragStarted += HandleEquipmentDragStarted;
                 equipmentPanel.SlotDragging += HandleEquipmentDragging;
                 equipmentPanel.SlotDragEnded += HandleEquipmentDragEnded;
@@ -776,6 +925,7 @@ namespace CombatSystem.UI
             if (equipmentPanel != null)
             {
                 equipmentPanel.SlotSelected -= HandleEquipmentSlotSelected;
+                equipmentPanel.SlotHoverChanged -= HandleEquipmentSlotHoverChanged;
                 equipmentPanel.SlotDragStarted -= HandleEquipmentDragStarted;
                 equipmentPanel.SlotDragging -= HandleEquipmentDragging;
                 equipmentPanel.SlotDragEnded -= HandleEquipmentDragEnded;
@@ -939,6 +1089,8 @@ namespace CombatSystem.UI
 
             selectedInventoryIndex = index;
             selectedEquipmentIndex = -1;
+            hoveredEquipmentIndex = -1;
+            hoveredEquipmentClearAt = -1f;
 
             if (equipmentPanel != null)
             {
@@ -957,6 +1109,8 @@ namespace CombatSystem.UI
         {
             selectedEquipmentIndex = index;
             selectedInventoryIndex = -1;
+            hoveredEquipmentIndex = -1;
+            hoveredEquipmentClearAt = -1f;
             ResetDoubleClickState();
 
             if (inventoryGrid != null)
@@ -965,6 +1119,69 @@ namespace CombatSystem.UI
             }
 
             RefreshSelectionAfterChange();
+        }
+
+        private void HandleEquipmentSlotHoverChanged(int index, bool hovered)
+        {
+            if (hovered)
+            {
+                hoveredEquipmentIndex = index;
+                hoveredEquipmentClearAt = -1f;
+            }
+            else if (hoveredEquipmentIndex == index)
+            {
+                if (IsPointerInEquipmentPanel())
+                {
+                    return;
+                }
+
+                hoveredEquipmentClearAt = Time.unscaledTime + equipmentHoverClearDelay;
+            }
+
+            if (selectedInventoryIndex >= 0 || selectedEquipmentIndex >= 0)
+            {
+                return;
+            }
+
+            RefreshSelectionAfterChange();
+        }
+
+        private void TickHoveredEquipmentClear()
+        {
+            if (hoveredEquipmentClearAt < 0f)
+            {
+                return;
+            }
+
+            if (IsPointerInEquipmentPanel())
+            {
+                hoveredEquipmentClearAt = Time.unscaledTime + equipmentHoverClearDelay;
+                return;
+            }
+
+            if (Time.unscaledTime < hoveredEquipmentClearAt)
+            {
+                return;
+            }
+
+            hoveredEquipmentClearAt = -1f;
+            if (hoveredEquipmentIndex < 0)
+            {
+                return;
+            }
+
+            hoveredEquipmentIndex = -1;
+            if (selectedInventoryIndex >= 0 || selectedEquipmentIndex >= 0)
+            {
+                return;
+            }
+
+            RefreshSelectionAfterChange();
+        }
+
+        private bool IsPointerInEquipmentPanel()
+        {
+            return equipmentPanel != null && equipmentPanel.ContainsScreenPoint(UnityEngine.Input.mousePosition);
         }
 
         private void HandleInventoryDragStarted(InventorySlotUI slot, PointerEventData eventData)
@@ -1248,6 +1465,7 @@ namespace CombatSystem.UI
         {
             var inventoryItem = ResolveInventorySelection();
             var equipmentItem = ResolveEquipmentSelection();
+            var hoveredEquipmentItem = ResolveHoveredEquipmentItem();
 
             if (inventoryGrid != null)
             {
@@ -1271,6 +1489,10 @@ namespace CombatSystem.UI
                 else if (equipmentItem != null)
                 {
                     comparePanel.ShowItem(equipmentItem, null);
+                }
+                else if (hoveredEquipmentItem != null)
+                {
+                    comparePanel.ShowItem(hoveredEquipmentItem, null);
                 }
                 else
                 {
@@ -1320,6 +1542,23 @@ namespace CombatSystem.UI
             }
 
             return equipment.Slots[selectedEquipmentIndex].Item;
+        }
+
+        private ItemInstance ResolveHoveredEquipmentItem()
+        {
+            if (equipment == null)
+            {
+                hoveredEquipmentIndex = -1;
+                return null;
+            }
+
+            if (hoveredEquipmentIndex < 0 || hoveredEquipmentIndex >= equipment.Slots.Count)
+            {
+                hoveredEquipmentIndex = -1;
+                return null;
+            }
+
+            return equipment.Slots[hoveredEquipmentIndex].Item;
         }
 
         private void UpdateButtons(ItemInstance inventoryItem, ItemInstance equipmentItem)
@@ -1571,6 +1810,8 @@ namespace CombatSystem.UI
             EndDrag();
             selectedInventoryIndex = -1;
             selectedEquipmentIndex = -1;
+            hoveredEquipmentIndex = -1;
+            hoveredEquipmentClearAt = -1f;
             if (inventory.TryAutoOrganize(CompareOrganizeItems, true))
             {
                 UIToast.Success("背包已整理。");

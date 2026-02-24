@@ -3130,6 +3130,7 @@ namespace CombatSystem.Editor
 
             var equipmentElement = equipmentSection.AddComponent<LayoutElement>();
             equipmentElement.preferredHeight = 390f;
+            equipmentElement.minHeight = 390f;
             equipmentElement.flexibleHeight = 0f;
 
             var equipmentTitleGo = CreateUIElement("EquipmentTitle", equipmentSection.transform);
@@ -3138,23 +3139,37 @@ namespace CombatSystem.Editor
             AddLayoutElement(equipmentTitleGo, 38f);
 
             var equipmentSlotsRoot = CreateUIElement("EquipmentSlots", equipmentSection.transform);
-            var equipmentSlotsRect = equipmentSlotsRoot.GetComponent<RectTransform>();
-            var equipmentSlotsLayout = equipmentSlotsRoot.AddComponent<VerticalLayoutGroup>();
-            equipmentSlotsLayout.spacing = 6f;
-            equipmentSlotsLayout.childAlignment = TextAnchor.UpperLeft;
-            equipmentSlotsLayout.childControlHeight = true;
-            equipmentSlotsLayout.childControlWidth = true;
-            equipmentSlotsLayout.childForceExpandHeight = false;
-            equipmentSlotsLayout.childForceExpandWidth = true;
+            var equipmentSlotsBackground = equipmentSlotsRoot.AddComponent<Image>();
+            equipmentSlotsBackground.sprite = sprite;
+            equipmentSlotsBackground.type = Image.Type.Sliced;
+            equipmentSlotsBackground.color = new Color(0.11f, 0.15f, 0.22f, 0.8f);
+            equipmentSlotsBackground.raycastTarget = true;
             var equipmentSlotsElement = equipmentSlotsRoot.AddComponent<LayoutElement>();
             equipmentSlotsElement.flexibleHeight = 1f;
             equipmentSlotsElement.flexibleWidth = 1f;
 
-            var equipmentPanel = equipmentSlotsRoot.AddComponent<EquipmentPanelUI>();
-            var equipmentSlotTemplate = CreateEquipmentSlotTemplate(equipmentSlotsRoot.transform, sprite, font);
+            var silhouetteRoot = CreateUIElement("Silhouette", equipmentSlotsRoot.transform);
+            var silhouetteRect = silhouetteRoot.GetComponent<RectTransform>();
+            silhouetteRect.anchorMin = new Vector2(0.5f, 0.5f);
+            silhouetteRect.anchorMax = new Vector2(0.5f, 0.5f);
+            silhouetteRect.pivot = new Vector2(0.5f, 0.5f);
+            silhouetteRect.anchoredPosition = new Vector2(0f, 6f);
+            silhouetteRect.sizeDelta = new Vector2(210f, 290f);
+
+            CreateEquipmentSilhouettePart("Head", silhouetteRoot.transform, sprite, new Vector2(0f, 96f), new Vector2(62f, 62f), new Color(0.24f, 0.3f, 0.4f, 0.38f));
+            CreateEquipmentSilhouettePart("Torso", silhouetteRoot.transform, sprite, new Vector2(0f, 18f), new Vector2(112f, 126f), new Color(0.2f, 0.27f, 0.36f, 0.34f));
+            CreateEquipmentSilhouettePart("Legs", silhouetteRoot.transform, sprite, new Vector2(0f, -90f), new Vector2(94f, 110f), new Color(0.19f, 0.25f, 0.34f, 0.32f));
+
+            var slotLayer = CreateUIElement("SlotLayer", equipmentSlotsRoot.transform);
+            var slotLayerRect = slotLayer.GetComponent<RectTransform>();
+            StretchRect(slotLayerRect);
+
+            var equipmentPanel = slotLayer.AddComponent<EquipmentPanelUI>();
+            var equipmentSlotTemplate = CreateEquipmentSlotTemplate(slotLayer.transform, sprite);
             equipmentSlotTemplate.gameObject.SetActive(false);
-            SetSerialized(equipmentPanel, "slotsRoot", equipmentSlotsRect);
+            SetSerialized(equipmentPanel, "slotsRoot", slotLayerRect);
             SetSerialized(equipmentPanel, "slotTemplate", equipmentSlotTemplate);
+            SetSerialized(equipmentPanel, "silhouetteRoot", silhouetteRect);
 
             var detailsSection = CreateUIElement("DetailsSection", sidePanel.transform);
             var detailsImage = detailsSection.AddComponent<Image>();
@@ -4243,7 +4258,7 @@ namespace CombatSystem.Editor
         {
             var root = CreateHudRect("FloatingText", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var template = CreateHudRect("FloatingTextTemplate", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(120f, 24f), Vector2.zero);
-            var label = CreateText(template.gameObject, "0", font, 16, TextAnchor.MiddleCenter);
+            var label = CreateText(template.gameObject, string.Empty, font, 16, TextAnchor.MiddleCenter);
             label.color = Color.white;
             var group = template.gameObject.AddComponent<CanvasGroup>();
             var item = template.gameObject.AddComponent<FloatingTextItem>();
@@ -4663,60 +4678,56 @@ namespace CombatSystem.Editor
             return slot;
         }
 
-        private static EquipmentSlotUI CreateEquipmentSlotTemplate(Transform parent, Sprite sprite, Font font)
+        private static void CreateEquipmentSilhouettePart(string name, Transform parent, Sprite sprite, Vector2 anchoredPosition, Vector2 size, Color color)
         {
-            var root = new GameObject("EquipmentSlotTemplate", typeof(RectTransform), typeof(Image), typeof(Button), typeof(HorizontalLayoutGroup));
+            var part = CreateUIElement(name, parent);
+            var partRect = part.GetComponent<RectTransform>();
+            partRect.anchorMin = new Vector2(0.5f, 0.5f);
+            partRect.anchorMax = new Vector2(0.5f, 0.5f);
+            partRect.pivot = new Vector2(0.5f, 0.5f);
+            partRect.anchoredPosition = anchoredPosition;
+            partRect.sizeDelta = size;
+
+            var image = part.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = color;
+            image.raycastTarget = false;
+        }
+
+        private static EquipmentSlotUI CreateEquipmentSlotTemplate(Transform parent, Sprite sprite)
+        {
+            var root = new GameObject("EquipmentSlotTemplate", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
             Undo.RegisterCreatedObjectUndo(root, "Create Equipment Slot Template");
             root.transform.SetParent(parent, false);
+
+            var rect = root.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(82f, 82f);
 
             var background = root.GetComponent<Image>();
             background.sprite = sprite;
             background.type = Image.Type.Sliced;
-            background.color = new Color(0.14f, 0.16f, 0.2f, 1f);
+            background.color = new Color(0.12f, 0.17f, 0.24f, 0.95f);
             background.raycastTarget = true;
+
+            var outline = root.GetComponent<Outline>();
+            outline.effectColor = new Color(0.26f, 0.43f, 0.67f, 0.88f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = true;
 
             var button = root.GetComponent<Button>();
             button.targetGraphic = background;
-
-            var layout = root.GetComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(8, 8, 6, 6);
-            layout.spacing = 12f;
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlHeight = true;
-            layout.childControlWidth = true;
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = true;
-            AddLayoutElement(root, 74f);
 
             var iconGo = CreateUIElement("Icon", root.transform);
             var icon = iconGo.AddComponent<Image>();
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            SetLayoutSize(iconGo, 52f, 52f);
-
-            var labelsRoot = CreateUIElement("Labels", root.transform);
-            var labelsLayout = labelsRoot.AddComponent<VerticalLayoutGroup>();
-            labelsLayout.spacing = 2f;
-            labelsLayout.childAlignment = TextAnchor.MiddleLeft;
-            labelsLayout.childControlHeight = true;
-            labelsLayout.childControlWidth = true;
-            labelsLayout.childForceExpandHeight = false;
-            labelsLayout.childForceExpandWidth = true;
-            AddLayoutElement(labelsRoot, 52f, 0f);
-
-            var slotLabelGo = CreateUIElement("SlotLabel", labelsRoot.transform);
-            var slotLabel = CreateText(slotLabelGo, "槽位", font, 16, TextAnchor.MiddleLeft);
-            slotLabel.color = new Color(0.94f, 0.95f, 0.98f, 1f);
-            slotLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            slotLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            AddLayoutElement(slotLabelGo, 24f);
-
-            var itemLabelGo = CreateUIElement("ItemLabel", labelsRoot.transform);
-            var itemLabel = CreateText(itemLabelGo, "空", font, 15, TextAnchor.MiddleLeft);
-            itemLabel.color = new Color(0.82f, 0.85f, 0.9f, 1f);
-            itemLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            itemLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            AddLayoutElement(itemLabelGo, 22f);
+            var iconRect = iconGo.GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = Vector2.zero;
+            iconRect.sizeDelta = new Vector2(52f, 52f);
 
             var selectionGo = CreateUIElement("Selection", root.transform);
             var selection = selectionGo.AddComponent<Image>();
@@ -4730,8 +4741,6 @@ namespace CombatSystem.Editor
             SetSerialized(slot, "background", background);
             SetSerialized(slot, "icon", icon);
             SetSerialized(slot, "selection", selection);
-            SetSerialized(slot, "slotLabel", slotLabel);
-            SetSerialized(slot, "itemLabel", itemLabel);
 
             return slot;
         }

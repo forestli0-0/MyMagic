@@ -25,6 +25,7 @@ namespace CombatSystem.UI
         [SerializeField] private RectTransform statsRoot;
         [SerializeField] private Text statTemplate;
         [SerializeField] private Color projectedHeaderColor = new Color(0.78f, 0.84f, 0.95f, 1f);
+        [SerializeField, Range(6, 24)] private int reservedStatRows = 12;
 
         private readonly List<Text> statEntries = new List<Text>();
         private ItemInstance currentItem;
@@ -81,6 +82,8 @@ namespace CombatSystem.UI
                 {
                     descriptionText.text = string.Empty;
                 }
+
+                PadStatRows();
 
                 return;
             }
@@ -161,6 +164,7 @@ namespace CombatSystem.UI
             if (keys.Count == 0)
             {
                 AddStatLine("No modifiers.", new Color(0.75f, 0.75f, 0.75f, 1f));
+                PadStatRows();
                 return;
             }
 
@@ -177,6 +181,7 @@ namespace CombatSystem.UI
             }
 
             AddProjectedCharacterPreview(selectedStats, compareStats);
+            PadStatRows();
         }
 
         private void ClearStats()
@@ -230,6 +235,47 @@ namespace CombatSystem.UI
             entry.gameObject.SetActive(true);
             entry.text = text;
             entry.color = color;
+        }
+
+        private void PadStatRows()
+        {
+            if (statTemplate == null || statsRoot == null || reservedStatRows <= 0)
+            {
+                return;
+            }
+
+            var activeCount = 0;
+            for (int i = 0; i < statEntries.Count; i++)
+            {
+                if (statEntries[i] != null && statEntries[i].gameObject.activeSelf)
+                {
+                    activeCount++;
+                }
+            }
+
+            while (activeCount < reservedStatRows)
+            {
+                Text entry;
+                if (activeCount < statEntries.Count)
+                {
+                    entry = statEntries[activeCount];
+                    if (entry == null)
+                    {
+                        entry = Instantiate(statTemplate, statsRoot);
+                        statEntries[activeCount] = entry;
+                    }
+                }
+                else
+                {
+                    entry = Instantiate(statTemplate, statsRoot);
+                    statEntries.Add(entry);
+                }
+
+                entry.gameObject.SetActive(true);
+                entry.text = " ";
+                entry.color = new Color(1f, 1f, 1f, 0f);
+                activeCount++;
+            }
         }
 
         private static List<StatKey> BuildStatKeys(
