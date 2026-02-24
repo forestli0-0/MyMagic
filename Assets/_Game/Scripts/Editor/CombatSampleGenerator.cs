@@ -239,61 +239,61 @@ namespace CombatSystem.Editor
                 ConfigureStat(assets.MaxHealth, "Stat_MaxHealth", "Max Health", 100f, 0f, 9999f, true, false);
 
                 assets.HealthRegen = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_HealthRegen.asset");
-                ConfigureStat(assets.HealthRegen, "Stat_HealthRegen", "Health Regen", 1f, 0f, 9999f, false, false);
+                ConfigureStat(assets.HealthRegen, "Stat_HealthRegen", "生命回复", 1f, 0f, 9999f, false, false);
 
                 assets.MaxMana = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MaxMana.asset");
-                ConfigureStat(assets.MaxMana, "Stat_MaxMana", "Max Mana", 100f, 0f, 9999f, true, false);
+                ConfigureStat(assets.MaxMana, "Stat_MaxMana", "最大法力", 100f, 0f, 9999f, true, false);
 
                 assets.ManaRegen = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ManaRegen.asset");
-                ConfigureStat(assets.ManaRegen, "Stat_ManaRegen", "Mana Regen", 5f, 0f, 9999f, false, false);
+                ConfigureStat(assets.ManaRegen, "Stat_ManaRegen", "法力回复", 5f, 0f, 9999f, false, false);
 
                 assets.MoveSpeed = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MoveSpeed.asset");
-                ConfigureStat(assets.MoveSpeed, "Stat_MoveSpeed", "Move Speed", 5f, 0f, 20f, false, false);
+                ConfigureStat(assets.MoveSpeed, "Stat_MoveSpeed", "移动速度", 5f, 0f, 20f, false, false);
 
                 assets.AttackPower = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AttackPower.asset");
-                ConfigureStat(assets.AttackPower, "Stat_AttackPower", "Attack Power", 10f, 0f, 9999f, false, false);
+                ConfigureStat(assets.AttackPower, "Stat_AttackPower", "攻击力", 10f, 0f, 9999f, false, false);
 
                 assets.AbilityPower = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AbilityPower.asset");
-                ConfigureStat(assets.AbilityPower, "Stat_AbilityPower", "Ability Power", 0f, 0f, 9999f, false, false);
+                ConfigureStat(assets.AbilityPower, "Stat_AbilityPower", "法术强度", 0f, 0f, 9999f, false, false);
 
                 assets.AttackSpeed = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AttackSpeed.asset");
-                ConfigureStat(assets.AttackSpeed, "Stat_AttackSpeed", "Attack Speed", 0f, 0f, 5f, false, true);
+                ConfigureStat(assets.AttackSpeed, "Stat_AttackSpeed", "攻速加成", 0f, 0f, 5f, false, true);
 
                 assets.CritChance = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_CritChance.asset");
-                ConfigureStat(assets.CritChance, "Stat_CritChance", "Crit Chance", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.CritChance, "Stat_CritChance", "暴击率", 0f, 0f, 1f, false, true);
 
                 assets.CritMultiplier = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_CritMultiplier.asset");
-                ConfigureStat(assets.CritMultiplier, "Stat_CritMultiplier", "Crit Multiplier", 2f, 1f, 5f, false, false);
+                ConfigureStat(assets.CritMultiplier, "Stat_CritMultiplier", "暴击伤害", 2f, 1f, 5f, false, false);
 
                 assets.Armor = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Armor.asset");
-                ConfigureStat(assets.Armor, "Stat_Armor", "Armor", 0f, 0f, 9999f, true, false);
+                ConfigureStat(assets.Armor, "Stat_Armor", "护甲", 0f, 0f, 9999f, true, false);
 
                 assets.MagicResist = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicResist.asset");
-                ConfigureStat(assets.MagicResist, "Stat_MagicResist", "Magic Resist", 0f, 0f, 9999f, true, false);
+                ConfigureStat(assets.MagicResist, "Stat_MagicResist", "魔抗", 0f, 0f, 9999f, true, false);
 
                 assets.ArmorPenFlat = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ArmorPenFlat.asset");
-                ConfigureStat(assets.ArmorPenFlat, "Stat_ArmorPenFlat", "Armor Pen Flat", 0f, 0f, 9999f, true, false);
+                ConfigureStat(assets.ArmorPenFlat, "Stat_ArmorPenFlat", "护甲穿透(固定)", 0f, 0f, 9999f, true, false);
 
                 assets.ArmorPenPercent = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_ArmorPenPercent.asset");
-                ConfigureStat(assets.ArmorPenPercent, "Stat_ArmorPenPercent", "Armor Pen Percent", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.ArmorPenPercent, "Stat_ArmorPenPercent", "护甲穿透(%)", 0f, 0f, 1f, false, true);
 
                 assets.MagicPenFlat = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicPenFlat.asset");
-                ConfigureStat(assets.MagicPenFlat, "Stat_MagicPenFlat", "Magic Pen Flat", 0f, 0f, 9999f, true, false);
+                ConfigureStat(assets.MagicPenFlat, "Stat_MagicPenFlat", "法术穿透(固定)", 0f, 0f, 9999f, true, false);
 
                 assets.MagicPenPercent = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_MagicPenPercent.asset");
-                ConfigureStat(assets.MagicPenPercent, "Stat_MagicPenPercent", "Magic Pen Percent", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.MagicPenPercent, "Stat_MagicPenPercent", "法术穿透(%)", 0f, 0f, 1f, false, true);
 
                 assets.AbilityHaste = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_AbilityHaste.asset");
-                ConfigureStat(assets.AbilityHaste, "Stat_AbilityHaste", "Ability Haste", 0f, 0f, 500f, true, false);
+                ConfigureStat(assets.AbilityHaste, "Stat_AbilityHaste", "技能急速", 0f, 0f, 500f, true, false);
 
                 assets.Lifesteal = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Lifesteal.asset");
-                ConfigureStat(assets.Lifesteal, "Stat_Lifesteal", "Lifesteal", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.Lifesteal, "Stat_Lifesteal", "生命偷取", 0f, 0f, 1f, false, true);
 
                 assets.Omnivamp = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Omnivamp.asset");
-                ConfigureStat(assets.Omnivamp, "Stat_Omnivamp", "Omnivamp", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.Omnivamp, "Stat_Omnivamp", "全能吸血", 0f, 0f, 1f, false, true);
 
                 assets.Tenacity = LoadOrCreate<StatDefinition>($"{folders.Stats}/Stat_Tenacity.asset");
-                ConfigureStat(assets.Tenacity, "Stat_Tenacity", "Tenacity", 0f, 0f, 1f, false, true);
+                ConfigureStat(assets.Tenacity, "Stat_Tenacity", "韧性", 0f, 0f, 1f, false, true);
 
                 assets.TagPlayer = LoadOrCreate<TagDefinition>($"{folders.Tags}/Tag_Player.asset");
                 ConfigureTag(assets.TagPlayer, "Tag_Player", "Player");

@@ -1,4 +1,4 @@
-%YAML 1.1
+﻿%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: Stat_ManaRegen
   m_EditorClassIdentifier: 
   id: Stat_ManaRegen
-  displayName: Mana Regen
+  displayName: 法力回复
   defaultValue: 5
   minValue: 0
   maxValue: 9999
   isInteger: 0
   isPercentage: 0
+
