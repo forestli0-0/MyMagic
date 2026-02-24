@@ -65,6 +65,7 @@ namespace CombatSystem.UI
         /// 当前飘字的随机偏移量
         /// </summary>
         private Vector3 randomOffset;
+        private bool templateHidden;
 
         private void Awake()
         {
@@ -85,6 +86,7 @@ namespace CombatSystem.UI
             root = rootRect;
             elapsed = 0f;
             randomOffset = new Vector3(Random.Range(-randomOffsetRange, randomOffsetRange), 0f, 0f);
+            templateHidden = false;
 
             if (label != null)
             {
@@ -97,6 +99,25 @@ namespace CombatSystem.UI
 
             SetAlpha(1f);
             UpdatePosition(0f);
+        }
+
+        /// <summary>
+        /// 将该实例重置为“模板态”，避免模板对象被误激活时显示占位数字。
+        /// </summary>
+        public void HideAsTemplate()
+        {
+            if (templateHidden)
+            {
+                return;
+            }
+
+            if (label != null)
+            {
+                label.text = string.Empty;
+            }
+
+            SetAlpha(0f);
+            templateHidden = true;
         }
 
         /// <summary>

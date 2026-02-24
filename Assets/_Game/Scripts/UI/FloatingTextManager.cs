@@ -27,11 +27,13 @@ namespace CombatSystem.UI
         /// 当前正在显示的飘字项目列表
         /// </summary>
         private readonly List<FloatingTextItem> active = new List<FloatingTextItem>(16);
+        private readonly HashSet<FloatingTextItem> activeLookup = new HashSet<FloatingTextItem>();
         
         /// <summary>
         /// 可复用的飘字项目对象池（栈结构）
         /// </summary>
         private readonly Stack<FloatingTextItem> pool = new Stack<FloatingTextItem>(16);
+        private readonly HashSet<FloatingTextItem> poolLookup = new HashSet<FloatingTextItem>();
         private int totalCreated;
 
         public int ActiveCount => active.Count;
@@ -50,19 +52,44 @@ namespace CombatSystem.UI
             if (itemPrefab == null)
             {
                 itemPrefab = GetComponentInChildren<FloatingTextItem>(true);
-                if (itemPrefab != null)
-                {
-                    // 将模板对象隐藏，作为预制体使用
-                    itemPrefab.gameObject.SetActive(false);
-                }
             }
+
+            EnsureTemplateHidden();
 
             // 预热对象池
             Prewarm();
         }
 
+        private void OnEnable()
+        {
+            EnsureTemplateHidden();
+            ReclaimUnexpectedChildren();
+        }
+
+        private void OnDisable()
+        {
+            // HUD 被整体隐藏时强制回收，避免恢复后出现脏飘字。
+            for (int i = active.Count - 1; i >= 0; i--)
+            {
+                var item = active[i];
+                if (item == null)
+                {
+                    continue;
+                }
+
+                item.gameObject.SetActive(false);
+                PushToPool(item);
+            }
+
+            active.Clear();
+            activeLookup.Clear();
+            EnsureTemplateHidden();
+        }
+
         private void Update()
         {
+            EnsureTemplateHidden();
+
             if (active.Count == 0)
             {
                 return;
@@ -76,7 +103,7 @@ namespace CombatSystem.UI
                 var item = active[i];
                 if (item == null)
                 {
-                    active.RemoveAt(i);
+                    RemoveActiveAt(i, item);
                     continue;
                 }
 
@@ -84,7 +111,7 @@ namespace CombatSystem.UI
                 if (!item.Tick(deltaTime))
                 {
                     Release(item);
-                    active.RemoveAt(i);
+                    RemoveActiveAt(i, item);
                 }
             }
         }
@@ -110,21 +137,23 @@ namespace CombatSystem.UI
                 return;
             }
 
-            // 从对象池获取或新建实例
-            FloatingTextItem item;
-            if (pool.Count > 0)
+            // 过滤近似 0 的数值，避免显示无意义的 "0" 飘字。
+            if (Mathf.Abs(value) < 0.5f)
             {
-                item = pool.Pop();
+                return;
             }
-            else
+
+            // 从对象池获取或新建实例
+            var item = AcquireItem();
+            if (item == null)
             {
-                item = Instantiate(itemPrefab, root);
-                totalCreated++;
+                return;
             }
 
             item.gameObject.SetActive(true);
             item.Activate(worldPosition, value, worldCamera, root);
             active.Add(item);
+            activeLookup.Add(item);
         }
 
         /// <summary>
@@ -142,7 +171,7 @@ namespace CombatSystem.UI
             {
                 var item = Instantiate(itemPrefab, root);
                 item.gameObject.SetActive(false);
-                pool.Push(item);
+                PushToPool(item);
                 totalCreated++;
             }
         }
@@ -154,7 +183,96 @@ namespace CombatSystem.UI
         private void Release(FloatingTextItem item)
         {
             item.gameObject.SetActive(false);
+            PushToPool(item);
+        }
+
+        private void EnsureTemplateHidden()
+        {
+            if (itemPrefab == null)
+            {
+                return;
+            }
+
+            itemPrefab.HideAsTemplate();
+            if (itemPrefab.gameObject.activeSelf)
+            {
+                itemPrefab.gameObject.SetActive(false);
+            }
+        }
+
+        private void ReclaimUnexpectedChildren()
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            var allItems = root.GetComponentsInChildren<FloatingTextItem>(true);
+            for (int i = 0; i < allItems.Length; i++)
+            {
+                var item = allItems[i];
+                if (item == null || item == itemPrefab)
+                {
+                    continue;
+                }
+
+                var isActiveTracked = activeLookup.Contains(item);
+                if (!isActiveTracked && item.gameObject.activeSelf)
+                {
+                    item.gameObject.SetActive(false);
+                }
+
+                if (!isActiveTracked && !poolLookup.Contains(item))
+                {
+                    PushToPool(item);
+                }
+            }
+        }
+
+        private FloatingTextItem AcquireItem()
+        {
+            while (pool.Count > 0)
+            {
+                var pooled = pool.Pop();
+                poolLookup.Remove(pooled);
+                if (pooled != null)
+                {
+                    return pooled;
+                }
+            }
+
+            if (itemPrefab == null || root == null)
+            {
+                return null;
+            }
+
+            totalCreated++;
+            return Instantiate(itemPrefab, root);
+        }
+
+        private void PushToPool(FloatingTextItem item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if (!poolLookup.Add(item))
+            {
+                return;
+            }
+
             pool.Push(item);
+        }
+
+        private void RemoveActiveAt(int index, FloatingTextItem item)
+        {
+            if (index >= 0 && index < active.Count)
+            {
+                active.RemoveAt(index);
+            }
+
+            activeLookup.Remove(item);
         }
     }
 }

@@ -59,6 +59,13 @@ namespace CombatSystem.UI
         [SerializeField] private Color inactiveColor = new Color(0.2f, 0.2f, 0.2f, 1f);
         [SerializeField] private Color activeTextColor = new Color(0.97f, 0.98f, 1f, 1f);
         [SerializeField] private Color inactiveTextColor = new Color(0.85f, 0.87f, 0.9f, 1f);
+        [Header("Layout Normalization")]
+        [SerializeField] private bool normalizeTabLayoutOnEnable = true;
+        [SerializeField] private float normalizedTabsRowHeight = 60f;
+        [SerializeField] private float normalizedTabButtonHeight = 44f;
+        [SerializeField] private int normalizedTabFontSize = 20;
+        [SerializeField] private float normalizedTabsSpacing = 12f;
+        [SerializeField] private int normalizedTabsPadding = 10;
 
         private bool listenersBound;
         private readonly List<RuntimeTabBinding> runtimeBindings = new List<RuntimeTabBinding>(8);
@@ -100,6 +107,7 @@ namespace CombatSystem.UI
             UIThemeRuntime.ThemeChanged += HandleThemeChanged;
             SyncThemeColors();
             ResolveReferences();
+            NormalizeTabLayoutIfNeeded();
             SyncActiveStateFromOwner();
             CollectTabs();
             BindButtons();
@@ -526,8 +534,130 @@ namespace CombatSystem.UI
         private void HandleThemeChanged(UIThemeConfig theme)
         {
             SyncThemeColors();
+            NormalizeTabLayoutIfNeeded();
             RefreshVisualState();
             RefreshOwnerFooterHints(force: true);
+        }
+
+        private void NormalizeTabLayoutIfNeeded()
+        {
+            if (!normalizeTabLayoutOnEnable)
+            {
+                return;
+            }
+
+            var tabsRoot = ResolveTabsRoot();
+            if (tabsRoot == null)
+            {
+                return;
+            }
+
+            NormalizeTabsRowLayout(tabsRoot);
+            NormalizeTabButtonLayout(characterButton);
+            NormalizeTabButtonLayout(inventoryButton);
+            NormalizeTabButtonLayout(questButton);
+        }
+
+        private RectTransform ResolveTabsRoot()
+        {
+            Button seed = characterButton != null
+                ? characterButton
+                : inventoryButton != null
+                    ? inventoryButton
+                    : questButton;
+
+            if (seed == null)
+            {
+                return null;
+            }
+
+            return seed.transform.parent as RectTransform;
+        }
+
+        private void NormalizeTabsRowLayout(RectTransform tabsRoot)
+        {
+            if (tabsRoot == null)
+            {
+                return;
+            }
+
+            tabsRoot.localScale = Vector3.one;
+
+            var rowLayout = tabsRoot.GetComponent<HorizontalLayoutGroup>();
+            if (rowLayout == null)
+            {
+                rowLayout = tabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            }
+
+            if (rowLayout != null)
+            {
+                rowLayout.spacing = normalizedTabsSpacing;
+                rowLayout.padding = new RectOffset(
+                    normalizedTabsPadding,
+                    normalizedTabsPadding,
+                    8,
+                    8);
+                rowLayout.childAlignment = TextAnchor.MiddleCenter;
+                rowLayout.childControlHeight = true;
+                rowLayout.childControlWidth = true;
+                rowLayout.childForceExpandHeight = false;
+                rowLayout.childForceExpandWidth = true;
+            }
+
+            var rowElement = tabsRoot.GetComponent<LayoutElement>();
+            if (rowElement == null)
+            {
+                rowElement = tabsRoot.gameObject.AddComponent<LayoutElement>();
+            }
+
+            rowElement.preferredHeight = normalizedTabsRowHeight;
+            rowElement.minHeight = normalizedTabsRowHeight;
+            rowElement.flexibleHeight = 0f;
+            rowElement.flexibleWidth = 1f;
+        }
+
+        private void NormalizeTabButtonLayout(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var rect = button.transform as RectTransform;
+            if (rect != null)
+            {
+                rect.localScale = Vector3.one;
+            }
+
+            var layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = normalizedTabButtonHeight;
+            layout.minHeight = normalizedTabButtonHeight;
+            layout.flexibleHeight = 0f;
+            layout.flexibleWidth = 1f;
+            layout.minWidth = 0f;
+
+            var labels = button.GetComponentsInChildren<Text>(true);
+            if (labels == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                label.fontSize = Mathf.Max(12, normalizedTabFontSize);
+                label.resizeTextForBestFit = false;
+            }
         }
 
         private void SetOwnerFooterHintsVisible(bool visible)

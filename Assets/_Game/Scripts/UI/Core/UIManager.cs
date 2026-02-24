@@ -8,6 +8,21 @@ namespace CombatSystem.UI
 {
     public class UIManager : MonoBehaviour
     {
+        private static readonly string[] SkillBarOnlyHideNameHints =
+        {
+            "CombatLog",
+            "DebugOverlay",
+            "FloatingText",
+            "QuestTracker",
+            "ProgressionHUD",
+            "HudToast",
+            "CastBar",
+            "BuffBar",
+            "ValueBar",
+            "PlayerHealthBar",
+            "PlayerResourceBar"
+        };
+
         private enum HudVisibilityMode
         {
             Hidden = 0,
@@ -44,6 +59,10 @@ namespace CombatSystem.UI
         private float nextFocusRecoveryTime;
         private HudVisibilityMode hudVisibilityMode = HudVisibilityMode.Hidden;
         private readonly List<GameObject> hudTemporarilyHiddenObjects = new List<GameObject>(24);
+        private readonly HashSet<GameObject> hudTemporarilyHiddenLookup = new HashSet<GameObject>();
+        private readonly HashSet<GameObject> hudMaskCandidates = new HashSet<GameObject>(64);
+        private readonly HashSet<Transform> hudMaskProtectedTransforms = new HashSet<Transform>(64);
+        private readonly HashSet<Transform> hudMaskProtectedPath = new HashSet<Transform>(128);
 
         public event Action<UIInputMode> InputModeChanged;
 
@@ -63,7 +82,13 @@ namespace CombatSystem.UI
 
         private void Update()
         {
+            EnforceHudSkillBarOnlyMaskIfNeeded();
             TryRecoverUiFocus();
+        }
+
+        private void LateUpdate()
+        {
+            EnforceHudSkillBarOnlyMaskIfNeeded();
         }
 
         public void Initialize(UIRoot uiRoot)
@@ -486,8 +511,15 @@ namespace CombatSystem.UI
                     return;
                 }
 
-                if (mode == HudVisibilityMode.SkillBarOnly && hudActive && hasTemporaryMask)
+                if (mode == HudVisibilityMode.SkillBarOnly)
                 {
+                    if (!hudActive)
+                    {
+                        hudRoot.gameObject.SetActive(true);
+                    }
+
+                    // 同模式重复调用时做增量压制，避免先恢复再隐藏导致闪烁。
+                    ApplySkillBarOnlyMask();
                     return;
                 }
             }
@@ -520,8 +552,9 @@ namespace CombatSystem.UI
                 return;
             }
 
-            var keepTransforms = CollectSkillBarProtectedTransforms();
-            var candidates = new HashSet<GameObject>();
+            var keepTransforms = CollectSkillBarProtectedTransforms(hudMaskProtectedTransforms);
+            var candidates = hudMaskCandidates;
+            candidates.Clear();
 
             CollectHudHideCandidates<ValueBarUI>(candidates, keepTransforms);
             CollectHudHideCandidates<BuffBarUI>(candidates, keepTransforms);
@@ -533,25 +566,141 @@ namespace CombatSystem.UI
             CollectHudHideCandidates<UnitHealthBarManager>(candidates, keepTransforms);
             CollectHudHideCandidates<QuestTrackerHUD>(candidates, keepTransforms);
             CollectHudHideCandidates<HudToastOverlay>(candidates, keepTransforms);
+            CollectHudHideCandidatesByHierarchy(candidates, keepTransforms);
+            CollectHudHideCandidatesByName(candidates, keepTransforms);
 
             foreach (var go in candidates)
             {
-                if (go == null || !go.activeSelf)
+                if (go == null)
                 {
                     continue;
                 }
 
-                hudTemporarilyHiddenObjects.Add(go);
-                go.SetActive(false);
+                if (hudTemporarilyHiddenLookup.Add(go))
+                {
+                    hudTemporarilyHiddenObjects.Add(go);
+                }
+
+                if (go.activeSelf)
+                {
+                    go.SetActive(false);
+                }
             }
         }
 
-        private HashSet<Transform> CollectSkillBarProtectedTransforms()
+        private void CollectHudHideCandidatesByName(HashSet<GameObject> candidates, HashSet<Transform> protectedTransforms)
         {
-            var protectedTransforms = new HashSet<Transform>();
+            if (hudRoot == null || SkillBarOnlyHideNameHints == null || SkillBarOnlyHideNameHints.Length == 0)
+            {
+                return;
+            }
+
+            var nodes = hudRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                var node = nodes[i];
+                if (node == null || node == hudRoot || IsProtectedTransform(node, protectedTransforms))
+                {
+                    continue;
+                }
+
+                var name = node.name;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < SkillBarOnlyHideNameHints.Length; j++)
+                {
+                    var hint = SkillBarOnlyHideNameHints[j];
+                    if (string.IsNullOrWhiteSpace(hint))
+                    {
+                        continue;
+                    }
+
+                    if (name.IndexOf(hint, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        continue;
+                    }
+
+                    candidates.Add(node.gameObject);
+                    break;
+                }
+            }
+        }
+
+        private void CollectHudHideCandidatesByHierarchy(HashSet<GameObject> candidates, HashSet<Transform> protectedTransforms)
+        {
             if (hudRoot == null)
             {
-                return protectedTransforms;
+                return;
+            }
+
+            BuildProtectedPathSet(protectedTransforms, hudMaskProtectedPath);
+            CollectHudHideCandidatesRecursive(hudRoot, candidates, hudMaskProtectedPath);
+        }
+
+        private static void BuildProtectedPathSet(HashSet<Transform> protectedTransforms, HashSet<Transform> output)
+        {
+            if (output == null)
+            {
+                return;
+            }
+
+            output.Clear();
+            if (protectedTransforms == null || protectedTransforms.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var leaf in protectedTransforms)
+            {
+                for (var cursor = leaf; cursor != null; cursor = cursor.parent)
+                {
+                    if (!output.Add(cursor))
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        private static void CollectHudHideCandidatesRecursive(Transform root, HashSet<GameObject> candidates, HashSet<Transform> protectedPath)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var child = root.GetChild(i);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                if (protectedPath != null && protectedPath.Contains(child))
+                {
+                    CollectHudHideCandidatesRecursive(child, candidates, protectedPath);
+                    continue;
+                }
+
+                candidates.Add(child.gameObject);
+            }
+        }
+
+        private HashSet<Transform> CollectSkillBarProtectedTransforms(HashSet<Transform> output)
+        {
+            if (output == null)
+            {
+                output = new HashSet<Transform>(64);
+            }
+
+            output.Clear();
+            if (hudRoot == null)
+            {
+                return output;
             }
 
             var skillBars = hudRoot.GetComponentsInChildren<SkillBarUI>(true);
@@ -569,12 +718,12 @@ namespace CombatSystem.UI
                     var node = barTransforms[j];
                     if (node != null)
                     {
-                        protectedTransforms.Add(node);
+                        output.Add(node);
                     }
                 }
             }
 
-            return protectedTransforms;
+            return output;
         }
 
         private void CollectHudHideCandidates<T>(HashSet<GameObject> candidates, HashSet<Transform> protectedTransforms) where T : Component
@@ -638,6 +787,70 @@ namespace CombatSystem.UI
             }
 
             hudTemporarilyHiddenObjects.Clear();
+            hudTemporarilyHiddenLookup.Clear();
+        }
+
+        private void EnforceHudSkillBarOnlyMaskIfNeeded()
+        {
+            if (hudVisibilityMode != HudVisibilityMode.SkillBarOnly || hudRoot == null || !hudRoot.gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            if (IsSkillBarOnlyMaskIntact())
+            {
+                return;
+            }
+
+            // 仅补充压制，不先恢复，避免日志/面板出现可见闪烁。
+            ApplySkillBarOnlyMask();
+        }
+
+        private bool IsSkillBarOnlyMaskIntact()
+        {
+            if (hudTemporarilyHiddenObjects == null || hudTemporarilyHiddenObjects.Count == 0)
+            {
+                return false;
+            }
+
+            var hasValidTarget = false;
+            var removedNull = false;
+            for (int i = hudTemporarilyHiddenObjects.Count - 1; i >= 0; i--)
+            {
+                var go = hudTemporarilyHiddenObjects[i];
+                if (go == null)
+                {
+                    hudTemporarilyHiddenObjects.RemoveAt(i);
+                    removedNull = true;
+                    continue;
+                }
+
+                hasValidTarget = true;
+                if (go.activeSelf)
+                {
+                    return false;
+                }
+            }
+
+            if (removedNull)
+            {
+                RebuildHudHiddenLookup();
+            }
+
+            return hasValidTarget;
+        }
+
+        private void RebuildHudHiddenLookup()
+        {
+            hudTemporarilyHiddenLookup.Clear();
+            for (int i = 0; i < hudTemporarilyHiddenObjects.Count; i++)
+            {
+                var go = hudTemporarilyHiddenObjects[i];
+                if (go != null)
+                {
+                    hudTemporarilyHiddenLookup.Add(go);
+                }
+            }
         }
 
         private void TryRecoverUiFocus()
