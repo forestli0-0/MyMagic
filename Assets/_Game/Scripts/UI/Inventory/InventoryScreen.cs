@@ -3307,6 +3307,30 @@ namespace CombatSystem.UI
             }
         }
 
+        private static Font ResolveBuiltinFallbackFont()
+        {
+            try
+            {
+                var legacyFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (legacyFont != null)
+                {
+                    return legacyFont;
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                return Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         private enum DragSource
         {
             None,
