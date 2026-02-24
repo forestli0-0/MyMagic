@@ -14,10 +14,10 @@ namespace CombatSystem.UI
     /// </summary>
     public class CharacterScreen : UIScreenBase
     {
-        private const string StatMaxHealthId = "Stat_MaxHealth";
-        private const string StatAttackPowerId = "Stat_AttackPower";
-        private const string StatArmorId = "Stat_Armor";
-        private const string StatMoveSpeedId = "Stat_MoveSpeed";
+        private const string StatMaxHealthId = CombatStatIds.MaxHealth;
+        private const string StatAttackPowerId = CombatStatIds.AttackPower;
+        private const string StatArmorId = CombatStatIds.Armor;
+        private const string StatMoveSpeedId = CombatStatIds.MoveSpeed;
         private const string HoverShieldId = "__hover_shield";
         private const string HoverResourceId = "__hover_resource";
 
@@ -42,6 +42,9 @@ namespace CombatSystem.UI
         [SerializeField] private Text healthText;
         [SerializeField] private Text shieldText;
         [SerializeField] private Text resourceText;
+        [SerializeField] private Text maxManaText;
+        [SerializeField] private Text healthRegenText;
+        [SerializeField] private Text manaRegenText;
         [SerializeField] private Text attributePointsText;
         [SerializeField] private Text currencyText;
         [SerializeField] private Text moveSpeedText;
@@ -49,6 +52,9 @@ namespace CombatSystem.UI
         [SerializeField] private Text magicResistText;
         [SerializeField] private Text tenacityText;
         [SerializeField] private Text attackPowerText;
+        [SerializeField] private Text abilityPowerText;
+        [SerializeField] private Text critChanceText;
+        [SerializeField] private Text critMultiplierText;
         [SerializeField] private Text attackSpeedText;
         [SerializeField] private Text abilityHasteText;
         [SerializeField] private Text lifestealText;
@@ -513,6 +519,24 @@ namespace CombatSystem.UI
                 }
             }
 
+            if (maxManaText != null)
+            {
+                var maxMana = resource != null
+                    ? resource.Max
+                    : GetStatValue(CombatStatIds.MaxMana);
+                maxManaText.text = $"最大法力: {FormatNumber(maxMana)}";
+            }
+
+            if (healthRegenText != null)
+            {
+                healthRegenText.text = $"生命回复: {FormatNumber(GetStatValue(CombatStatIds.HealthRegen))}";
+            }
+
+            if (manaRegenText != null)
+            {
+                manaRegenText.text = $"法力回复: {FormatNumber(GetStatValue(CombatStatIds.ManaRegen))}";
+            }
+
             if (attributePointsText != null)
             {
                 if (progression != null)
@@ -556,14 +580,35 @@ namespace CombatSystem.UI
                 attackPowerText.text = $"攻击力: {FormatNumber(GetStatValue(StatAttackPowerId))}";
             }
 
+            var abilityPowerValue = GetStatValue(CombatStatIds.AbilityPower);
+            if (abilityPowerText != null)
+            {
+                abilityPowerText.text = $"法术强度: {FormatNumber(abilityPowerValue)}";
+            }
+
             if (attackSpeedText != null)
             {
                 attackSpeedText.text = $"攻速加成: {FormatPercent(GetStatValue(CombatStatIds.AttackSpeed))}";
             }
 
+            if (critChanceText != null)
+            {
+                critChanceText.text = $"暴击率: {FormatPercent(GetStatValue(CombatStatIds.CritChance))}";
+            }
+
+            if (critMultiplierText != null)
+            {
+                critMultiplierText.text = $"暴击伤害: {FormatPercent(GetStatValue(CombatStatIds.CritMultiplier))}";
+            }
+
             if (abilityHasteText != null)
             {
                 abilityHasteText.text = $"技能急速: {FormatNumber(GetStatValue(CombatStatIds.AbilityHaste))}";
+                if (abilityPowerText == null)
+                {
+                    // 兼容旧UI层级：未绑定独立法术强度文本时，与技能急速同排显示。
+                    abilityHasteText.text = $"{abilityHasteText.text}    法术强度: {FormatNumber(abilityPowerValue)}";
+                }
             }
 
             if (lifestealText != null)
@@ -1134,15 +1179,23 @@ namespace CombatSystem.UI
                 return;
             }
 
+            EnsureExtendedStatTextBindings();
+
             BindStatHoverTarget(healthText, StatMaxHealthId, "最大生命");
             BindStatHoverTarget(shieldText, HoverShieldId, "护盾");
             BindStatHoverTarget(resourceText, HoverResourceId, "资源");
+            BindStatHoverTarget(maxManaText, CombatStatIds.MaxMana, "最大法力");
+            BindStatHoverTarget(healthRegenText, CombatStatIds.HealthRegen, "生命回复");
+            BindStatHoverTarget(manaRegenText, CombatStatIds.ManaRegen, "法力回复");
             BindStatHoverTarget(armorText, CombatStatIds.Armor, "护甲");
             BindStatHoverTarget(moveSpeedText, CombatStatIds.MoveSpeed, "移动速度");
             BindStatHoverTarget(attackPowerText, StatAttackPowerId, "攻击力");
+            BindStatHoverTarget(abilityPowerText, CombatStatIds.AbilityPower, "法术强度");
             BindStatHoverTarget(magicResistText, CombatStatIds.MagicResist, "魔抗");
             BindStatHoverTarget(tenacityText, CombatStatIds.Tenacity, "韧性");
             BindStatHoverTarget(attackSpeedText, CombatStatIds.AttackSpeed, "攻速加成");
+            BindStatHoverTarget(critChanceText, CombatStatIds.CritChance, "暴击率");
+            BindStatHoverTarget(critMultiplierText, CombatStatIds.CritMultiplier, "暴击伤害");
             BindStatHoverTarget(abilityHasteText, CombatStatIds.AbilityHaste, "技能急速");
             BindStatHoverTarget(lifestealText, CombatStatIds.Lifesteal, "生命偷取");
             BindStatHoverTarget(omnivampText, CombatStatIds.Omnivamp, "全能吸血");
@@ -1152,6 +1205,55 @@ namespace CombatSystem.UI
             BindStatHoverTarget(magicPenPercentText, CombatStatIds.MagicPenPercent, "法术穿透(%)");
 
             statHoverTargetsBound = true;
+        }
+
+        private void EnsureExtendedStatTextBindings()
+        {
+            abilityPowerText = EnsureSiblingText(abilityPowerText, abilityHasteText, "AbilityPowerText_Auto", "法术强度: -", 1);
+            critChanceText = EnsureSiblingText(critChanceText, attackSpeedText, "CritChanceText_Auto", "暴击率: -", 1);
+            var critTemplate = critChanceText != null ? critChanceText : attackSpeedText;
+            critMultiplierText = EnsureSiblingText(critMultiplierText, critTemplate, "CritMultiplierText_Auto", "暴击伤害: -", 1);
+            maxManaText = EnsureSiblingText(maxManaText, resourceText, "MaxManaText_Auto", "最大法力: -", 1);
+            var regenTemplate = maxManaText != null ? maxManaText : resourceText;
+            healthRegenText = EnsureSiblingText(healthRegenText, regenTemplate, "HealthRegenText_Auto", "生命回复: -", 1);
+            var manaRegenTemplate = healthRegenText != null ? healthRegenText : regenTemplate;
+            manaRegenText = EnsureSiblingText(manaRegenText, manaRegenTemplate, "ManaRegenText_Auto", "法力回复: -", 1);
+        }
+
+        private Text EnsureSiblingText(Text target, Text template, string cloneName, string fallbackText, int siblingOffset)
+        {
+            if (target != null || template == null)
+            {
+                return target;
+            }
+
+            var templateRect = template.transform as RectTransform;
+            if (templateRect == null || templateRect.parent == null)
+            {
+                return target;
+            }
+
+            var clone = Instantiate(template.gameObject, templateRect.parent);
+            clone.name = cloneName;
+            var cloneText = clone.GetComponent<Text>();
+            if (cloneText == null)
+            {
+                Destroy(clone);
+                return target;
+            }
+
+            cloneText.text = fallbackText;
+            var cloneRect = cloneText.transform as RectTransform;
+            if (cloneRect != null)
+            {
+                var sibling = Mathf.Clamp(
+                    templateRect.GetSiblingIndex() + siblingOffset,
+                    0,
+                    templateRect.parent.childCount - 1);
+                cloneRect.SetSiblingIndex(sibling);
+            }
+
+            return cloneText;
         }
 
         private void BindStatHoverTarget(Text targetText, string statId, string statLabel)

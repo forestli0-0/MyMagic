@@ -8,6 +8,14 @@ namespace CombatSystem.Data
     /// </remarks>
     public static class CombatStatIds
     {
+        /// <summary>最大生命</summary>
+        public const string MaxHealth = "Stat_MaxHealth";
+        /// <summary>最大法力</summary>
+        public const string MaxMana = "Stat_MaxMana";
+        /// <summary>攻击力</summary>
+        public const string AttackPower = "Stat_AttackPower";
+        /// <summary>法术强度</summary>
+        public const string AbilityPower = "Stat_AbilityPower";
         /// <summary>护甲（物理减伤）</summary>
         public const string Armor = "Stat_Armor";
         /// <summary>魔法抗性（魔法减伤）</summary>
@@ -24,6 +32,14 @@ namespace CombatSystem.Data
         public const string AbilityHaste = "Stat_AbilityHaste";
         /// <summary>攻击速度加成</summary>
         public const string AttackSpeed = "Stat_AttackSpeed";
+        /// <summary>暴击率</summary>
+        public const string CritChance = "Stat_CritChance";
+        /// <summary>暴击伤害</summary>
+        public const string CritMultiplier = "Stat_CritMultiplier";
+        /// <summary>生命回复</summary>
+        public const string HealthRegen = "Stat_HealthRegen";
+        /// <summary>法力回复</summary>
+        public const string ManaRegen = "Stat_ManaRegen";
         /// <summary>韧性（减少控制效果持续时间）</summary>
         /// <remarks>
         /// TODO: 需要在 BuffController 中实现韧性对控制效果持续时间的影响。

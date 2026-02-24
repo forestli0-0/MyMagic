@@ -2541,6 +2541,9 @@ namespace CombatSystem.Editor
             var healthText = CreateCharacterLine(survivabilityBody, "生命: -", font, 18, new Color(0.93f, 0.64f, 0.64f, 1f));
             var shieldText = CreateCharacterLine(survivabilityBody, "护盾: -", font, 18, new Color(0.75f, 0.85f, 1f, 1f));
             var resourceText = CreateCharacterLine(survivabilityBody, "资源: -", font, 18, new Color(0.67f, 0.8f, 0.97f, 1f));
+            var maxManaText = CreateCharacterLine(survivabilityBody, "最大法力: -", font, 18, new Color(0.67f, 0.8f, 0.97f, 1f));
+            var healthRegenText = CreateCharacterLine(survivabilityBody, "生命回复: -", font, 18, new Color(0.84f, 0.92f, 0.98f, 1f));
+            var manaRegenText = CreateCharacterLine(survivabilityBody, "法力回复: -", font, 18, new Color(0.84f, 0.92f, 0.98f, 1f));
             var moveSpeedText = CreateCharacterLine(survivabilityBody, "移动速度: -", font, 18, new Color(0.84f, 0.92f, 0.98f, 1f));
 
             var defenseBody = CreateCharacterCard(leftColumn.transform, "DefenseCard", sprite, font, "防御属性", 0f, 1f);
@@ -2550,7 +2553,10 @@ namespace CombatSystem.Editor
 
             var offenseBody = CreateCharacterCard(rightColumn.transform, "OffenseCard", sprite, font, "进攻属性", 0f, 1f);
             var attackPowerText = CreateCharacterLine(offenseBody, "攻击力: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var abilityPowerText = CreateCharacterLine(offenseBody, "法术强度: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
             var attackSpeedText = CreateCharacterLine(offenseBody, "攻速加成: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var critChanceText = CreateCharacterLine(offenseBody, "暴击率: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
+            var critMultiplierText = CreateCharacterLine(offenseBody, "暴击伤害: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
             var abilityHasteText = CreateCharacterLine(offenseBody, "技能急速: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
             var lifestealText = CreateCharacterLine(offenseBody, "生命偷取: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
             var omnivampText = CreateCharacterLine(offenseBody, "全能吸血: -", font, 18, new Color(0.9f, 0.9f, 0.92f, 1f));
@@ -2582,6 +2588,9 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "healthText", healthText);
             SetSerialized(screen, "shieldText", shieldText);
             SetSerialized(screen, "resourceText", resourceText);
+            SetSerialized(screen, "maxManaText", maxManaText);
+            SetSerialized(screen, "healthRegenText", healthRegenText);
+            SetSerialized(screen, "manaRegenText", manaRegenText);
             SetSerialized(screen, "attributePointsText", pointsText);
             SetSerialized(screen, "currencyText", currencyText);
             SetSerialized(screen, "moveSpeedText", moveSpeedText);
@@ -2589,7 +2598,10 @@ namespace CombatSystem.Editor
             SetSerialized(screen, "magicResistText", magicResistText);
             SetSerialized(screen, "tenacityText", tenacityText);
             SetSerialized(screen, "attackPowerText", attackPowerText);
+            SetSerialized(screen, "abilityPowerText", abilityPowerText);
             SetSerialized(screen, "attackSpeedText", attackSpeedText);
+            SetSerialized(screen, "critChanceText", critChanceText);
+            SetSerialized(screen, "critMultiplierText", critMultiplierText);
             SetSerialized(screen, "abilityHasteText", abilityHasteText);
             SetSerialized(screen, "lifestealText", lifestealText);
             SetSerialized(screen, "omnivampText", omnivampText);

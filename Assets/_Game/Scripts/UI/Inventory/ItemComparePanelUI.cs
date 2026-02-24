@@ -163,7 +163,7 @@ namespace CombatSystem.UI
 
             if (keys.Count == 0)
             {
-                AddStatLine("No modifiers.", new Color(0.75f, 0.75f, 0.75f, 1f));
+                AddStatLine("无属性修正。", new Color(0.75f, 0.75f, 0.75f, 1f));
                 PadStatRows();
                 return;
             }
@@ -647,10 +647,90 @@ namespace CombatSystem.UI
         {
             if (stat == null)
             {
-                return "Stat";
+                return "属性";
+            }
+
+            if (TryResolveLocalizedStatName(stat.Id, out var localized))
+            {
+                return localized;
             }
 
             return string.IsNullOrWhiteSpace(stat.DisplayName) ? stat.name : stat.DisplayName;
+        }
+
+        private static bool TryResolveLocalizedStatName(string statId, out string localizedName)
+        {
+            localizedName = string.Empty;
+            if (string.IsNullOrWhiteSpace(statId))
+            {
+                return false;
+            }
+
+            switch (statId)
+            {
+                case CombatStatIds.MaxHealth:
+                    localizedName = "最大生命";
+                    return true;
+                case CombatStatIds.MaxMana:
+                    localizedName = "最大法力";
+                    return true;
+                case CombatStatIds.AttackPower:
+                    localizedName = "攻击力";
+                    return true;
+                case CombatStatIds.AbilityPower:
+                    localizedName = "法术强度";
+                    return true;
+                case CombatStatIds.AbilityHaste:
+                    localizedName = "技能急速";
+                    return true;
+                case CombatStatIds.AttackSpeed:
+                    localizedName = "攻速加成";
+                    return true;
+                case CombatStatIds.CritChance:
+                    localizedName = "暴击率";
+                    return true;
+                case CombatStatIds.CritMultiplier:
+                    localizedName = "暴击伤害";
+                    return true;
+                case CombatStatIds.Armor:
+                    localizedName = "护甲";
+                    return true;
+                case CombatStatIds.MagicResist:
+                    localizedName = "魔抗";
+                    return true;
+                case CombatStatIds.MoveSpeed:
+                    localizedName = "移动速度";
+                    return true;
+                case CombatStatIds.HealthRegen:
+                    localizedName = "生命回复";
+                    return true;
+                case CombatStatIds.ManaRegen:
+                    localizedName = "法力回复";
+                    return true;
+                case CombatStatIds.Tenacity:
+                    localizedName = "韧性";
+                    return true;
+                case CombatStatIds.Lifesteal:
+                    localizedName = "生命偷取";
+                    return true;
+                case CombatStatIds.Omnivamp:
+                    localizedName = "全能吸血";
+                    return true;
+                case CombatStatIds.ArmorPenFlat:
+                    localizedName = "护甲穿透(固定)";
+                    return true;
+                case CombatStatIds.ArmorPenPercent:
+                    localizedName = "护甲穿透(%)";
+                    return true;
+                case CombatStatIds.MagicPenFlat:
+                    localizedName = "法术穿透(固定)";
+                    return true;
+                case CombatStatIds.MagicPenPercent:
+                    localizedName = "法术穿透(%)";
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static Color ResolveCompareColor(float diff, bool hasCompare)
