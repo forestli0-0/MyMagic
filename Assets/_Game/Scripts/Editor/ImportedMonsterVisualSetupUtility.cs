@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using CombatSystem.Data;
 using UnityEditor;
@@ -23,6 +24,12 @@ namespace CombatSystem.Editor
         private const string CyberProfilePath = ProfileFolder + "/Unit_Enemy_Cyber_Visual.asset";
         private const string SpiderControllerPath = ControllerFolder + "/Unit_Monster_Spider.controller";
         private const string CyberControllerPath = ControllerFolder + "/Unit_Monster_Cyber.controller";
+        private const string CyberStableClipFolder = "Assets/_Game/Art/Monsters/Animations/Cyber";
+        private const string CyberStableIdleClipPath = CyberStableClipFolder + "/Cyber_Idle.anim";
+        private const string CyberStableRunClipPath = CyberStableClipFolder + "/Cyber_Run.anim";
+        private const string CyberStableAttackClipPath = CyberStableClipFolder + "/Cyber_Attack.anim";
+        private const string CyberStableCastClipPath = CyberStableClipFolder + "/Cyber_Cast.anim";
+        private const string CyberStableDieClipPath = CyberStableClipFolder + "/Cyber_Die.anim";
 
         private const string UnitEnemyPath = "Assets/_Game/ScriptableObjects/Units/Unit_Enemy.asset";
         private const string UnitEnemyHighHpPath = "Assets/_Game/ScriptableObjects/Units/Unit_Enemy_high_hp.asset";
@@ -40,6 +47,7 @@ namespace CombatSystem.Editor
         private const string CyberAvatarSourcePath = "Assets/Cyber Monsters 2/Base mesh/Cyber_Monsters_2.fbx";
         private const string CyberIdlePath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@Idle.fbx";
         private const string CyberMovePath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@Run.fbx";
+        private const string CyberWalkPath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@Walking.fbx";
         private const string CyberAttackPath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@sword attack.fbx";
         private const string CyberCastPath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@shoots gun_2.fbx";
         private const string CyberDiePath = "Assets/Cyber Monsters 2/Animation/Anim_Cyber_Monsters_2@Death.fbx";
@@ -102,6 +110,129 @@ namespace CombatSystem.Editor
                 "OK");
         }
 
+        [MenuItem("Combat/Visual/Imported Monsters/Fix Cyber Locomotion Loop")]
+        public static void FixCyberLocomotionLoop()
+        {
+            FixCyberLocomotionLoopInternal(interactive: true);
+        }
+
+        [MenuItem("Combat/Visual/Imported Monsters/Dump Cyber Animation Diagnostics")]
+        public static void DumpCyberAnimationDiagnostics()
+        {
+            DumpCyberAnimationDiagnosticsInternal(interactive: true);
+        }
+
+        public static void DumpCyberAnimationDiagnosticsBatch()
+        {
+            DumpCyberAnimationDiagnosticsInternal(interactive: false);
+        }
+
+        public static void FixCyberLocomotionLoopBatch()
+        {
+            FixCyberLocomotionLoopInternal(interactive: false);
+        }
+
+        private static void FixCyberLocomotionLoopInternal(bool interactive)
+        {
+            var changed = 0;
+            changed += EnsureModelClipLooping(CyberIdlePath) ? 1 : 0;
+            changed += EnsureModelClipLooping(CyberMovePath) ? 1 : 0;
+            changed += EnsureModelClipLooping(CyberWalkPath) ? 1 : 0;
+
+            // 重新导入 FBX 后，子动画的 local file id 可能变化，旧 Controller 会出现 Missing(Motion)。
+            // 因此这里强制重建一次 Cyber Controller 并回写到 Cyber 视觉配置。
+            if (RebuildCyberControllerAndProfileBinding())
+            {
+                changed++;
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"[ImportedMonsterSetup] Cyber locomotion loop fix completed. changed={changed}");
+            if (interactive)
+            {
+                EditorUtility.DisplayDialog(
+                    "Imported Monster Setup",
+                    $"赛博怪移动动画循环修复完成。\n变更文件数: {changed}",
+                    "OK");
+            }
+        }
+
+        private static bool RebuildCyberControllerAndProfileBinding()
+        {
+            if (!TryPrepareCyberControllerClips(
+                    out var cyberIdle,
+                    out var cyberMove,
+                    out var cyberAttack,
+                    out var cyberCast,
+                    out var cyberHit,
+                    out var cyberDie))
+            {
+                Debug.LogError("[ImportedMonsterSetup] Rebuild cyber controller failed: unable to prepare stable cyber clips.");
+                return false;
+            }
+
+            var cyberController = BuildOrReplaceController(
+                CyberControllerPath,
+                cyberIdle,
+                cyberMove,
+                cyberAttack,
+                cyberCast,
+                cyberHit,
+                cyberDie);
+
+            var cyberProfile = AssetDatabase.LoadAssetAtPath<UnitVisualProfile>(CyberProfilePath);
+            if (cyberProfile == null)
+            {
+                return cyberController != null;
+            }
+
+            var so = new SerializedObject(cyberProfile);
+            var changed = SetObjectIfDifferent(so, "animatorController", cyberController);
+            if (changed)
+            {
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(cyberProfile);
+            }
+
+            return cyberController != null || changed;
+        }
+
+        private static void DumpCyberAnimationDiagnosticsInternal(bool interactive)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<UnitVisualProfile>(CyberProfilePath);
+            var idle = LoadPrimaryClip(CyberIdlePath);
+            var run = LoadPrimaryClip(CyberMovePath);
+            var walk = LoadPrimaryClip(CyberWalkPath);
+            var cast = LoadPrimaryClip(CyberCastPath);
+            var attack = LoadPrimaryClip(CyberAttackPath);
+            var die = LoadPrimaryClip(CyberDiePath);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CyberPrefabPath);
+            var prefabAnimator = prefab != null ? prefab.GetComponentInChildren<Animator>(true) : null;
+
+            var lines = new[]
+            {
+                "[ImportedMonsterSetup] Cyber diagnostics:",
+                DescribeClip("Idle", idle),
+                DescribeClip("Run", run),
+                DescribeClip("Walk", walk),
+                DescribeClip("Cast", cast),
+                DescribeClip("Attack", attack),
+                DescribeClip("Die", die),
+                $"Profile: {(profile != null ? profile.name : "<null>")}, controller={(profile != null && profile.AnimatorController != null ? profile.AnimatorController.name : "<null>")}, avatar={(profile != null && profile.AvatarOverride != null ? profile.AvatarOverride.name : "<null>")}",
+                $"Prefab Animator: {(prefabAnimator != null ? prefabAnimator.name : "<null>")}, controller={(prefabAnimator != null && prefabAnimator.runtimeAnimatorController != null ? prefabAnimator.runtimeAnimatorController.name : "<null>")}, avatar={(prefabAnimator != null && prefabAnimator.avatar != null ? prefabAnimator.avatar.name : "<null>")}"
+            };
+
+            var message = string.Join("\n", lines);
+            Debug.Log(message);
+
+            if (interactive)
+            {
+                EditorUtility.DisplayDialog("Imported Monster Setup", message, "OK");
+            }
+        }
+
         public static void SetupAndApplyToUnitsBatch()
         {
             SetupInternal(applyProfilesToUnits: true, interactive: false);
@@ -112,6 +243,11 @@ namespace CombatSystem.Editor
             EnsureFolder(ControllerFolder);
             EnsureFolder(ProfileFolder);
 
+            // 某些第三方 FBX 默认不是循环，移动状态会在几步后停在末帧。
+            EnsureModelClipLooping(CyberIdlePath);
+            EnsureModelClipLooping(CyberMovePath);
+            EnsureModelClipLooping(CyberWalkPath);
+
             var spiderPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SpiderPrefabPath);
             var cyberPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CyberPrefabPath);
             var spiderIdle = LoadClip(SpiderIdlePath);
@@ -121,12 +257,10 @@ namespace CombatSystem.Editor
             var spiderHit = LoadClip(SpiderHitPath) ?? spiderIdle;
             var spiderDie = LoadClip(SpiderDiePath);
 
-            var cyberIdle = LoadPrimaryClip(CyberIdlePath);
-            var cyberMove = LoadPrimaryClip(CyberMovePath);
-            var cyberAttack = LoadPrimaryClip(CyberAttackPath);
-            var cyberCast = LoadPrimaryClip(CyberCastPath) ?? cyberAttack;
-            var cyberHit = cyberIdle;
-            var cyberDie = LoadPrimaryClip(CyberDiePath);
+            var cyberIdleSource = LoadPrimaryClip(CyberIdlePath);
+            var cyberMoveSource = LoadPrimaryClip(CyberMovePath);
+            var cyberAttackSource = LoadPrimaryClip(CyberAttackPath);
+            var cyberDieSource = LoadPrimaryClip(CyberDiePath);
 
             if (!ValidateRequiredAssets(
                     spiderPrefab,
@@ -135,12 +269,30 @@ namespace CombatSystem.Editor
                     spiderMove,
                     spiderAttack,
                     spiderDie,
-                    cyberIdle,
-                    cyberMove,
-                    cyberAttack,
-                    cyberDie,
+                    cyberIdleSource,
+                    cyberMoveSource,
+                    cyberAttackSource,
+                    cyberDieSource,
                     interactive))
             {
+                return;
+            }
+
+            if (!TryPrepareCyberControllerClips(
+                    out var cyberIdle,
+                    out var cyberMove,
+                    out var cyberAttack,
+                    out var cyberCast,
+                    out var cyberHit,
+                    out var cyberDie))
+            {
+                var message = "[ImportedMonsterSetup] Unable to prepare stable cyber clips.";
+                Debug.LogError(message);
+                if (interactive)
+                {
+                    EditorUtility.DisplayDialog("Imported Monster Setup", message, "OK");
+                }
+
                 return;
             }
 
@@ -163,7 +315,8 @@ namespace CombatSystem.Editor
                 cyberDie);
 
             var spiderAvatar = LoadPrimaryAvatar(SpiderAvatarSourcePath);
-            var cyberAvatar = LoadPrimaryAvatar(CyberAvatarSourcePath);
+            // Cyber 动画与 Idle 源 Avatar 绑定最稳定，优先使用 Idle 的 Avatar。
+            var cyberAvatar = LoadPrimaryAvatar(CyberIdlePath) ?? LoadPrimaryAvatar(CyberAvatarSourcePath);
 
             var spiderProfile = LoadOrCreateProfile(SpiderProfilePath, "Unit_Enemy_Spider_Visual");
             var cyberProfile = LoadOrCreateProfile(CyberProfilePath, "Unit_Enemy_Cyber_Visual");
@@ -316,6 +469,12 @@ namespace CombatSystem.Editor
             controller.AddParameter("IsCasting", AnimatorControllerParameterType.Bool);
 
             var stateMachine = controller.layers[0].stateMachine;
+            var layers = controller.layers;
+            if (layers != null && layers.Length > 0)
+            {
+                layers[0].defaultWeight = 1f;
+                controller.layers = layers;
+            }
             var locomotionState = stateMachine.AddState("Locomotion");
             var attackState = stateMachine.AddState("Attack");
             var castState = stateMachine.AddState("Cast");
@@ -352,6 +511,75 @@ namespace CombatSystem.Editor
             CreateReturnToLocomotion(hitState, locomotionState);
 
             return controller;
+        }
+
+        private static bool TryPrepareCyberControllerClips(
+            out AnimationClip cyberIdle,
+            out AnimationClip cyberMove,
+            out AnimationClip cyberAttack,
+            out AnimationClip cyberCast,
+            out AnimationClip cyberHit,
+            out AnimationClip cyberDie)
+        {
+            cyberIdle = null;
+            cyberMove = null;
+            cyberAttack = null;
+            cyberCast = null;
+            cyberHit = null;
+            cyberDie = null;
+
+            var sourceIdle = LoadPrimaryClip(CyberIdlePath);
+            var sourceMove = LoadPrimaryClip(CyberMovePath);
+            var sourceAttack = LoadPrimaryClip(CyberAttackPath);
+            var sourceCast = LoadPrimaryClip(CyberCastPath);
+            var sourceDie = LoadPrimaryClip(CyberDiePath);
+            if (sourceIdle == null || sourceMove == null || sourceAttack == null || sourceDie == null)
+            {
+                return false;
+            }
+
+            EnsureFolder(CyberStableClipFolder);
+
+            cyberIdle = CreateOrUpdateClipAsset(sourceIdle, CyberStableIdleClipPath, "Cyber_Idle");
+            cyberMove = CreateOrUpdateClipAsset(sourceMove, CyberStableRunClipPath, "Cyber_Run");
+            cyberAttack = CreateOrUpdateClipAsset(sourceAttack, CyberStableAttackClipPath, "Cyber_Attack");
+            cyberDie = CreateOrUpdateClipAsset(sourceDie, CyberStableDieClipPath, "Cyber_Die");
+            if (sourceCast != null)
+            {
+                cyberCast = CreateOrUpdateClipAsset(sourceCast, CyberStableCastClipPath, "Cyber_Cast");
+            }
+
+            cyberCast ??= cyberAttack;
+            cyberHit = cyberIdle;
+            return cyberIdle != null && cyberMove != null && cyberAttack != null && cyberCast != null && cyberDie != null;
+        }
+
+        private static AnimationClip CreateOrUpdateClipAsset(AnimationClip sourceClip, string targetPath, string targetName)
+        {
+            if (sourceClip == null || string.IsNullOrWhiteSpace(targetPath))
+            {
+                return null;
+            }
+
+            var folder = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrWhiteSpace(folder))
+            {
+                EnsureFolder(folder.Replace('\\', '/'));
+            }
+
+            var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(targetPath);
+            if (existing == null)
+            {
+                var copy = UnityEngine.Object.Instantiate(sourceClip);
+                copy.name = targetName;
+                AssetDatabase.CreateAsset(copy, targetPath);
+                return copy;
+            }
+
+            EditorUtility.CopySerialized(sourceClip, existing);
+            existing.name = targetName;
+            EditorUtility.SetDirty(existing);
+            return existing;
         }
 
         private static void CreateAnyStateTriggerTransition(
@@ -423,7 +651,7 @@ namespace CombatSystem.Editor
                 return null;
             }
 
-            var preferredName = System.IO.Path.GetFileNameWithoutExtension(path);
+            var preferredName = Path.GetFileNameWithoutExtension(path);
             foreach (var asset in assets)
             {
                 if (!(asset is AnimationClip clip) || clip.name.StartsWith("__preview__", StringComparison.Ordinal))
@@ -448,6 +676,60 @@ namespace CombatSystem.Editor
             }
 
             return AssetDatabase.LoadAllAssetsAtPath(path).OfType<Avatar>().FirstOrDefault(a => a != null && a.isValid);
+        }
+
+        private static string DescribeClip(string label, AnimationClip clip)
+        {
+            if (clip == null)
+            {
+                return $"{label}: <null>";
+            }
+
+            var bindings = AnimationUtility.GetCurveBindings(clip);
+            var varyingCurves = 0;
+            var rootCurves = 0;
+            var sampleBindings = new System.Collections.Generic.List<string>(4);
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                var binding = bindings[i];
+                if (binding.path.Length == 0)
+                {
+                    rootCurves++;
+                }
+
+                var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                if (curve == null || curve.keys == null || curve.keys.Length == 0)
+                {
+                    continue;
+                }
+
+                var min = curve.keys[0].value;
+                var max = min;
+                for (int k = 1; k < curve.keys.Length; k++)
+                {
+                    var value = curve.keys[k].value;
+                    if (value < min)
+                    {
+                        min = value;
+                    }
+                    else if (value > max)
+                    {
+                        max = value;
+                    }
+                }
+
+                if (Mathf.Abs(max - min) > 0.0001f)
+                {
+                    varyingCurves++;
+                    if (sampleBindings.Count < 4)
+                    {
+                        sampleBindings.Add($"{binding.path}/{binding.propertyName}");
+                    }
+                }
+            }
+
+            var samples = sampleBindings.Count > 0 ? string.Join(" | ", sampleBindings) : "<none>";
+            return $"{label}: name={clip.name}, length={clip.length:F3}s, frameRate={clip.frameRate:F1}, curves={bindings.Length}, varying={varyingCurves}, rootCurves={rootCurves}, legacy={clip.legacy}, humanMotion={clip.humanMotion}, samples={samples}";
         }
 
         private static bool ValidateRequiredAssets(
@@ -570,6 +852,67 @@ namespace CombatSystem.Editor
 
                 current = next;
             }
+        }
+
+        private static bool EnsureModelClipLooping(string assetPath)
+        {
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                return false;
+            }
+
+            var importer = AssetImporter.GetAtPath(assetPath) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"[ImportedMonsterSetup] ModelImporter not found: {assetPath}");
+                return false;
+            }
+
+            var clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+            {
+                clips = importer.defaultClipAnimations;
+            }
+
+            if (clips == null || clips.Length == 0)
+            {
+                Debug.LogWarning($"[ImportedMonsterSetup] No clips found in importer: {assetPath}");
+                return false;
+            }
+
+            var changed = false;
+            for (int i = 0; i < clips.Length; i++)
+            {
+                var clip = clips[i];
+                if (!clip.loopTime)
+                {
+                    clip.loopTime = true;
+                    changed = true;
+                }
+
+                if (!clip.loopPose)
+                {
+                    clip.loopPose = true;
+                    changed = true;
+                }
+
+                if (clip.wrapMode != WrapMode.Loop)
+                {
+                    clip.wrapMode = WrapMode.Loop;
+                    changed = true;
+                }
+
+                clips[i] = clip;
+            }
+
+            if (!changed)
+            {
+                return false;
+            }
+
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+            return true;
         }
 
         private static bool UpgradeMaterialToUrpLit(Material material, Shader urpLit)

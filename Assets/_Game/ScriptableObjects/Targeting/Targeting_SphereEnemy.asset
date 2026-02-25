@@ -22,5 +22,6 @@ MonoBehaviour:
   maxTargets: 6
   sort: 1
   includeSelf: 0
+  allowEmpty: 1
   requiredTags: []
   blockedTags: []

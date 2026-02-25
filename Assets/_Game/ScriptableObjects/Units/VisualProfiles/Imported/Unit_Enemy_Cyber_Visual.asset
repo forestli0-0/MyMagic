@@ -19,7 +19,7 @@ MonoBehaviour:
   localScale: {x: 1, y: 1, z: 1}
   hideRootRenderersWhenModelActive: 1
   animatorController: {fileID: 9100000, guid: fbf6bf3e1c65ae945a7572a5aa2e7d05, type: 2}
-  avatarOverride: {fileID: 9000000, guid: a4544f3443b35324db34bf13819a2a48, type: 3}
+  avatarOverride: {fileID: 9000000, guid: ffac060b1c1282641bb30bd1bc5ffbfb, type: 3}
   applyRootMotion: 0
   moveSpeedFloat: MoveSpeed
   movingBool: IsMoving
