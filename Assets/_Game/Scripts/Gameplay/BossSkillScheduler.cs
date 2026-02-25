@@ -24,6 +24,12 @@ namespace CombatSystem.Gameplay
         [SerializeField] private bool autoStart = true;
         [SerializeField] private float initialDelay = 1f;
         [SerializeField] private float retryInterval = 0.15f;
+        [Tooltip("预警结束后到真正尝试施法之间的额外前摇（秒），用于确保体感是“先预警再攻击”。")]
+        [SerializeField] private float castDelayAfterTelegraph = 0.12f;
+        [Tooltip("预警结束后首次施法失败时的重试窗口（秒），用于减少“有预警但未命中/未施法”的体感。")]
+        [SerializeField] private float postTelegraphCastRetryWindow = 0.25f;
+        [Tooltip("预警后施法重试间隔（秒）。")]
+        [SerializeField] private float postTelegraphCastRetryInterval = 0.05f;
         [Tooltip("Boss 施法最小停移时长（秒），用于避免动画仍在播放时出现滑步。")]
         [SerializeField] private float minimumMovementLockDuration = 0.35f;
         [Tooltip("施法动作收尾的额外停移缓冲（秒），用于消除末尾一小段滑步。")]
@@ -38,11 +44,25 @@ namespace CombatSystem.Gameplay
         [SerializeField] private string[] castStateTags = { "Cast", "Casting" };
         [Tooltip("等待进入/退出施法动画或事件信号的最大时长（秒），超时后回退到时长锁，防止卡死。")]
         [SerializeField] private float animatorCastStateLockTimeout = 2.5f;
+        [Tooltip("范围/近战预警开始时是否立即锁定 Boss 移动（推荐开启，避免边追边读条）。")]
+        [SerializeField] private bool lockMovementDuringAreaTelegraph = true;
+        [Tooltip("锁定型（远程单体）预警开始时是否也锁定 Boss 移动。")]
+        [SerializeField] private bool lockMovementDuringLockedTelegraph;
+        [Tooltip("预警停移的额外缓冲（秒），避免预警尾帧恢复追击。")]
+        [SerializeField] private float telegraphMovementLockBuffer = 0.05f;
 
         [Header("Telegraph")]
         [SerializeField] private bool showGroundTelegraph = true;
         [SerializeField] private Color telegraphColor = new Color(1f, 0.25f, 0.2f, 0.4f);
+        [SerializeField] private Color lockedTelegraphColor = new Color(1f, 0.35f, 0.2f, 0.8f);
+        [SerializeField] private Color telegraphFillColor = new Color(1f, 0.2f, 0.15f, 0.2f);
         [SerializeField] private float fallbackTelegraphRadius = 2f;
+        [SerializeField] private float lockedTelegraphRadius = 1.2f;
+        [SerializeField, Range(0.05f, 0.95f)] private float expandingTelegraphStartRatio = 0.2f;
+        [SerializeField, Range(12, 96)] private int telegraphSegments = 48;
+        [SerializeField] private float telegraphRingWidth = 0.12f;
+        [SerializeField] private float meleeRangeThreshold = 2.5f;
+        [SerializeField] private bool drawTelegraphFill = true;
         [SerializeField] private float telegraphHeight = 0.02f;
         [SerializeField] private bool logCastCancellation;
 
@@ -53,6 +73,26 @@ namespace CombatSystem.Gameplay
         private bool animatorCastStateObserved;
         private float animatorCastLockDeadline;
         private UnitAnimationEventProxy animationEventProxy;
+        private Material telegraphLineMaterial;
+        private Material telegraphFillMaterial;
+
+        private enum BossTelegraphStyle
+        {
+            ExpandingArea = 0,
+            LockedTarget = 1
+        }
+
+        private sealed class BossTelegraphRuntime
+        {
+            public GameObject Root;
+            public LineRenderer Ring;
+            public Transform Fill;
+            public Transform FollowTarget;
+            public Vector3[] Points;
+            public BossTelegraphStyle Style;
+            public float BaseRadius;
+            public float StartRadius;
+        }
 
         /// <summary>
         /// 是否处于 Boss 技能流程导致的停移窗口。
@@ -96,6 +136,7 @@ namespace CombatSystem.Gameplay
             animatorCastStateObserved = false;
             animatorCastLockDeadline = 0f;
             UnbindAnimationEventProxy();
+            ReleaseTelegraphMaterials();
         }
 
         public void StartLoop()
@@ -173,16 +214,55 @@ namespace CombatSystem.Gameplay
                 var telegraphDuration = Mathf.Max(0f, entry.TelegraphDuration);
                 if (telegraphDuration > 0f)
                 {
+                    var telegraphStyle = ResolveTelegraphStyle(entry.Skill);
+                    if (ShouldLockMovementDuringTelegraph(telegraphStyle))
+                    {
+                        var preCastLockDuration =
+                            telegraphDuration
+                            + Mathf.Max(0f, castDelayAfterTelegraph)
+                            + Mathf.Max(0f, telegraphMovementLockBuffer);
+                        ExtendMovementLock(preCastLockDuration);
+                    }
+
                     RaiseTelegraph(entry, castSnapshot.TelegraphCenter, telegraphDuration);
                     if (showGroundTelegraph)
                     {
-                        SpawnTelegraphMarker(entry, castSnapshot.TelegraphCenter, telegraphDuration);
+                        SpawnTelegraphMarker(entry, castSnapshot, telegraphDuration);
                     }
 
                     yield return new WaitForSeconds(telegraphDuration);
                 }
 
-                var casted = TryCastSnapshot(entry, castSnapshot);
+                var casted = false;
+                var postTelegraphDelay = Mathf.Max(0f, castDelayAfterTelegraph);
+                if (postTelegraphDelay > 0f)
+                {
+                    yield return new WaitForSeconds(postTelegraphDelay);
+                }
+
+                casted = TryCastSnapshot(entry, castSnapshot);
+                if (!casted)
+                {
+                    var retryWindow = Mathf.Max(0f, postTelegraphCastRetryWindow);
+                    if (retryWindow > 0f)
+                    {
+                        var retryIntervalSeconds = Mathf.Max(0.02f, postTelegraphCastRetryInterval);
+                        var retryDeadline = Time.time + retryWindow;
+                        while (!casted && Time.time <= retryDeadline)
+                        {
+                            if (TryAcquireCastSnapshot(entry, out var retrySnapshot))
+                            {
+                                casted = TryCastSnapshot(entry, retrySnapshot);
+                            }
+
+                            if (!casted)
+                            {
+                                yield return new WaitForSeconds(retryIntervalSeconds);
+                            }
+                        }
+                    }
+                }
+
                 if (casted)
                 {
                     ExtendMovementLock(ResolveMovementLockDuration(entry));
@@ -293,7 +373,8 @@ namespace CombatSystem.Gameplay
                 hasAimPoint,
                 aimPoint,
                 aimDirection,
-                ResolveTelegraphCenter(skill, resolvedTarget));
+                ResolveTelegraphCenter(skill, resolvedTarget),
+                resolvedTarget);
             return true;
         }
 
@@ -378,33 +459,336 @@ namespace CombatSystem.Gameplay
             TelegraphStarted?.Invoke(new BossTelegraphEvent(entry.Skill, center, duration));
         }
 
-        private void SpawnTelegraphMarker(BossSkillCycleEntry entry, Vector3 center, float duration)
+        private void SpawnTelegraphMarker(BossSkillCycleEntry entry, BossCastSnapshot snapshot, float duration)
         {
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            marker.name = "BossTelegraph";
-            marker.transform.SetParent(telegraphRoot != null ? telegraphRoot : null, true);
-            marker.transform.position = new Vector3(center.x, center.y + telegraphHeight, center.z);
+            if (entry == null || entry.Skill == null)
+            {
+                return;
+            }
 
-            var radius = ResolveTelegraphRadius(entry.Skill);
-            marker.transform.localScale = new Vector3(radius * 2f, telegraphHeight, radius * 2f);
+            var style = ResolveTelegraphStyle(entry.Skill);
+            var runtime = CreateTelegraphRuntime(entry.Skill, snapshot, style);
+            if (runtime == null || runtime.Root == null)
+            {
+                return;
+            }
 
-            var collider = marker.GetComponent<Collider>();
+            StartCoroutine(AnimateTelegraph(runtime, Mathf.Max(0.05f, duration)));
+        }
+
+        private BossTelegraphRuntime CreateTelegraphRuntime(SkillDefinition skill, BossCastSnapshot snapshot, BossTelegraphStyle style)
+        {
+            var baseRadius = style == BossTelegraphStyle.LockedTarget
+                ? ResolveLockedTelegraphRadius(skill)
+                : ResolveTelegraphRadius(skill);
+            var safeRadius = Mathf.Max(0.4f, baseRadius);
+            var startRadius = style == BossTelegraphStyle.ExpandingArea
+                ? Mathf.Max(0.2f, safeRadius * Mathf.Clamp01(expandingTelegraphStartRatio))
+                : safeRadius;
+            var center = ResolveTelegraphRuntimeCenter(snapshot, style);
+
+            var root = new GameObject(style == BossTelegraphStyle.LockedTarget ? "BossTelegraph_Locked" : "BossTelegraph_Area");
+            root.transform.SetParent(telegraphRoot != null ? telegraphRoot : null, true);
+            root.transform.position = center;
+
+            var ring = root.AddComponent<LineRenderer>();
+            ring.useWorldSpace = false;
+            ring.loop = true;
+            ring.positionCount = Mathf.Clamp(telegraphSegments, 12, 96);
+            ring.alignment = LineAlignment.TransformZ;
+            ring.textureMode = LineTextureMode.Stretch;
+            ring.numCapVertices = 4;
+            ring.startWidth = telegraphRingWidth;
+            ring.endWidth = telegraphRingWidth;
+            ring.startColor = style == BossTelegraphStyle.LockedTarget ? lockedTelegraphColor : telegraphColor;
+            ring.endColor = style == BossTelegraphStyle.LockedTarget ? lockedTelegraphColor : telegraphColor;
+
+            var lineMaterial = GetOrCreateTelegraphLineMaterial();
+            if (lineMaterial != null)
+            {
+                ring.sharedMaterial = lineMaterial;
+            }
+
+            Transform fill = null;
+            if (drawTelegraphFill)
+            {
+                fill = CreateTelegraphFill(root.transform, style);
+            }
+
+            var runtime = new BossTelegraphRuntime
+            {
+                Root = root,
+                Ring = ring,
+                Fill = fill,
+                FollowTarget = style == BossTelegraphStyle.LockedTarget ? snapshot.TelegraphTarget : null,
+                Points = new Vector3[ring.positionCount],
+                Style = style,
+                BaseRadius = safeRadius,
+                StartRadius = startRadius
+            };
+
+            UpdateTelegraphGeometry(runtime, startRadius);
+            return runtime;
+        }
+
+        private Transform CreateTelegraphFill(Transform parent, BossTelegraphStyle style)
+        {
+            var fill = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            fill.name = "TelegraphFill";
+            fill.transform.SetParent(parent, false);
+            fill.transform.localPosition = Vector3.zero;
+            fill.transform.localRotation = Quaternion.identity;
+            fill.transform.localScale = new Vector3(1f, Mathf.Max(0.005f, telegraphHeight), 1f);
+
+            var collider = fill.GetComponent<Collider>();
             if (collider != null)
             {
                 Destroy(collider);
             }
 
-            var renderer = marker.GetComponent<Renderer>();
+            var renderer = fill.GetComponent<Renderer>();
             if (renderer != null)
             {
+                var fillColor = style == BossTelegraphStyle.LockedTarget
+                    ? new Color(lockedTelegraphColor.r, lockedTelegraphColor.g, lockedTelegraphColor.b, telegraphFillColor.a)
+                    : telegraphFillColor;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+
+                var fillMaterial = GetOrCreateTelegraphFillMaterial();
+                if (fillMaterial != null)
+                {
+                    renderer.sharedMaterial = fillMaterial;
+                }
+
                 var block = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(block);
-                block.SetColor("_Color", telegraphColor);
-                block.SetColor("_BaseColor", telegraphColor);
+                block.SetColor("_Color", fillColor);
+                block.SetColor("_BaseColor", fillColor);
                 renderer.SetPropertyBlock(block);
             }
 
-            Destroy(marker, Mathf.Max(0.1f, duration));
+            return fill.transform;
+        }
+
+        private IEnumerator AnimateTelegraph(BossTelegraphRuntime runtime, float duration)
+        {
+            var safeDuration = Mathf.Max(0.05f, duration);
+            var elapsed = 0f;
+
+            while (runtime != null && runtime.Root != null && elapsed < safeDuration)
+            {
+                elapsed += Time.deltaTime;
+                var progress = Mathf.Clamp01(elapsed / safeDuration);
+                var radius = ResolveAnimatedRadius(runtime, progress);
+                UpdateTelegraphPosition(runtime);
+                UpdateTelegraphGeometry(runtime, radius);
+                yield return null;
+            }
+
+            if (runtime != null && runtime.Root != null)
+            {
+                Destroy(runtime.Root);
+            }
+        }
+
+        private void UpdateTelegraphPosition(BossTelegraphRuntime runtime)
+        {
+            if (runtime == null || runtime.Root == null)
+            {
+                return;
+            }
+
+            if (runtime.Style != BossTelegraphStyle.LockedTarget || runtime.FollowTarget == null)
+            {
+                return;
+            }
+
+            var targetPosition = runtime.FollowTarget.position;
+            runtime.Root.transform.position = new Vector3(targetPosition.x, targetPosition.y + telegraphHeight, targetPosition.z);
+        }
+
+        private float ResolveAnimatedRadius(BossTelegraphRuntime runtime, float progress)
+        {
+            if (runtime == null)
+            {
+                return 0.5f;
+            }
+
+            if (runtime.Style == BossTelegraphStyle.ExpandingArea)
+            {
+                return Mathf.Lerp(runtime.StartRadius, runtime.BaseRadius, progress);
+            }
+
+            // 目标锁定型预警做轻微脉冲，传达“锁定中”状态。
+            var pulse = 1f + Mathf.Sin(progress * Mathf.PI * 8f) * 0.03f;
+            return runtime.BaseRadius * pulse;
+        }
+
+        private void UpdateTelegraphGeometry(BossTelegraphRuntime runtime, float radius)
+        {
+            if (runtime == null || runtime.Ring == null)
+            {
+                return;
+            }
+
+            var safeRadius = Mathf.Max(0.05f, radius);
+            var count = runtime.Points != null ? runtime.Points.Length : 0;
+            if (count < 3)
+            {
+                return;
+            }
+
+            var angleStep = Mathf.PI * 2f / count;
+            for (int i = 0; i < count; i++)
+            {
+                var angle = angleStep * i;
+                runtime.Points[i] = new Vector3(Mathf.Cos(angle) * safeRadius, 0f, Mathf.Sin(angle) * safeRadius);
+            }
+
+            runtime.Ring.SetPositions(runtime.Points);
+
+            if (runtime.Fill != null)
+            {
+                runtime.Fill.localScale = new Vector3(safeRadius * 2f, Mathf.Max(0.005f, telegraphHeight), safeRadius * 2f);
+            }
+        }
+
+        private Vector3 ResolveTelegraphRuntimeCenter(BossCastSnapshot snapshot, BossTelegraphStyle style)
+        {
+            if (style == BossTelegraphStyle.LockedTarget && snapshot.TelegraphTarget != null)
+            {
+                var targetPos = snapshot.TelegraphTarget.position;
+                return new Vector3(targetPos.x, targetPos.y + telegraphHeight, targetPos.z);
+            }
+
+            return new Vector3(snapshot.TelegraphCenter.x, snapshot.TelegraphCenter.y + telegraphHeight, snapshot.TelegraphCenter.z);
+        }
+
+        private Material GetOrCreateTelegraphLineMaterial()
+        {
+            if (telegraphLineMaterial != null)
+            {
+                return telegraphLineMaterial;
+            }
+
+            var shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                return null;
+            }
+
+            telegraphLineMaterial = new Material(shader)
+            {
+                name = "BossTelegraphLine_Mat"
+            };
+            return telegraphLineMaterial;
+        }
+
+        private Material GetOrCreateTelegraphFillMaterial()
+        {
+            if (telegraphFillMaterial != null)
+            {
+                return telegraphFillMaterial;
+            }
+
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                return null;
+            }
+
+            telegraphFillMaterial = new Material(shader)
+            {
+                name = "BossTelegraphFill_Mat"
+            };
+            return telegraphFillMaterial;
+        }
+
+        private void ReleaseTelegraphMaterials()
+        {
+            if (telegraphLineMaterial != null)
+            {
+                SafeDestroyObject(telegraphLineMaterial);
+                telegraphLineMaterial = null;
+            }
+
+            if (telegraphFillMaterial != null)
+            {
+                SafeDestroyObject(telegraphFillMaterial);
+                telegraphFillMaterial = null;
+            }
+        }
+
+        private static void SafeDestroyObject(UnityEngine.Object obj)
+        {
+            if (obj == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(obj);
+            }
+            else
+            {
+                DestroyImmediate(obj);
+            }
+        }
+
+        private BossTelegraphStyle ResolveTelegraphStyle(SkillDefinition skill)
+        {
+            if (skill == null || skill.Targeting == null)
+            {
+                return BossTelegraphStyle.ExpandingArea;
+            }
+
+            return IsLockedTargetTelegraph(skill.Targeting)
+                ? BossTelegraphStyle.LockedTarget
+                : BossTelegraphStyle.ExpandingArea;
+        }
+
+        private bool IsLockedTargetTelegraph(TargetingDefinition targeting)
+        {
+            if (targeting == null)
+            {
+                return false;
+            }
+
+            if (targeting.Origin == TargetingOrigin.TargetPoint)
+            {
+                return true;
+            }
+
+            if (targeting.Mode != TargetingMode.Single)
+            {
+                return false;
+            }
+
+            if (targeting.Origin != TargetingOrigin.Caster)
+            {
+                return true;
+            }
+
+            return targeting.Range > Mathf.Max(0.5f, meleeRangeThreshold);
+        }
+
+        private bool ShouldLockMovementDuringTelegraph(BossTelegraphStyle style)
+        {
+            switch (style)
+            {
+                case BossTelegraphStyle.LockedTarget:
+                    return lockMovementDuringLockedTelegraph;
+                case BossTelegraphStyle.ExpandingArea:
+                default:
+                    return lockMovementDuringAreaTelegraph;
+            }
         }
 
         private readonly struct BossCastSnapshot
@@ -414,14 +798,22 @@ namespace CombatSystem.Gameplay
             public readonly Vector3 AimPoint;
             public readonly Vector3 AimDirection;
             public readonly Vector3 TelegraphCenter;
+            public readonly Transform TelegraphTarget;
 
-            public BossCastSnapshot(GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection, Vector3 telegraphCenter)
+            public BossCastSnapshot(
+                GameObject explicitTarget,
+                bool hasAimPoint,
+                Vector3 aimPoint,
+                Vector3 aimDirection,
+                Vector3 telegraphCenter,
+                Transform telegraphTarget)
             {
                 ExplicitTarget = explicitTarget;
                 HasAimPoint = hasAimPoint;
                 AimPoint = aimPoint;
                 AimDirection = aimDirection;
                 TelegraphCenter = telegraphCenter;
+                TelegraphTarget = telegraphTarget;
             }
         }
 
@@ -702,6 +1094,26 @@ namespace CombatSystem.Gameplay
             }
 
             return Mathf.Max(0.5f, fallbackTelegraphRadius);
+        }
+
+        private float ResolveLockedTelegraphRadius(SkillDefinition skill)
+        {
+            if (skill == null || skill.Targeting == null)
+            {
+                return Mathf.Max(0.4f, lockedTelegraphRadius);
+            }
+
+            if (skill.Targeting.Mode == TargetingMode.Single)
+            {
+                return Mathf.Max(0.4f, lockedTelegraphRadius);
+            }
+
+            if (skill.Targeting.Radius > 0f)
+            {
+                return Mathf.Max(0.4f, Mathf.Min(skill.Targeting.Radius, lockedTelegraphRadius));
+            }
+
+            return Mathf.Max(0.4f, lockedTelegraphRadius);
         }
     }
 
