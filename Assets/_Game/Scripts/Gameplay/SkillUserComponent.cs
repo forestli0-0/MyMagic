@@ -445,11 +445,6 @@ namespace CombatSystem.Gameplay
                 hasAimPoint = false;
                 aimPoint = default;
                 aimDirection = default;
-
-                if (!IsTargetInRange(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
-                {
-                    return false;
-                }
             }
 
             if (!CanCast(skill))
@@ -490,6 +485,12 @@ namespace CombatSystem.Gameplay
                 {
                     aimDirection = dir.normalized;
                 }
+            }
+
+            // 显式目标统一按“当前帧”的形状/距离进行校验，避免旧快照导致超范围命中。
+            if (explicitTarget != null && !IsTargetInRange(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+            {
+                return false;
             }
 
             // 收集目标
@@ -827,7 +828,13 @@ namespace CombatSystem.Gameplay
             }
 
             var targeting = skill.Targeting;
-            if (targeting == null || targeting.Range <= 0f)
+            if (targeting == null)
+            {
+                return true;
+            }
+
+            // 兼容纯效果技能：没有任何几何参数时不强制范围限制。
+            if (targeting.Range <= 0f && targeting.Radius <= 0f)
             {
                 return true;
             }
