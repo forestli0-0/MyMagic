@@ -83,6 +83,10 @@ namespace CombatSystem.AI
         [Tooltip("NavMesh 期望速度平滑强度，值越大响应越快。")]
         [SerializeField] private float desiredVelocitySmoothing = 12f;
 
+        [Header("攻击回退")]
+        [Tooltip("当 AI 规则未选出技能时，是否自动回退到普攻。Boss 若由调度器驱动，建议关闭。")]
+        [SerializeField] private bool useBasicAttackFallback = true;
+
         [Header("撤退机制")]
         [Tooltip("是否启用撤退机制")]
         [SerializeField] private bool enableRetreat;
@@ -246,14 +250,25 @@ namespace CombatSystem.AI
                 return;
             }
 
-            // 使用普通攻击
-            selectedSkill = skillUser != null ? skillUser.BasicAttack : null;
-            selectedMinRange = 0f;
-            selectedMaxRange = GetSkillMaxRange(selectedSkill, aiProfile.AttackRange);
-            selectedAllowWhileMoving = true;
+            if (useBasicAttackFallback)
+            {
+                // 使用普通攻击回退
+                selectedSkill = skillUser != null ? skillUser.BasicAttack : null;
+                selectedMinRange = 0f;
+                selectedMaxRange = GetSkillMaxRange(selectedSkill, aiProfile.AttackRange);
+                selectedAllowWhileMoving = true;
 
-            // 根据距离决定追击或攻击
-            currentState = distance <= selectedMaxRange ? AIState.Attack : AIState.Chase;
+                // 根据距离决定追击或攻击
+                currentState = distance <= selectedMaxRange ? AIState.Attack : AIState.Chase;
+                return;
+            }
+
+            // 关闭普攻回退时：维持追击，交由外部调度器（如 BossSkillScheduler）驱动攻击节奏。
+            selectedSkill = null;
+            selectedMinRange = 0f;
+            selectedMaxRange = 0f;
+            selectedAllowWhileMoving = true;
+            currentState = AIState.Chase;
         }
 
         /// <summary>
@@ -952,7 +967,7 @@ namespace CombatSystem.AI
 
         private void EnsureBasicAttackSelection()
         {
-            if (selectedSkill != null || skillUser == null)
+            if (!useBasicAttackFallback || selectedSkill != null || skillUser == null)
             {
                 return;
             }

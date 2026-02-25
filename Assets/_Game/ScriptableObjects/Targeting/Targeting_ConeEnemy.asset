@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Cone Enemy
   mode: 3
   team: 3
-  range: 6
+  range: 2.5
   radius: 0
   angle: 60
   maxTargets: 3

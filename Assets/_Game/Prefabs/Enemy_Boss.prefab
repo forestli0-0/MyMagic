@@ -371,6 +371,7 @@ MonoBehaviour:
   queuedRingSpacing: 0.9
   separationRadius: 1.2
   separationStrength: 0.6
+  useBasicAttackFallback: 0
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
