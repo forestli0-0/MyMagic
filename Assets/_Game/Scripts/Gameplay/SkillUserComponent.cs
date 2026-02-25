@@ -806,6 +806,19 @@ namespace CombatSystem.Gameplay
             return control == ControlType.Taunt && source != null;
         }
 
+        /// <summary>
+        /// 预检查技能目标是否在有效形状/距离内（不触发施法）。
+        /// </summary>
+        public bool IsTargetInRangePreview(
+            SkillDefinition skill,
+            GameObject target,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
+        {
+            return IsTargetInRange(skill, target, hasAimPoint, aimPoint, aimDirection);
+        }
+
         private bool IsTargetInRange(SkillDefinition skill, GameObject target, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
         {
             if (skill == null || target == null || targetingSystem == null || unitRoot == null)

@@ -42,6 +42,8 @@ namespace CombatSystem.AI
         [SerializeField] private AIProfile aiProfile;
         [Tooltip("导航代理")]
         [SerializeField] private NavMeshAgent navAgent;
+        [Tooltip("Boss 技能节奏器（存在时，施法期间强制停移）")]
+        [SerializeField] private BossSkillScheduler bossSkillScheduler;
 
         [Header("目标搜索")]
         [Tooltip("目标搜索的物理层")]
@@ -113,6 +115,10 @@ namespace CombatSystem.AI
         private float selectedMinRange;
         // 选中技能的最大释放距离
         private float selectedMaxRange;
+        // 选中技能是否允许边移动边施法（来自 AI 规则）
+        private bool selectedAllowWhileMoving = true;
+        // 当前施法阶段是否应强制停移（由本次技能决策决定）
+        private bool lockMovementDuringCurrentCast;
         private Vector3 lastIssuedDestination;
         private bool hasIssuedDestination;
         private float nextDestinationRefreshTime;
@@ -155,6 +161,7 @@ namespace CombatSystem.AI
             {
                 StopMovement();
                 currentState = AIState.Idle;
+                lockMovementDuringCurrentCast = false;
                 return;
             }
 
@@ -162,6 +169,11 @@ namespace CombatSystem.AI
             if (aiProfile == null)
             {
                 return;
+            }
+
+            if (skillUser == null || !skillUser.IsCasting)
+            {
+                lockMovementDuringCurrentCast = false;
             }
 
             // 定时执行决策
@@ -185,14 +197,11 @@ namespace CombatSystem.AI
         /// </summary>
         private void Think()
         {
-            // 正在施法时保持施法状态
-            if (skillUser != null && skillUser.IsCasting)
+            // 施法/调度锁期间保持施法状态（Boss 需要覆盖动画晚于逻辑施法结束的场景）
+            if (ShouldStopMovementWhileCasting())
             {
-                if (!skillUser.CanMoveWhileCasting)
-                {
-                    currentState = AIState.CastSkill;
-                    return;
-                }
+                currentState = AIState.CastSkill;
+                return;
             }
 
             // 验证并获取目标
@@ -227,11 +236,12 @@ namespace CombatSystem.AI
             }
 
             // 尝试选择技能
-            if (TrySelectSkill(distance, out var skill, out var minRange, out var maxRange))
+            if (TrySelectSkill(distance, out var skill, out var minRange, out var maxRange, out var allowWhileMoving))
             {
                 selectedSkill = skill;
                 selectedMinRange = minRange;
                 selectedMaxRange = maxRange;
+                selectedAllowWhileMoving = allowWhileMoving;
                 currentState = AIState.Attack;
                 return;
             }
@@ -240,6 +250,7 @@ namespace CombatSystem.AI
             selectedSkill = skillUser != null ? skillUser.BasicAttack : null;
             selectedMinRange = 0f;
             selectedMaxRange = GetSkillMaxRange(selectedSkill, aiProfile.AttackRange);
+            selectedAllowWhileMoving = true;
 
             // 根据距离决定追击或攻击
             currentState = distance <= selectedMaxRange ? AIState.Attack : AIState.Chase;
@@ -250,7 +261,7 @@ namespace CombatSystem.AI
         /// </summary>
         private void UpdateState()
         {
-            if (skillUser != null && skillUser.IsCasting && !skillUser.CanMoveWhileCasting)
+            if (ShouldStopMovementWhileCasting())
             {
                 StopMovement();
                 currentState = AIState.CastSkill;
@@ -295,7 +306,7 @@ namespace CombatSystem.AI
                         return;
                     }
 
-                    if (skillUser == null || !skillUser.IsCasting || !skillUser.CanMoveWhileCasting)
+                    if (skillUser == null || !skillUser.IsCasting || ShouldStopMovementWhileCasting())
                     {
                         StopMovement();
                     }
@@ -305,14 +316,8 @@ namespace CombatSystem.AI
 
                 case AIState.CastSkill:
                     // 施法：等待施法完成
-                    if (skillUser != null && skillUser.CanMoveWhileCasting)
-                    {
-                        currentState = AIState.Attack;
-                        break;
-                    }
-
                     StopMovement();
-                    if (skillUser == null || !skillUser.IsCasting)
+                    if (!ShouldStopMovementWhileCasting())
                     {
                         currentState = AIState.Attack;
                     }
@@ -890,6 +895,21 @@ namespace CombatSystem.AI
             return skillUser == null || !skillUser.IsCasting || skillUser.CanRotateWhileCasting;
         }
 
+        private bool ShouldStopMovementWhileCasting()
+        {
+            if (bossSkillScheduler != null && bossSkillScheduler.IsMovementLocked)
+            {
+                return true;
+            }
+
+            if (skillUser == null || !skillUser.IsCasting)
+            {
+                return false;
+            }
+
+            return !skillUser.CanMoveWhileCasting || lockMovementDuringCurrentCast;
+        }
+
         #endregion
 
         #region 技能选择与释放
@@ -920,7 +940,8 @@ namespace CombatSystem.AI
             // 尝试释放技能
             if (skillUser.TryCast(selectedSkill, currentTarget.GameObject))
             {
-                if (!skillUser.CanMoveWhileCasting)
+                lockMovementDuringCurrentCast = !selectedAllowWhileMoving;
+                if (ShouldStopMovementWhileCasting())
                 {
                     currentState = AIState.CastSkill;
                 }
@@ -945,6 +966,7 @@ namespace CombatSystem.AI
             selectedSkill = basic;
             selectedMinRange = 0f;
             selectedMaxRange = GetSkillMaxRange(basic, aiProfile != null ? aiProfile.AttackRange : 0f);
+            selectedAllowWhileMoving = true;
         }
 
         /// <summary>
@@ -954,12 +976,14 @@ namespace CombatSystem.AI
         /// <param name="skill">输出选中的技能</param>
         /// <param name="minRange">输出技能最小距离</param>
         /// <param name="maxRange">输出技能最大距离</param>
+        /// <param name="allowWhileMoving">该技能规则是否允许移动中施法</param>
         /// <returns>若成功选择技能则返回 true</returns>
-        private bool TrySelectSkill(float distance, out SkillDefinition skill, out float minRange, out float maxRange)
+        private bool TrySelectSkill(float distance, out SkillDefinition skill, out float minRange, out float maxRange, out bool allowWhileMoving)
         {
             skill = null;
             minRange = 0f;
             maxRange = 0f;
+            allowWhileMoving = true;
 
             if (skillUser == null || aiProfile == null)
             {
@@ -1004,6 +1028,7 @@ namespace CombatSystem.AI
                         skill = rule.skill;
                         minRange = rule.minRange;
                         maxRange = rule.maxRange;
+                        allowWhileMoving = rule.allowWhileMoving;
                         return true;
                     }
                 }
@@ -1028,6 +1053,7 @@ namespace CombatSystem.AI
                     skill = rule.skill;
                     minRange = rule.minRange;
                     maxRange = rule.maxRange;
+                    allowWhileMoving = rule.allowWhileMoving;
                     return true;
                 }
             }
@@ -1199,6 +1225,11 @@ namespace CombatSystem.AI
             if (navAgent == null)
             {
                 navAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (bossSkillScheduler == null)
+            {
+                bossSkillScheduler = GetComponent<BossSkillScheduler>();
             }
 
             if (navAgent != null && movement != null)

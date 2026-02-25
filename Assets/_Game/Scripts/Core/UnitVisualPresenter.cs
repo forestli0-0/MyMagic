@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
@@ -35,6 +36,8 @@ namespace CombatSystem.Core
 
         [Header("Debug")]
         [SerializeField] private bool enableDebugLog;
+        [Tooltip("仅在少数第三方非循环移动动画上启用。默认关闭，避免频繁重播 Locomotion 导致姿态异常。")]
+        [SerializeField] private bool useLocomotionLoopFallback;
 
         [Header("Model Anchor")]
         [Tooltip("当不使用 Root Motion 时锁定模型局部位置，防止动画根节点位移导致模型与逻辑体错位。")]
@@ -85,6 +88,7 @@ namespace CombatSystem.Core
         private int castingHash;
         private static readonly int HitStateHash = Animator.StringToHash("Hit");
         private static readonly int DieStateHash = Animator.StringToHash("Die");
+        private static readonly int LocomotionStateHash = Animator.StringToHash("Locomotion");
 
         private bool hasMoveSpeedFloat;
         private bool hasMovingBool;
@@ -404,6 +408,16 @@ namespace CombatSystem.Core
             animator.applyRootMotion = activeProfile.ApplyRootMotion;
             animator.Rebind();
             animator.Update(0f);
+
+            // 某些运行时生成/外部导入的 Controller 默认层权重会是 0，导致整层不出动画（T Pose）。
+            var layerCount = animator.layerCount;
+            for (int i = 0; i < layerCount; i++)
+            {
+                if (animator.GetLayerWeight(i) <= 0f)
+                {
+                    animator.SetLayerWeight(i, 1f);
+                }
+            }
         }
 
         private void EnforceModelAnchor()
@@ -625,13 +639,40 @@ namespace CombatSystem.Core
                 animator.SetFloat(moveSpeedHash, smoothedSpeed);
             }
 
+            var movingThreshold = activeProfile != null ? Mathf.Max(0.01f, activeProfile.MovingThreshold) : 0.08f;
             if (hasMovingBool)
             {
-                var threshold = activeProfile != null ? Mathf.Max(0.01f, activeProfile.MovingThreshold) : 0.08f;
-                animator.SetBool(movingHash, !isDead && smoothedSpeed >= threshold);
+                animator.SetBool(movingHash, !isDead && smoothedSpeed >= movingThreshold);
             }
 
+            if (useLocomotionLoopFallback)
+            {
+                EnsureLocomotionStateLoopsWhenNeeded(movingThreshold);
+            }
             TryForceExitHitState();
+        }
+
+        private void EnsureLocomotionStateLoopsWhenNeeded(float movingThreshold)
+        {
+            if (animator == null || isDead)
+            {
+                return;
+            }
+
+            var state = animator.GetCurrentAnimatorStateInfo(0);
+            if (state.shortNameHash != LocomotionStateHash)
+            {
+                return;
+            }
+
+            // 对非循环移动片段做兜底：避免跑几步后停在最后一帧。
+            if (state.loop || smoothedSpeed < movingThreshold || state.normalizedTime < 0.98f)
+            {
+                return;
+            }
+
+            animator.Play(state.fullPathHash, 0, 0f);
+            animator.Update(0f);
         }
 
         private void CaptureMotionBaseline()
@@ -905,6 +946,27 @@ namespace CombatSystem.Core
     [DisallowMultipleComponent]
     public class UnitAnimationEventProxy : MonoBehaviour
     {
+        public event Action CastStateEntered;
+        public event Action CastStateExited;
+
+        public void NotifyCastStateEntered()
+        {
+            CastStateEntered?.Invoke();
+        }
+
+        public void NotifyCastStateExited()
+        {
+            CastStateExited?.Invoke();
+        }
+
+        // 动画事件别名：不同资源可直接复用（无参数签名）。
+        public void CastStart() => NotifyCastStateEntered();
+        public void CastBegin() => NotifyCastStateEntered();
+        public void OnCastStart() => NotifyCastStateEntered();
+        public void CastEnd() => NotifyCastStateExited();
+        public void CastFinish() => NotifyCastStateExited();
+        public void OnCastEnd() => NotifyCastStateExited();
+
         public void FootL()
         {
         }
