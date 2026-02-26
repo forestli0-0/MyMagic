@@ -70,6 +70,7 @@ namespace CombatSystem.UI
         public UIModalBase CurrentModal => modalStack.Peek();
         public int ModalCount => modalStack.Count;
         public UIInputMode CurrentInputMode => inputMode;
+        public bool IsHudSkillBarOnlyMode => hudVisibilityMode == HudVisibilityMode.SkillBarOnly;
 
         private void Awake()
         {
@@ -287,6 +288,21 @@ namespace CombatSystem.UI
             {
                 CloseModal(modalStack.Peek());
             }
+        }
+
+        /// <summary>
+        /// 强制返回可操作的游戏态：
+        /// - 关闭所有弹窗
+        /// - 清空主屏栈并隐藏其可见性
+        /// - 恢复 Gameplay 输入与完整 HUD
+        /// </summary>
+        public void ForceReturnToGameplay()
+        {
+            CloseAllModals();
+            ClearScreens();
+            SetInputMode(UIInputMode.Gameplay);
+            UpdateScreenPauseState();
+            SetHudVisible(true);
         }
 
         public void SetHudVisible(bool visible)
@@ -576,13 +592,16 @@ namespace CombatSystem.UI
                     continue;
                 }
 
+                // 仅记录“原本处于激活状态”的对象，恢复时只还原这些对象。
+                // 避免把运行时模板/对象池节点（本应隐藏）错误地 SetActive(true)。
+                if (!go.activeSelf)
+                {
+                    continue;
+                }
+
                 if (hudTemporarilyHiddenLookup.Add(go))
                 {
                     hudTemporarilyHiddenObjects.Add(go);
-                }
-
-                if (go.activeSelf)
-                {
                     go.SetActive(false);
                 }
             }
@@ -796,13 +815,8 @@ namespace CombatSystem.UI
             {
                 return;
             }
-
-            if (IsSkillBarOnlyMaskIntact())
-            {
-                return;
-            }
-
-            // 仅补充压制，不先恢复，避免日志/面板出现可见闪烁。
+            // 持续补充压制：即使有组件在 Update 中反向 SetActive(true)，
+            // 也会在同帧后半段（LateUpdate）再次被遮罩掉，避免背包页露出 HUD 子面板。
             ApplySkillBarOnlyMask();
         }
 

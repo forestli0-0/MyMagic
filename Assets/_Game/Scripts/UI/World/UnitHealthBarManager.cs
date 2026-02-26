@@ -15,6 +15,7 @@ namespace CombatSystem.UI
         [SerializeField] private Camera worldCamera;
         [SerializeField] private RectTransform barsRoot;
         [SerializeField] private UnitHealthBar barTemplate;
+        [SerializeField, Min(0.1f)] private float eventHubResolveInterval = 0.5f;
 
         [Header("Display")]
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.6f, 0f);
@@ -58,6 +59,7 @@ namespace CombatSystem.UI
         private HealthComponent currentTarget;
         private HealthComponent hoveredTarget;
         private bool templateBuilt;
+        private float nextEventHubResolveTime;
         private static Sprite fallbackSprite;
         private RectTransform hoverPanelRect;
         private Text hoverNameText;
@@ -110,6 +112,8 @@ namespace CombatSystem.UI
 
         private void LateUpdate()
         {
+            TryRefreshEventHubBinding();
+
             if (worldCamera == null)
             {
                 worldCamera = Camera.main;
@@ -189,14 +193,26 @@ namespace CombatSystem.UI
             if (player != null)
             {
                 eventHub = player.EventHub;
+            }
+        }
+
+        private void TryRefreshEventHubBinding()
+        {
+            if (Time.unscaledTime < nextEventHubResolveTime)
+            {
                 return;
             }
 
-            var unit = FindFirstObjectByType<UnitRoot>();
-            if (unit != null)
+            nextEventHubResolveTime = Time.unscaledTime + Mathf.Max(0.1f, eventHubResolveInterval);
+            var player = PlayerUnitLocator.FindPlayerUnit();
+            if (player == null || player.EventHub == null || player.EventHub == eventHub)
             {
-                eventHub = unit.EventHub;
+                return;
             }
+
+            Unsubscribe();
+            eventHub = player.EventHub;
+            Subscribe();
         }
 
         private void Subscribe()
