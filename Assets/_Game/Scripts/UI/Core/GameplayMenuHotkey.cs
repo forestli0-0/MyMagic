@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 
 namespace CombatSystem.UI
 {
@@ -15,6 +17,9 @@ namespace CombatSystem.UI
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private UIScreenBase defaultMenuScreen;
+        [SerializeField] private UIScreenBase characterMenuScreen;
+        [SerializeField] private UIScreenBase inventoryMenuScreen;
+        [SerializeField] private UIScreenBase questMenuScreen;
         [SerializeField] private Key toggleKey = Key.Tab;
         [SerializeField] private Key closeKey = Key.Escape;
         [SerializeField] private Key previousTabKey = Key.LeftArrow;
@@ -56,21 +61,34 @@ namespace CombatSystem.UI
 
         private void ResolveReferences()
         {
-            if (uiManager == null)
+            uiManager = UIHotkeyUtility.ResolveUiManager(this, uiManager);
+
+            if (characterMenuScreen == null)
             {
-                uiManager = GetComponentInParent<UIManager>();
-                if (uiManager == null)
-                {
-                    uiManager = FindFirstObjectByType<UIManager>();
-                }
+                characterMenuScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+            }
+
+            if (inventoryMenuScreen == null)
+            {
+                inventoryMenuScreen = FindFirstObjectByType<InventoryScreen>(FindObjectsInactive.Include);
+            }
+
+            if (questMenuScreen == null)
+            {
+                questMenuScreen = FindFirstObjectByType<QuestJournalScreen>(FindObjectsInactive.Include);
             }
 
             if (defaultMenuScreen == null)
             {
-                defaultMenuScreen = FindFirstObjectByType<InventoryScreen>(FindObjectsInactive.Include);
+                defaultMenuScreen = inventoryMenuScreen;
                 if (defaultMenuScreen == null)
                 {
-                    defaultMenuScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+                    defaultMenuScreen = characterMenuScreen;
+                }
+
+                if (defaultMenuScreen == null)
+                {
+                    defaultMenuScreen = questMenuScreen;
                 }
             }
         }
@@ -83,15 +101,20 @@ namespace CombatSystem.UI
                 return;
             }
 
-            if (uiManager.ModalCount > 0)
-            {
-                return;
-            }
-
             var current = uiManager.CurrentScreen;
             if (closeIfMenuAlreadyOpen && GameplayMenuTabs.IsGameplayMenuScreen(current))
             {
+                if (uiManager.ModalCount > 0)
+                {
+                    uiManager.CloseAllModals();
+                }
+
                 CloseGameplayMenu(current);
+                return;
+            }
+
+            if (uiManager.ModalCount > 0)
+            {
                 return;
             }
 
@@ -105,6 +128,15 @@ namespace CombatSystem.UI
                 return;
             }
 
+            if (current == null)
+            {
+                var fallback = UIHotkeyUtility.FindFallbackGameplayScreen(defaultMenuScreen, true);
+                if (fallback != null && fallback != defaultMenuScreen)
+                {
+                    uiManager.ShowScreen(fallback, true);
+                }
+            }
+
             uiManager.PushScreen(defaultMenuScreen);
         }
 
@@ -116,7 +148,10 @@ namespace CombatSystem.UI
             }
 
             var toggle = keyboard[toggleKey];
-            if (toggle == null || !toggle.wasPressedThisFrame)
+            var tabFallback = keyboard[Key.Tab];
+            var togglePressed = (toggle != null && toggle.wasPressedThisFrame) ||
+                                (tabFallback != null && tabFallback.wasPressedThisFrame);
+            if (!togglePressed)
             {
                 return false;
             }
@@ -133,13 +168,16 @@ namespace CombatSystem.UI
             }
 
             ResolveReferences();
-            if (uiManager == null || uiManager.ModalCount > 0)
+            if (uiManager == null)
             {
                 return false;
             }
 
             var close = keyboard[closeKey];
-            if (close == null || !close.wasPressedThisFrame)
+            var escFallback = keyboard[Key.Escape];
+            var closePressed = (close != null && close.wasPressedThisFrame) ||
+                               (escFallback != null && escFallback.wasPressedThisFrame);
+            if (!closePressed)
             {
                 return false;
             }
@@ -148,6 +186,11 @@ namespace CombatSystem.UI
             if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
             {
                 return false;
+            }
+
+            if (uiManager.ModalCount > 0)
+            {
+                uiManager.CloseAllModals();
             }
 
             CloseGameplayMenu(current);
@@ -176,7 +219,10 @@ namespace CombatSystem.UI
             var tabs = current.GetComponent<GameplayMenuTabs>();
             if (tabs == null)
             {
-                return false;
+                var fallbackDirection = ResolveTabSwitchDirection(
+                    keyboard[previousTabKey] ?? keyboard[Key.LeftArrow],
+                    keyboard[nextTabKey] ?? keyboard[Key.RightArrow]);
+                return fallbackDirection != 0 && TryOpenRelativeTabFallback(current, fallbackDirection);
             }
 
             var left = keyboard[previousTabKey];
@@ -216,7 +262,8 @@ namespace CombatSystem.UI
             var tabs = current.GetComponent<GameplayMenuTabs>();
             if (tabs == null)
             {
-                return false;
+                var fallbackDirection = ResolveGamepadTabSwitchDirection(gamepad);
+                return fallbackDirection != 0 && TryOpenRelativeTabFallback(current, fallbackDirection);
             }
 
             if (gamepad.leftShoulder.wasPressedThisFrame || gamepad.dpad.left.wasPressedThisFrame)
@@ -240,7 +287,7 @@ namespace CombatSystem.UI
             }
 
             ResolveReferences();
-            if (uiManager == null || uiManager.ModalCount > 0)
+            if (uiManager == null)
             {
                 return false;
             }
@@ -254,6 +301,11 @@ namespace CombatSystem.UI
             if (!GameplayMenuTabs.IsGameplayMenuScreen(current))
             {
                 return false;
+            }
+
+            if (uiManager.ModalCount > 0)
+            {
+                uiManager.CloseAllModals();
             }
 
             CloseGameplayMenu(current);
@@ -291,37 +343,140 @@ namespace CombatSystem.UI
             }
 
             var tabs = current != null ? current.GetComponent<GameplayMenuTabs>() : null;
-            var fallback = tabs != null ? tabs.ResolveFallbackGameplayScreen() : FindFallbackGameplayScreen(current);
+            var fallback = tabs != null
+                ? tabs.ResolveFallbackGameplayScreen()
+                : UIHotkeyUtility.FindFallbackGameplayScreen(current, true);
             if (fallback != null && fallback != current)
             {
                 uiManager.ShowScreen(fallback, true);
+                return;
             }
+
+            // 兜底：没有可用 fallback 时，强制回到可操作的 gameplay 态，避免菜单卡死。
+            uiManager.ForceReturnToGameplay();
         }
 
-        private static UIScreenBase FindFallbackGameplayScreen(UIScreenBase excludeScreen)
+        private int ResolveTabSwitchDirection(KeyControl previous, KeyControl next)
         {
-            var inGame = FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
-            if (inGame != null && inGame != excludeScreen)
+            if (previous != null && previous.wasPressedThisFrame)
             {
-                return inGame;
+                return -1;
             }
 
-            var screens = FindObjectsByType<UIScreenBase>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < screens.Length; i++)
+            if (next != null && next.wasPressedThisFrame)
             {
-                var screen = screens[i];
-                if (screen == null || screen == excludeScreen || GameplayMenuTabs.IsGameplayMenuScreen(screen))
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private static int ResolveGamepadTabSwitchDirection(Gamepad gamepad)
+        {
+            if (gamepad == null)
+            {
+                return 0;
+            }
+
+            if (gamepad.leftShoulder.wasPressedThisFrame || gamepad.dpad.left.wasPressedThisFrame)
+            {
+                return -1;
+            }
+
+            if (gamepad.rightShoulder.wasPressedThisFrame || gamepad.dpad.right.wasPressedThisFrame)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private bool TryOpenRelativeTabFallback(UIScreenBase current, int direction)
+        {
+            if (uiManager == null || direction == 0)
+            {
+                return false;
+            }
+
+            ResolveReferences();
+
+            var orderedScreens = new List<UIScreenBase>(3);
+            AppendUniqueMenuScreen(orderedScreens, characterMenuScreen);
+            AppendUniqueMenuScreen(orderedScreens, inventoryMenuScreen);
+            AppendUniqueMenuScreen(orderedScreens, questMenuScreen);
+
+            if (orderedScreens.Count <= 1)
+            {
+                return false;
+            }
+
+            var currentIndex = ResolveCurrentTabIndex(orderedScreens, current);
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+            }
+
+            var step = direction > 0 ? 1 : -1;
+            for (int i = 0; i < orderedScreens.Count; i++)
+            {
+                currentIndex = (currentIndex + step + orderedScreens.Count) % orderedScreens.Count;
+                var target = orderedScreens[currentIndex];
+                if (target == null || target == current)
                 {
                     continue;
                 }
 
-                if (screen.InputMode == UIInputMode.Gameplay)
+                uiManager.PushScreen(target);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void AppendUniqueMenuScreen(List<UIScreenBase> buffer, UIScreenBase screen)
+        {
+            if (screen == null || buffer == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < buffer.Count; i++)
+            {
+                if (buffer[i] == screen)
                 {
-                    return screen;
+                    return;
                 }
             }
 
-            return null;
+            buffer.Add(screen);
+        }
+
+        private static int ResolveCurrentTabIndex(List<UIScreenBase> orderedScreens, UIScreenBase current)
+        {
+            if (orderedScreens == null || orderedScreens.Count == 0 || current == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < orderedScreens.Count; i++)
+            {
+                if (orderedScreens[i] == current)
+                {
+                    return i;
+                }
+            }
+
+            var type = current.GetType();
+            for (int i = 0; i < orderedScreens.Count; i++)
+            {
+                var candidate = orderedScreens[i];
+                if (candidate != null && candidate.GetType() == type)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
     }
 }

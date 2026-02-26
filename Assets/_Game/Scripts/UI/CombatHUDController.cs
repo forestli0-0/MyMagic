@@ -24,6 +24,8 @@ namespace CombatSystem.UI
         [SerializeField] private Camera worldCamera;
         [Tooltip("当玩家运行时动态生成时，自动重绑检测间隔（秒）")]
         [SerializeField] private float autoRebindInterval = 0.5f;
+        [Tooltip("UI 管理器引用，用于感知 HUD 可见性模式（全显/仅技能栏/隐藏）")]
+        [SerializeField] private UIManager uiManager;
 
         [Header("Widgets")]
         [SerializeField] private ValueBarUI healthBar;           // 血条
@@ -125,6 +127,11 @@ namespace CombatSystem.UI
             if (worldCamera == null)
             {
                 worldCamera = Camera.main;
+            }
+
+            if (uiManager == null)
+            {
+                uiManager = FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
             }
 
             if (questTracker == null)
@@ -301,19 +308,21 @@ namespace CombatSystem.UI
                 return;
             }
 
+            var skillBarOnlyMode = uiManager != null && uiManager.IsHudSkillBarOnlyMode;
+
             if (castBar != null)
             {
-                castBar.gameObject.SetActive(hudConfig.ShowCastBar);
+                castBar.gameObject.SetActive(!skillBarOnlyMode && hudConfig.ShowCastBar);
             }
 
             if (combatLog != null)
             {
-                combatLog.gameObject.SetActive(hudConfig.ShowCombatLog);
+                combatLog.gameObject.SetActive(!skillBarOnlyMode && hudConfig.ShowCombatLog);
             }
 
             if (floatingText != null)
             {
-                floatingText.gameObject.SetActive(hudConfig.ShowFloatingText);
+                floatingText.gameObject.SetActive(!skillBarOnlyMode && hudConfig.ShowFloatingText);
             }
         }
 

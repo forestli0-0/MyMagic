@@ -76,7 +76,20 @@ namespace CombatSystem.UI
 
         public static bool IsGameplayMenuScreen(UIScreenBase screen)
         {
-            return screen != null && screen.GetComponent<GameplayMenuTabs>() != null;
+            if (screen == null)
+            {
+                return false;
+            }
+
+            if (screen.GetComponent<GameplayMenuTabs>() != null)
+            {
+                return true;
+            }
+
+            // 兜底：历史场景可能遗漏 GameplayMenuTabs 组件，但页面类型仍属于功能菜单。
+            return screen is CharacterScreen ||
+                   screen is InventoryScreen ||
+                   screen is QuestJournalScreen;
         }
 
         public static void CollapseGameplayMenuStack(UIManager manager)
@@ -238,6 +251,44 @@ namespace CombatSystem.UI
             if (ownerScreen == null)
             {
                 ownerScreen = GetComponent<UIScreenBase>();
+            }
+
+            if (characterScreen == null)
+            {
+                characterScreen = FindFirstObjectByType<CharacterScreen>(FindObjectsInactive.Include);
+            }
+
+            if (inventoryScreen == null)
+            {
+                inventoryScreen = FindFirstObjectByType<InventoryScreen>(FindObjectsInactive.Include);
+            }
+
+            if (questJournalScreen == null)
+            {
+                questJournalScreen = FindFirstObjectByType<QuestJournalScreen>(FindObjectsInactive.Include);
+            }
+
+            var searchRoot = ownerScreen != null ? ownerScreen.transform : transform;
+            if ((characterButton == null || inventoryButton == null || questButton == null) && searchRoot != null)
+            {
+                var tabsRoot = ResolveTabsRootByHeuristic(searchRoot);
+                if (tabsRoot != null)
+                {
+                    if (characterButton == null)
+                    {
+                        characterButton = FindTabButton(tabsRoot, "character", "角色");
+                    }
+
+                    if (inventoryButton == null)
+                    {
+                        inventoryButton = FindTabButton(tabsRoot, "inventory", "背包");
+                    }
+
+                    if (questButton == null)
+                    {
+                        questButton = FindTabButton(tabsRoot, "quest", "任务");
+                    }
+                }
             }
 
         }
@@ -764,6 +815,130 @@ namespace CombatSystem.UI
             }
 
             return null;
+        }
+
+        private static RectTransform ResolveTabsRootByHeuristic(Transform searchRoot)
+        {
+            if (searchRoot == null)
+            {
+                return null;
+            }
+
+            RectTransform fallback = null;
+            var rowLayouts = searchRoot.GetComponentsInChildren<HorizontalLayoutGroup>(true);
+            for (int i = 0; i < rowLayouts.Length; i++)
+            {
+                var row = rowLayouts[i];
+                if (row == null)
+                {
+                    continue;
+                }
+
+                var rowTransform = row.transform as RectTransform;
+                if (rowTransform == null)
+                {
+                    continue;
+                }
+
+                var buttonCount = rowTransform.GetComponentsInChildren<Button>(true).Length;
+                if (buttonCount < 3)
+                {
+                    continue;
+                }
+
+                if (rowTransform.parent == searchRoot)
+                {
+                    return rowTransform;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = rowTransform;
+                }
+            }
+
+            return fallback;
+        }
+
+        private static Button FindTabButton(RectTransform tabsRoot, params string[] keywords)
+        {
+            if (tabsRoot == null || keywords == null || keywords.Length == 0)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < tabsRoot.childCount; i++)
+            {
+                var child = tabsRoot.GetChild(i);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                var button = child.GetComponent<Button>();
+                if (button == null)
+                {
+                    continue;
+                }
+
+                if (MatchesAnyKeyword(button.name, keywords))
+                {
+                    return button;
+                }
+
+                var label = button.GetComponentInChildren<Text>(true);
+                if (label != null && MatchesAnyKeyword(label.text, keywords))
+                {
+                    return button;
+                }
+            }
+
+            var nestedButtons = tabsRoot.GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < nestedButtons.Length; i++)
+            {
+                var button = nestedButtons[i];
+                if (button == null)
+                {
+                    continue;
+                }
+
+                if (MatchesAnyKeyword(button.name, keywords))
+                {
+                    return button;
+                }
+
+                var label = button.GetComponentInChildren<Text>(true);
+                if (label != null && MatchesAnyKeyword(label.text, keywords))
+                {
+                    return button;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool MatchesAnyKeyword(string value, string[] keywords)
+        {
+            if (string.IsNullOrWhiteSpace(value) || keywords == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < keywords.Length; i++)
+            {
+                var keyword = keywords[i];
+                if (string.IsNullOrWhiteSpace(keyword))
+                {
+                    continue;
+                }
+
+                if (value.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
     }

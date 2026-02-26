@@ -38,14 +38,7 @@ namespace CombatSystem.UI
 
         private void ResolveReferences()
         {
-            if (uiManager == null)
-            {
-                uiManager = GetComponentInParent<UIManager>();
-                if (uiManager == null)
-                {
-                    uiManager = FindFirstObjectByType<UIManager>();
-                }
-            }
+            uiManager = UIHotkeyUtility.ResolveUiManager(this, uiManager);
 
             if (questJournalScreen == null)
             {
@@ -80,7 +73,7 @@ namespace CombatSystem.UI
             // 避免 Journal 成为栈底导致 Back/Pop 无法返回。
             if (uiManager.CurrentScreen == null)
             {
-                var fallbackGameplay = FindFallbackGameplayScreen();
+                var fallbackGameplay = UIHotkeyUtility.FindFallbackGameplayScreen(questJournalScreen, false);
                 if (fallbackGameplay != null && fallbackGameplay != questJournalScreen)
                 {
                     uiManager.ShowScreen(fallbackGameplay, true);
@@ -93,32 +86,6 @@ namespace CombatSystem.UI
             }
 
             uiManager.PushScreen(questJournalScreen);
-        }
-
-        private UIScreenBase FindFallbackGameplayScreen()
-        {
-            var inGame = FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
-            if (inGame != null)
-            {
-                return inGame;
-            }
-
-            var screens = FindObjectsByType<UIScreenBase>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < screens.Length; i++)
-            {
-                var screen = screens[i];
-                if (screen == null || screen == questJournalScreen)
-                {
-                    continue;
-                }
-
-                if (screen.InputMode == UIInputMode.Gameplay)
-                {
-                    return screen;
-                }
-            }
-
-            return null;
         }
     }
 }
