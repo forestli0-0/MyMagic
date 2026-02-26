@@ -29,6 +29,8 @@ namespace CombatSystem.UI
         private const float InvalidClickTimestamp = -999f;
         private const float DefaultEquipmentSectionHeight = 390f;
         private const int LayoutLookupDepth = 8;
+        private const float GameplayMenuBottomGap = 4f;
+        private const float FallbackBottomClearance = 96f;
 
         [Header("References")]
         [SerializeField] private UIManager uiManager;
@@ -100,6 +102,11 @@ namespace CombatSystem.UI
         private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
         private int lastInventoryClickIndex = InvalidSelectionIndex;
         private float lastInventoryClickAt = InvalidClickTimestamp;
+        private RectTransform rootRectTransform;
+        private bool rootRectBaselineCaptured;
+        private Vector2 rootOffsetMinBaseline;
+        private Vector2 rootOffsetMaxBaseline;
+        private readonly Vector3[] skillBarWorldCorners = new Vector3[4];
 
         private enum InventoryFilter
         {
@@ -224,6 +231,7 @@ namespace CombatSystem.UI
         {
             ApplyThemeColors();
             EnsureReferences();
+            ApplyGameplayBottomSafePadding();
             EnsureStableEquipmentPanelHeight();
             if (uiManager != null)
             {
@@ -242,6 +250,7 @@ namespace CombatSystem.UI
             EndDrag();
             ResetDoubleClickState();
             ClearHoveredEquipmentState();
+            RestoreGameplayBottomSafePadding();
         }
 
         private void OnDestroy()
@@ -257,6 +266,7 @@ namespace CombatSystem.UI
 
         public override void OnFocus()
         {
+            ApplyGameplayBottomSafePadding();
             EnsureStableEquipmentPanelHeight();
             RefreshAll();
         }
@@ -271,6 +281,7 @@ namespace CombatSystem.UI
         private void OnDisable()
         {
             UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
+            RestoreGameplayBottomSafePadding();
         }
 
         private void Update()
@@ -466,6 +477,96 @@ namespace CombatSystem.UI
             }
 
             EnsureSkillFilterButton();
+        }
+
+        private void ApplyGameplayBottomSafePadding()
+        {
+            var rect = transform as RectTransform;
+            if (rect == null)
+            {
+                return;
+            }
+
+            rootRectTransform = rect;
+            CaptureRootRectBaselineIfNeeded(rect);
+
+            var requiredBottomInset = ResolveBottomSafeInset(rect);
+            var targetMin = rootOffsetMinBaseline;
+            if (requiredBottomInset > targetMin.y)
+            {
+                targetMin.y = requiredBottomInset;
+            }
+
+            if (rect.offsetMin != targetMin)
+            {
+                rect.offsetMin = targetMin;
+            }
+
+            if (rect.offsetMax != rootOffsetMaxBaseline)
+            {
+                rect.offsetMax = rootOffsetMaxBaseline;
+            }
+        }
+
+        private void RestoreGameplayBottomSafePadding()
+        {
+            if (!rootRectBaselineCaptured || rootRectTransform == null)
+            {
+                return;
+            }
+
+            if (rootRectTransform.offsetMin != rootOffsetMinBaseline)
+            {
+                rootRectTransform.offsetMin = rootOffsetMinBaseline;
+            }
+
+            if (rootRectTransform.offsetMax != rootOffsetMaxBaseline)
+            {
+                rootRectTransform.offsetMax = rootOffsetMaxBaseline;
+            }
+        }
+
+        private void CaptureRootRectBaselineIfNeeded(RectTransform rect)
+        {
+            if (rootRectBaselineCaptured)
+            {
+                return;
+            }
+
+            rootOffsetMinBaseline = rect.offsetMin;
+            rootOffsetMaxBaseline = rect.offsetMax;
+            rootRectBaselineCaptured = true;
+        }
+
+        private float ResolveBottomSafeInset(RectTransform screenRect)
+        {
+            var fallback = Mathf.Max(0f, FallbackBottomClearance);
+            if (skillBar == null)
+            {
+                return fallback;
+            }
+
+            var skillRect = skillBar.transform as RectTransform;
+            if (skillRect == null)
+            {
+                return fallback;
+            }
+
+            var parentRect = screenRect.parent as RectTransform;
+            if (parentRect == null)
+            {
+                return fallback;
+            }
+
+            skillRect.GetWorldCorners(skillBarWorldCorners);
+            var topLeft = RectTransformUtility.WorldToScreenPoint(null, skillBarWorldCorners[1]);
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, topLeft, null, out var topLocal))
+            {
+                return fallback;
+            }
+
+            var topFromBottom = topLocal.y + (parentRect.rect.height * parentRect.pivot.y);
+            return Mathf.Max(fallback, topFromBottom + GameplayMenuBottomGap);
         }
 
         private void EnsureStableEquipmentPanelHeight()

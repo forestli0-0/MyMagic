@@ -7,6 +7,17 @@ using UnityEngine;
 
 namespace CombatSystem.Gameplay
 {
+    public enum BossSkillExecutionPhase
+    {
+        Idle = 0,
+        InitialDelay = 1,
+        AcquireSnapshot = 2,
+        Telegraph = 3,
+        PreCastDelay = 4,
+        CastAttempt = 5,
+        PostCastDelay = 6
+    }
+
     /// <summary>
     /// Boss 技能节奏控制器：按序列进行 telegraph + 施法。
     /// </summary>
@@ -75,6 +86,8 @@ namespace CombatSystem.Gameplay
         private UnitAnimationEventProxy animationEventProxy;
         private Material telegraphLineMaterial;
         private Material telegraphFillMaterial;
+        private BossSkillExecutionPhase executionPhase = BossSkillExecutionPhase.Idle;
+        private bool phaseMovementStopRequested;
 
         private enum BossTelegraphStyle
         {
@@ -98,6 +111,8 @@ namespace CombatSystem.Gameplay
         /// 是否处于 Boss 技能流程导致的停移窗口。
         /// </summary>
         public bool IsMovementLocked => Time.time < movementLockUntilTime || animatorCastLockActive;
+        public BossSkillExecutionPhase ExecutionPhase => executionPhase;
+        public bool IsPhaseMovementStopRequested => phaseMovementStopRequested;
 
         public event Action<BossTelegraphEvent> TelegraphStarted;
 
@@ -135,6 +150,8 @@ namespace CombatSystem.Gameplay
             animatorCastLockActive = false;
             animatorCastStateObserved = false;
             animatorCastLockDeadline = 0f;
+            executionPhase = BossSkillExecutionPhase.Idle;
+            phaseMovementStopRequested = false;
             UnbindAnimationEventProxy();
             ReleaseTelegraphMaterials();
         }
@@ -162,6 +179,7 @@ namespace CombatSystem.Gameplay
 
         private IEnumerator RunLoop()
         {
+            SetExecutionPhase(BossSkillExecutionPhase.InitialDelay);
             var delay = Mathf.Max(0f, initialDelay);
             if (delay > 0f)
             {
@@ -171,8 +189,10 @@ namespace CombatSystem.Gameplay
             var index = 0;
             while (isActiveAndEnabled)
             {
+                phaseMovementStopRequested = false;
                 if (skillCycle.Count == 0 || skillUser == null)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.Idle);
                     yield return null;
                     continue;
                 }
@@ -187,10 +207,12 @@ namespace CombatSystem.Gameplay
 
                 if (entry == null || entry.Skill == null)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.Idle);
                     yield return null;
                     continue;
                 }
 
+                SetExecutionPhase(BossSkillExecutionPhase.AcquireSnapshot);
                 var castSnapshot = default(BossCastSnapshot);
                 var hasSnapshot = false;
                 var castRetryDeadline = Time.time + Mathf.Max(0.05f, entry.CastRetryWindow);
@@ -207,14 +229,18 @@ namespace CombatSystem.Gameplay
 
                 if (!hasSnapshot)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.PostCastDelay);
                     yield return new WaitForSeconds(Mathf.Max(0.05f, entry.DelayOnFail));
+                    SetExecutionPhase(BossSkillExecutionPhase.Idle);
                     continue;
                 }
 
                 var telegraphDuration = Mathf.Max(0f, entry.TelegraphDuration);
                 if (telegraphDuration > 0f)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.Telegraph);
                     var telegraphStyle = ResolveTelegraphStyle(entry.Skill);
+                    phaseMovementStopRequested = ShouldLockMovementDuringTelegraph(telegraphStyle);
                     if (ShouldLockMovementDuringTelegraph(telegraphStyle))
                     {
                         var preCastLockDuration =
@@ -237,9 +263,13 @@ namespace CombatSystem.Gameplay
                 var postTelegraphDelay = Mathf.Max(0f, castDelayAfterTelegraph);
                 if (postTelegraphDelay > 0f)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.PreCastDelay);
+                    phaseMovementStopRequested = true;
                     yield return new WaitForSeconds(postTelegraphDelay);
                 }
 
+                SetExecutionPhase(BossSkillExecutionPhase.CastAttempt);
+                phaseMovementStopRequested = true;
                 casted = TryCastSnapshot(entry, castSnapshot);
                 if (!casted)
                 {
@@ -280,13 +310,28 @@ namespace CombatSystem.Gameplay
                 var postDelay = casted ? entry.DelayAfterCast : entry.DelayOnFail;
                 if (postDelay > 0f)
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.PostCastDelay);
+                    phaseMovementStopRequested = false;
                     yield return new WaitForSeconds(postDelay);
                 }
                 else
                 {
+                    SetExecutionPhase(BossSkillExecutionPhase.PostCastDelay);
+                    phaseMovementStopRequested = false;
                     yield return null;
                 }
+
+                SetExecutionPhase(BossSkillExecutionPhase.Idle);
+                phaseMovementStopRequested = false;
             }
+
+            SetExecutionPhase(BossSkillExecutionPhase.Idle);
+            phaseMovementStopRequested = false;
+        }
+
+        private void SetExecutionPhase(BossSkillExecutionPhase nextPhase)
+        {
+            executionPhase = nextPhase;
         }
 
         private bool TryAcquireCastSnapshot(BossSkillCycleEntry entry, out BossCastSnapshot snapshot)

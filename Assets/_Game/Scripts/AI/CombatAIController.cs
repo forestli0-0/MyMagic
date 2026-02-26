@@ -912,9 +912,12 @@ namespace CombatSystem.AI
 
         private bool ShouldStopMovementWhileCasting()
         {
-            if (bossSkillScheduler != null && bossSkillScheduler.IsMovementLocked)
+            if (bossSkillScheduler != null)
             {
-                return true;
+                if (bossSkillScheduler.IsMovementLocked || bossSkillScheduler.IsPhaseMovementStopRequested)
+                {
+                    return true;
+                }
             }
 
             if (skillUser == null || !skillUser.IsCasting)
