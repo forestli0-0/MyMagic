@@ -71,6 +71,7 @@ namespace CombatSystem.Gameplay
             EnsureSlots();
             if (newItems != null)
             {
+                // 情况1：存档数据与当前容量一一对应，直接按槽位恢复。
                 if (newItems.Count == Capacity)
                 {
                     for (int i = 0; i < Capacity; i++)
@@ -80,6 +81,7 @@ namespace CombatSystem.Gameplay
                 }
                 else
                 {
+                    // 情况2：长度不一致（比如版本变更/兼容旧数据），按“遇到的顺序”塞空位。
                     for (int i = 0; i < newItems.Count; i++)
                     {
                         var entry = newItems[i];
@@ -121,6 +123,7 @@ namespace CombatSystem.Gameplay
 
             if (stackable)
             {
+                // 先尝试“理论上”能否塞进已有同类堆叠，不真正修改数据。
                 for (int i = 0; i < items.Count; i++)
                 {
                     var existing = items[i];
@@ -156,6 +159,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            // 剩余数量如果是可堆叠物，按每格 MaxStack 计算需要多少格。
             var slotsNeeded = stackable ? Mathf.CeilToInt((float)remaining / item.MaxStack) : remaining;
             return freeSlots >= slotsNeeded;
         }
@@ -184,6 +188,7 @@ namespace CombatSystem.Gameplay
 
             if (stackable)
             {
+                // 第一步：先把数量尽量填进已有同类堆叠，减少占用新格子。
                 for (int i = 0; i < items.Count; i++)
                 {
                     var existing = items[i];
@@ -209,6 +214,7 @@ namespace CombatSystem.Gameplay
                 }
             }
 
+            // 第二步：如果还有剩余，再开新槽位逐格放入。
             while (remaining > 0)
             {
                 // 找到第一个空槽并放入
@@ -227,6 +233,7 @@ namespace CombatSystem.Gameplay
 
             if (remaining > 0)
             {
+                // 装不下的部分通过 remainder 返回给调用方（例如掉落到地上/邮件）。
                 remainder = item.CloneWithStack(remaining);
                 return false;
             }
@@ -271,10 +278,12 @@ namespace CombatSystem.Gameplay
 
             if (amount >= entry.Stack)
             {
+                // 删光或超删时，直接清空该槽位。
                 items[index] = null;
             }
             else
             {
+                // 部分删除时，仅减少堆叠数量。
                 entry.SetStack(entry.Stack - amount);
             }
 
@@ -335,6 +344,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            // 纯移动：来源置空，目标放入，不做自动合并。
             items[toIndex] = item;
             items[fromIndex] = null;
 
@@ -380,10 +390,12 @@ namespace CombatSystem.Gameplay
 
             if (move >= source.Stack)
             {
+                // 来源全部并入后，来源槽位清空。
                 items[fromIndex] = null;
             }
             else
             {
+                // 只并入一部分，来源保留剩余数量。
                 source.SetStack(source.Stack - move);
             }
 
@@ -403,6 +415,7 @@ namespace CombatSystem.Gameplay
             }
 
             replaced = items[index];
+            // 不做类型校验/堆叠校验，调用方可用它实现“强制覆盖”语义。
             items[index] = item;
             InventoryChanged?.Invoke();
             return true;
@@ -441,6 +454,7 @@ namespace CombatSystem.Gameplay
             List<ItemInstance> normalized;
             if (mergeStacks)
             {
+                // 先把同类可堆叠物规整到满栈，减少碎片，再排序。
                 normalized = BuildMergedStacks(occupied);
             }
             else
@@ -448,8 +462,10 @@ namespace CombatSystem.Gameplay
                 normalized = occupied;
             }
 
+            // 使用自定义比较器；未提供时走默认规则（分类->稀有度->名称->价格）。
             normalized.Sort(comparison ?? CompareByDefaultOrganizeRule);
 
+            // 覆盖回固定槽位：前面是整理后的物品，后面全部置空。
             for (int i = 0; i < items.Count; i++)
             {
                 items[i] = i < normalized.Count ? normalized[i] : null;
@@ -503,6 +519,7 @@ namespace CombatSystem.Gameplay
                 return merged;
             }
 
+            // 以 ItemDefinition 分桶：同定义的可堆叠物累计总数量，再按 MaxStack 重新切分。
             var stackBuckets = new Dictionary<ItemDefinition, StackBucket>(16);
             var bucketOrder = new List<StackBucket>(16);
             for (int i = 0; i < source.Count; i++)
@@ -515,6 +532,7 @@ namespace CombatSystem.Gameplay
 
                 if (!item.IsStackable)
                 {
+                    // 不可堆叠物品原样保留（通常是一件装备一个实例）。
                     merged.Add(item);
                     continue;
                 }
@@ -535,6 +553,7 @@ namespace CombatSystem.Gameplay
                 var bucket = bucketOrder[i];
                 var remaining = bucket.TotalStack;
                 var maxStack = Mathf.Max(1, bucket.Prototype.MaxStack);
+                // 把累计数量按上限切成多个栈（例如 37 -> 20 + 17）。
                 while (remaining > 0)
                 {
                     var take = Mathf.Min(maxStack, remaining);
@@ -580,30 +599,63 @@ namespace CombatSystem.Gameplay
                 return -1;
             }
 
-            var categoryCompare = GetCategoryOrder(leftDef.Category).CompareTo(GetCategoryOrder(rightDef.Category));
-            if (categoryCompare != 0)
+            // Comparison<T> 约定：
+            // < 0 表示 left 在前，= 0 表示相等，> 0 表示 right 在前。
+            // 下面按优先级逐层比较：分类 -> 稀有度 -> 名称 -> 价格 -> 堆叠。
+            var result = CompareCategory(leftDef, rightDef);
+            if (result != 0)
             {
-                return categoryCompare;
+                return result;
             }
 
-            var rarityCompare = ((int)right.Rarity).CompareTo((int)left.Rarity);
-            if (rarityCompare != 0)
+            result = CompareRarityDescending(left, right);
+            if (result != 0)
             {
-                return rarityCompare;
+                return result;
             }
 
-            var nameCompare = string.Compare(ResolveDisplayName(leftDef), ResolveDisplayName(rightDef), StringComparison.OrdinalIgnoreCase);
-            if (nameCompare != 0)
+            result = CompareNameAscending(leftDef, rightDef);
+            if (result != 0)
             {
-                return nameCompare;
+                return result;
             }
 
-            var priceCompare = rightDef.BasePrice.CompareTo(leftDef.BasePrice);
-            if (priceCompare != 0)
+            result = CompareBasePriceDescending(leftDef, rightDef);
+            if (result != 0)
             {
-                return priceCompare;
+                return result;
             }
 
+            return CompareStackDescending(left, right);
+        }
+
+        private static int CompareCategory(ItemDefinition leftDef, ItemDefinition rightDef)
+        {
+            // 分类优先级越小越靠前（Weapon 在 Armor 前）。
+            return GetCategoryOrder(leftDef.Category).CompareTo(GetCategoryOrder(rightDef.Category));
+        }
+
+        private static int CompareRarityDescending(ItemInstance left, ItemInstance right)
+        {
+            // 稀有度高的排前面。
+            return ((int)right.Rarity).CompareTo((int)left.Rarity);
+        }
+
+        private static int CompareNameAscending(ItemDefinition leftDef, ItemDefinition rightDef)
+        {
+            // 名称按字典序升序。
+            return string.Compare(ResolveDisplayName(leftDef), ResolveDisplayName(rightDef), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int CompareBasePriceDescending(ItemDefinition leftDef, ItemDefinition rightDef)
+        {
+            // 同名前后再按基础价格高到低。
+            return rightDef.BasePrice.CompareTo(leftDef.BasePrice);
+        }
+
+        private static int CompareStackDescending(ItemInstance left, ItemInstance right)
+        {
+            // 最后兜底：堆叠数量大的放前面。
             return right.Stack.CompareTo(left.Stack);
         }
 
@@ -678,6 +730,7 @@ namespace CombatSystem.Gameplay
                     continue;
                 }
 
+                // 克隆后再加，避免直接引用编辑器里的同一实例导致运行时互相影响。
                 TryAddItem(item.CloneWithStack(item.Stack));
             }
         }
