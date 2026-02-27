@@ -18,11 +18,13 @@ namespace CombatSystem.Gameplay
         private int remainingPierce;
         private bool active;
         private Rigidbody body;
+        private SphereCollider runtimeHitCollider;
         private readonly List<int> hitIds = new List<int>(8);
 
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
+            runtimeHitCollider = GetComponent<SphereCollider>();
         }
 
         public void SetPool(ProjectilePool projectilePool, GameObject prefab)
@@ -49,6 +51,7 @@ namespace CombatSystem.Gameplay
             remainingPierce = definition.Pierce ? Mathf.Max(1, definition.MaxPierce) : 1;
             active = true;
             hitIds.Clear();
+            ApplyHitRadius();
         }
 
         private void Update()
@@ -137,6 +140,11 @@ namespace CombatSystem.Gameplay
 
         private bool IsValidTarget(CombatTarget hitTarget)
         {
+            if (hitTarget.Health != null && !hitTarget.Health.IsAlive)
+            {
+                return false;
+            }
+
             if (context.CasterUnit != null && hitTarget.Unit == context.CasterUnit)
             {
                 var includeSelf = targetingDefinition != null && targetingDefinition.IncludeSelf;
@@ -153,6 +161,35 @@ namespace CombatSystem.Gameplay
             }
 
             return true;
+        }
+
+        private void ApplyHitRadius()
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            var radius = Mathf.Max(0f, definition.HitRadius);
+            if (runtimeHitCollider == null)
+            {
+                runtimeHitCollider = GetComponent<SphereCollider>();
+            }
+
+            if (runtimeHitCollider != null)
+            {
+                runtimeHitCollider.radius = radius;
+                return;
+            }
+
+            if (radius <= 0f)
+            {
+                return;
+            }
+
+            runtimeHitCollider = gameObject.AddComponent<SphereCollider>();
+            runtimeHitCollider.isTrigger = true;
+            runtimeHitCollider.radius = radius;
         }
 
         private void ApplyHitEffects(CombatTarget hitTarget)

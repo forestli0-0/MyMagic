@@ -210,7 +210,7 @@ namespace CombatSystem.Core
         public float ApplyDamage(float amount, out float absorbed, DamageSourceInfo source)
         {
             absorbed = 0f;
-            if (amount <= 0f)
+            if (!IsAlive || amount <= 0f)
             {
                 return 0f;
             }

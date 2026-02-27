@@ -264,7 +264,7 @@ namespace CombatSystem.Core
                 if (instance.NextTickTime > 0f && now >= instance.NextTickTime)
                 {
                     // 触发 OnTick 效果
-                    TriggerBuff(instance, BuffTriggerType.OnTick, BuildContext(default), GetSelfTarget());
+                    TriggerBuff(instance, BuffTriggerType.OnTick, default, GetSelfTarget());
 
                     // 计算下一次 Tick 时间
                     var interval = instance.Definition.TickInterval;
@@ -412,7 +412,7 @@ namespace CombatSystem.Core
                     }
 
                     activeBuffs[index] = instance;
-                    TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                    TriggerBuff(instance, BuffTriggerType.OnApply, default, GetSelfTarget());
                     TryInterruptCast(buff);
                     BuffsChanged?.Invoke();
                     return;
@@ -437,7 +437,7 @@ namespace CombatSystem.Core
                         }
 
                         activeBuffs[refreshIndex] = instance;
-                        TriggerBuff(instance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+                        TriggerBuff(instance, BuffTriggerType.OnApply, default, GetSelfTarget());
                         TryInterruptCast(buff);
                         BuffsChanged?.Invoke();
                     }
@@ -453,7 +453,7 @@ namespace CombatSystem.Core
             activeBuffs.Add(newInstance);
 
             // 触发 OnApply 效果
-            TriggerBuff(newInstance, BuffTriggerType.OnApply, BuildContext(default), GetSelfTarget());
+            TriggerBuff(newInstance, BuffTriggerType.OnApply, default, GetSelfTarget());
             TryInterruptCast(buff);
             BuffsChanged?.Invoke();
         }
@@ -616,10 +616,19 @@ namespace CombatSystem.Core
                 return;
             }
 
+            // Use a snapshot to avoid iteration instability when triggers mutate activeBuffs.
+            var snapshot = SimpleListPool<BuffInstance>.Get(activeBuffs.Count);
             for (int i = 0; i < activeBuffs.Count; i++)
             {
-                TriggerBuff(activeBuffs[i], triggerType, context, target);
+                snapshot.Add(activeBuffs[i]);
             }
+
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                TriggerBuff(snapshot[i], triggerType, context, target);
+            }
+
+            SimpleListPool<BuffInstance>.Release(snapshot);
         }
 
         /// <summary>
@@ -642,7 +651,8 @@ namespace CombatSystem.Core
                 return;
             }
 
-            var execContext = BuildContext(context);
+            var preferredCasterUnit = instance.Source != null ? instance.Source : unitRoot;
+            var execContext = BuildContext(context, preferredCasterUnit);
             if (!target.IsValid)
             {
                 target = GetSelfTarget();
@@ -690,15 +700,36 @@ namespace CombatSystem.Core
         /// </summary>
         /// <param name="context">原始上下文</param>
         /// <returns>有效的上下文</returns>
-        private SkillRuntimeContext BuildContext(SkillRuntimeContext context)
+        private SkillRuntimeContext BuildContext(SkillRuntimeContext context, UnitRoot preferredCasterUnit)
         {
             var skill = context.Skill;
-            if (context.CasterUnit != null && context.CasterUnit == unitRoot && context.Caster == skillUser)
+            var casterUnit = preferredCasterUnit != null ? preferredCasterUnit : unitRoot;
+            if (context.CasterUnit != null && context.CasterUnit == casterUnit)
             {
                 return context;
             }
 
-            return new SkillRuntimeContext(skillUser, unitRoot, skill, unitRoot != null ? unitRoot.EventHub : null, targetingSystem, effectExecutor);
+            var casterSkillUser = casterUnit != null ? casterUnit.GetComponent<SkillUserComponent>() : null;
+            var casterEventHub = casterUnit != null ? casterUnit.EventHub : null;
+            if (casterEventHub == null && unitRoot != null)
+            {
+                casterEventHub = unitRoot.EventHub;
+            }
+
+            return new SkillRuntimeContext(
+                casterSkillUser,
+                casterUnit,
+                skill,
+                casterEventHub,
+                targetingSystem,
+                effectExecutor,
+                context.HasAimPoint,
+                context.AimPoint,
+                context.AimDirection,
+                context.ExplicitTarget,
+                context.ChargeDuration,
+                context.ChargeRatio,
+                context.ChargeMultiplier);
         }
 
         #endregion
@@ -719,7 +750,7 @@ namespace CombatSystem.Core
             // 触发过期效果
             if (invokeExpire)
             {
-                TriggerBuff(removed, BuffTriggerType.OnExpire, BuildContext(default), GetSelfTarget());
+                TriggerBuff(removed, BuffTriggerType.OnExpire, default, GetSelfTarget());
             }
 
             // swap-remove：将最后一个元素移到被删除的位置

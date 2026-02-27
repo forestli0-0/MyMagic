@@ -16,6 +16,11 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (!target.Health.IsAlive)
+            {
+                return;
+            }
+
             var scaling = GetScalingValue(effect, context);
             var finalAmount = amount + scaling;
             if (finalAmount <= 0f)

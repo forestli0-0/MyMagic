@@ -465,7 +465,12 @@ namespace CombatSystem.Gameplay
                 aimDirection = default;
             }
 
-            if (!CanCast(skill))
+            if (!IsExplicitTargetAlive(explicitTarget))
+            {
+                return false;
+            }
+
+            if (!CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection))
             {
                 // 施法/后摇/GCD期间允许进入输入缓冲
                 if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, chargeDurationSeconds))
@@ -536,6 +541,12 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            if (!FilterCastTargetsByAlivePolicy(skill, targets))
+            {
+                SimpleListPool<CombatTarget>.Release(targets);
+                return false;
+            }
+
             var chargeDuration = Mathf.Max(0f, chargeDurationSeconds);
             var chargeRatio = skill.ResolveChargeRatio(chargeDuration);
             var chargeMultiplier = skill.ResolveChargeMultiplier(chargeDuration);
@@ -551,7 +562,7 @@ namespace CombatSystem.Gameplay
                 chargeRatio,
                 chargeMultiplier);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
-            var resourceCost = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ResourceCost, skill, context, primaryTarget, ModifierParameters.SkillResourceCost));
+            var resourceCost = ResolveModifiedResourceCost(skill, context, primaryTarget);
             var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
             var castTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.CastTime, skill, context, primaryTarget, ModifierParameters.SkillCastTime));
             var channelTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTime, skill, context, primaryTarget, ModifierParameters.SkillChannelTime));
@@ -746,55 +757,7 @@ namespace CombatSystem.Gameplay
         /// <returns>若满足所有释放条件则返回 true</returns>
         public bool CanCast(SkillDefinition skill)
         {
-            // 技能不能为空
-            if (skill == null)
-            {
-                return false;
-            }
-
-            var isTauntBasic = IsTauntBasicAttack(skill);
-            if (TryGetTauntSource(out _) && !isTauntBasic)
-            {
-                return false;
-            }
-
-            // 施法/后摇/GCD 期间不可释放
-            if (IsLockedOut())
-            {
-                return false;
-            }
-
-            // 控制状态限制（眩晕/沉默等）
-            if (buffController != null && buffController.HasControlFlag(ControlFlag.BlocksCasting))
-            {
-                if (!isTauntBasic)
-                {
-                    return false;
-                }
-            }
-
-            if (skill == BasicAttack && buffController != null && buffController.HasControlFlag(ControlFlag.BlocksBasicAttack))
-            {
-                if (!isTauntBasic)
-                {
-                    return false;
-                }
-            }
-
-            // 必须存活
-            if (health != null && !health.IsAlive)
-            {
-                return false;
-            }
-
-            // 检查冷却
-            if (cooldown != null && !cooldown.IsReady(skill))
-            {
-                return false;
-            }
-
-            // 检查资源
-            return HasResource(skill, skill.ResourceCost);
+            return CanCastInternal(skill, false, null, false, default, default);
         }
 
         private bool TryHandleTaunt()
@@ -820,7 +783,8 @@ namespace CombatSystem.Gameplay
                 return true;
             }
 
-            if (!HasResource(basicAttack, basicAttack.ResourceCost))
+            var resourceCost = ResolveModifiedResourceCost(basicAttack, source.gameObject, false, default, default);
+            if (!HasResource(basicAttack, resourceCost))
             {
                 return true;
             }
@@ -941,9 +905,46 @@ namespace CombatSystem.Gameplay
             return Time.time < gcdEndTime;
         }
 
-        private bool CanCastIgnoringLockouts(SkillDefinition skill)
+        private bool CanCastIgnoringLockouts(
+            SkillDefinition skill,
+            GameObject explicitTarget = null,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
+        {
+            return CanCastInternal(skill, true, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+        }
+
+        private bool CanCastInternal(
+            SkillDefinition skill,
+            bool ignoreLockouts,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection)
         {
             if (skill == null)
+            {
+                return false;
+            }
+
+            var isTauntBasic = IsTauntBasicAttack(skill);
+            if (TryGetTauntSource(out _) && !isTauntBasic)
+            {
+                return false;
+            }
+
+            if (!ignoreLockouts && IsLockedOut())
+            {
+                return false;
+            }
+
+            if (buffController != null && buffController.HasControlFlag(ControlFlag.BlocksCasting) && !isTauntBasic)
+            {
+                return false;
+            }
+
+            if (skill == BasicAttack && buffController != null && buffController.HasControlFlag(ControlFlag.BlocksBasicAttack) && !isTauntBasic)
             {
                 return false;
             }
@@ -958,7 +959,13 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            return HasResource(skill, skill.ResourceCost);
+            if (!IsExplicitTargetAlive(explicitTarget))
+            {
+                return false;
+            }
+
+            var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            return HasResource(skill, cost);
         }
 
         private bool TryQueueCast(
@@ -969,7 +976,7 @@ namespace CombatSystem.Gameplay
             Vector3 aimDirection,
             float chargeDurationSeconds)
         {
-            if (skill == null || !CanCastIgnoringLockouts(skill))
+            if (skill == null || !CanCastIgnoringLockouts(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
             {
                 return false;
             }
@@ -1115,6 +1122,42 @@ namespace CombatSystem.Gameplay
             }
 
             return skill.Targeting.AllowEmpty;
+        }
+
+        private bool FilterCastTargetsByAlivePolicy(SkillDefinition skill, List<CombatTarget> targets)
+        {
+            if (skill == null || targets == null)
+            {
+                return false;
+            }
+
+            var targeting = skill.Targeting;
+            if (targeting == null || targeting.HitValidation < HitValidationPolicy.AliveOnly)
+            {
+                return targets.Count > 0 || targeting != null && targeting.AllowEmpty;
+            }
+
+            for (int i = targets.Count - 1; i >= 0; i--)
+            {
+                var target = targets[i];
+                if (target.Health != null && !target.Health.IsAlive)
+                {
+                    targets.RemoveAt(i);
+                }
+            }
+
+            return targets.Count > 0 || targeting.AllowEmpty;
+        }
+
+        private bool IsExplicitTargetAlive(GameObject explicitTarget)
+        {
+            if (explicitTarget == null)
+            {
+                return true;
+            }
+
+            var targetHealth = explicitTarget.GetComponentInParent<HealthComponent>();
+            return targetHealth == null || targetHealth.IsAlive;
         }
 
         /// <summary>
@@ -1409,6 +1452,44 @@ namespace CombatSystem.Gameplay
             {
                 SimpleListPool<CombatTarget>.Release(targets);
             }
+        }
+
+        private float ResolveModifiedResourceCost(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection)
+        {
+            if (skill == null)
+            {
+                return 0f;
+            }
+
+            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget);
+            var primaryTarget = default(CombatTarget);
+            if (explicitTarget != null)
+            {
+                CombatTarget.TryCreate(explicitTarget, out primaryTarget);
+            }
+
+            return ResolveModifiedResourceCost(skill, context, primaryTarget);
+        }
+
+        private float ResolveModifiedResourceCost(SkillDefinition skill, SkillRuntimeContext context, CombatTarget primaryTarget)
+        {
+            if (skill == null)
+            {
+                return 0f;
+            }
+
+            var modifiedCost = ModifierResolver.ApplySkillModifiers(
+                skill.ResourceCost,
+                skill,
+                context,
+                primaryTarget,
+                ModifierParameters.SkillResourceCost);
+            return Mathf.Max(0f, modifiedCost);
         }
 
         /// <summary>
