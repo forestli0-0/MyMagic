@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 423d4e9b41e544a48bd5f4c93619d8bf, type: 3}
-  m_Name: Skill_Fireball
+  m_Name: Skill_LockOnBolt
   m_EditorClassIdentifier: 
-  id: Skill_Fireball
-  displayName: Fireball
-  icon: {fileID: 21300000, guid: e32b8056f5f2eb741bec42f791c7f1b5, type: 3}
+  id: Skill_LockOnBolt
+  displayName: Lock-On Bolt
+  icon: {fileID: 21300000, guid: bef29bce6ed719f4a946d25ac181f8bd, type: 3}
   resourceType: 0
-  resourceCost: 10
-  cooldown: 3
-  castTime: 0.2
+  resourceCost: 12
+  cooldown: 2.5
+  castTime: 0.15
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
@@ -28,7 +28,7 @@ MonoBehaviour:
   queueWindow: 0
   queuePolicy: 0
   targetSnapshotPolicy: 0
-  targeting: {fileID: 11400000, guid: d36f4193e8284459b1db3d24d719ef3d, type: 2}
+  targeting: {fileID: 11400000, guid: edf6f826bdbc46948b7be81b3a9e63f7, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}
   - {fileID: 11400000, guid: 3c125633f625b144a985216b688a7efc, type: 2}
@@ -40,5 +40,4 @@ MonoBehaviour:
     vfxPrefab: {fileID: 0}
     sfx: {fileID: 0}
     effects:
-    - {fileID: 11400000, guid: b7744e7035094634e9ab9feaa79d9a7c, type: 2}
-    - {fileID: 11400000, guid: 850351bd026a1da4992ec6d055a703d7, type: 2}
+    - {fileID: 11400000, guid: c7f848ecdf87ed147a9ce35088eb4cfd, type: 2}

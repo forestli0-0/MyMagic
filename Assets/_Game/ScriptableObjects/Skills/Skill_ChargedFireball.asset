@@ -10,18 +10,22 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 423d4e9b41e544a48bd5f4c93619d8bf, type: 3}
-  m_Name: Skill_Fireball
+  m_Name: Skill_ChargedFireball
   m_EditorClassIdentifier: 
-  id: Skill_Fireball
-  displayName: Fireball
+  id: Skill_ChargedFireball
+  displayName: Charged Fireball
   icon: {fileID: 21300000, guid: e32b8056f5f2eb741bec42f791c7f1b5, type: 3}
   resourceType: 0
   resourceCost: 10
-  cooldown: 3
-  castTime: 0.2
+  cooldown: 4
+  castTime: 0.12
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
+  enableCharge: 1
+  maxChargeTime: 1.2
+  minChargeMultiplier: 1
+  maxChargeMultiplier: 2.2
   postCastTime: 0
   gcdDuration: 0
   channelTickInterval: 0

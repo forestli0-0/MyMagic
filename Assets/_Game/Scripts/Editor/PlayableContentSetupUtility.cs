@@ -26,10 +26,12 @@ namespace CombatSystem.EditorTools
         private const string ItemAccessoryPath = "Assets/_Game/ScriptableObjects/Items/Item_Accessory_Test.asset";
         private const string ItemPotionPath = "Assets/_Game/ScriptableObjects/Items/Item_Potion_Test.asset";
         private const string ItemSkillFireballPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_Fireball.asset";
+        private const string ItemSkillLockOnBoltPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_LockOnBolt.asset";
         private const string ItemSkillDashPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_Dash.asset";
         private const string ItemSkillArcaneFocusPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_ArcaneFocus.asset";
 
         private const string SkillFireballPath = "Assets/_Game/ScriptableObjects/Skills/Skill_Fireball.asset";
+        private const string SkillLockOnBoltPath = "Assets/_Game/ScriptableObjects/Skills/Skill_LockOnBolt.asset";
         private const string SkillDashPath = "Assets/_Game/ScriptableObjects/Skills/Skill_Dash.asset";
         private const string SkillArcaneFocusPath = "Assets/_Game/ScriptableObjects/Skills/Skill_ArcaneFocus.asset";
 
@@ -111,6 +113,7 @@ namespace CombatSystem.EditorTools
                 8f);
 
             var skillFireball = AssetDatabase.LoadAssetAtPath<SkillDefinition>(SkillFireballPath);
+            var skillLockOnBolt = AssetDatabase.LoadAssetAtPath<SkillDefinition>(SkillLockOnBoltPath);
             var skillDash = AssetDatabase.LoadAssetAtPath<SkillDefinition>(SkillDashPath);
             var skillArcaneFocus = AssetDatabase.LoadAssetAtPath<SkillDefinition>(SkillArcaneFocusPath);
 
@@ -121,6 +124,7 @@ namespace CombatSystem.EditorTools
             var accessory = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemAccessoryPath);
             var potion = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemPotionPath);
             var skillbookFireball = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemSkillFireballPath);
+            var skillbookLockOnBolt = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemSkillLockOnBoltPath);
             var skillbookDash = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemSkillDashPath);
             var skillbookArcaneFocus = AssetDatabase.LoadAssetAtPath<ItemDefinition>(ItemSkillArcaneFocusPath);
 
@@ -211,6 +215,18 @@ namespace CombatSystem.EditorTools
                 null);
 
             ConfigureItem(
+                skillbookLockOnBolt,
+                "技能书：锁定飞弹",
+                "学习锁定技能【锁定飞弹】。必须选中敌人才能释放。",
+                ItemRarity.Magic,
+                ItemSlot.None,
+                false,
+                ItemCategory.Skill,
+                135,
+                skillLockOnBolt,
+                null);
+
+            ConfigureItem(
                 skillbookDash,
                 "技能书：冲刺",
                 "学习位移技能【冲刺】并装配到技能栏。",
@@ -243,6 +259,7 @@ namespace CombatSystem.EditorTools
                 shoes,
                 accessory,
                 skillbookFireball,
+                skillbookLockOnBolt,
                 skillbookDash,
                 skillbookArcaneFocus);
 
@@ -255,6 +272,7 @@ namespace CombatSystem.EditorTools
                 shoes,
                 accessory,
                 skillbookFireball,
+                skillbookLockOnBolt,
                 skillbookDash,
                 skillbookArcaneFocus);
 
@@ -271,6 +289,7 @@ namespace CombatSystem.EditorTools
                 accessory,
                 potion,
                 skillbookFireball,
+                skillbookLockOnBolt,
                 skillbookDash);
 
             ConfigurePlayerBaseStats(
@@ -362,6 +381,7 @@ namespace CombatSystem.EditorTools
             ItemDefinition shoes,
             ItemDefinition accessory,
             ItemDefinition skillbookFireball,
+            ItemDefinition skillbookLockOnBolt,
             ItemDefinition skillbookDash,
             ItemDefinition skillbookArcaneFocus)
         {
@@ -388,6 +408,7 @@ namespace CombatSystem.EditorTools
             AddVendorItem(items, shoes, true, 5);
             AddVendorItem(items, accessory, true, 4);
             AddVendorItem(items, skillbookFireball, false, 1);
+            AddVendorItem(items, skillbookLockOnBolt, false, 1);
             AddVendorItem(items, skillbookDash, false, 1);
             AddVendorItem(items, skillbookArcaneFocus, false, 1);
 
@@ -419,6 +440,7 @@ namespace CombatSystem.EditorTools
             ItemDefinition shoes,
             ItemDefinition accessory,
             ItemDefinition skillbookFireball,
+            ItemDefinition skillbookLockOnBolt,
             ItemDefinition skillbookDash,
             ItemDefinition skillbookArcaneFocus)
         {
@@ -443,6 +465,7 @@ namespace CombatSystem.EditorTools
             AddItemLootEntry(entries, shoes, 7, 1, 1);
             AddItemLootEntry(entries, accessory, 5, 1, 1);
             AddItemLootEntry(entries, skillbookFireball, 3, 1, 1);
+            AddItemLootEntry(entries, skillbookLockOnBolt, 3, 1, 1);
             AddItemLootEntry(entries, skillbookDash, 3, 1, 1);
             AddItemLootEntry(entries, skillbookArcaneFocus, 3, 1, 1);
 
@@ -545,6 +568,7 @@ namespace CombatSystem.EditorTools
             ItemDefinition accessory,
             ItemDefinition potion,
             ItemDefinition skillbookFireball,
+            ItemDefinition skillbookLockOnBolt,
             ItemDefinition skillbookDash)
         {
             var prefabRoot = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
@@ -571,6 +595,7 @@ namespace CombatSystem.EditorTools
                 AddStartingItem(startingItems, accessory, 1);
                 AddStartingItem(startingItems, potion, 3);
                 AddStartingItem(startingItems, skillbookFireball, 1);
+                AddStartingItem(startingItems, skillbookLockOnBolt, 1);
                 AddStartingItem(startingItems, skillbookDash, 1);
 
                 so.ApplyModifiedPropertiesWithoutUndo();

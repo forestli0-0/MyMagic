@@ -43,5 +43,6 @@ MonoBehaviour:
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills:
   - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}
+  - {fileID: 11400000, guid: 6b4a6e47c0c546efb67dfdc9e78ab8e1, type: 2}
   - {fileID: 11400000, guid: b4334c8f64255634f894c947e4f459c0, type: 2}
   aiProfile: {fileID: 0}
