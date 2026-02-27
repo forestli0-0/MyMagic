@@ -34,6 +34,8 @@ namespace CombatSystem.Data
         [SerializeField] private bool includeSelf;
         [Tooltip("没有目标时是否仍允许释放技能")]
         [SerializeField] private bool allowEmpty;
+        [Tooltip("是否必须由输入显式指定目标（不允许系统自动补选）")]
+        [SerializeField] private bool requireExplicitTarget;
         
         [Header("标签过滤")]
         [Tooltip("目标必须具备的标签")]
@@ -60,6 +62,7 @@ namespace CombatSystem.Data
         public TargetSort Sort => sort;
         public bool IncludeSelf => includeSelf;
         public bool AllowEmpty => allowEmpty;
+        public bool RequireExplicitTarget => requireExplicitTarget;
         public IReadOnlyList<TagDefinition> RequiredTags => requiredTags;
         public IReadOnlyList<TagDefinition> BlockedTags => blockedTags;
         public HitValidationPolicy HitValidation => hitValidation;

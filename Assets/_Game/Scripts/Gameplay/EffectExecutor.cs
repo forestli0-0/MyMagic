@@ -121,6 +121,10 @@ namespace CombatSystem.Gameplay
         private void ApplyEffectInternal(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger)
         {
             var effectValue = ModifierResolver.ApplyEffectModifiers(effect.Value, effect, context, target, ModifierParameters.EffectValue);
+            if (context.ChargeMultiplier > 0f && !Mathf.Approximately(context.ChargeMultiplier, 1f))
+            {
+                effectValue *= context.ChargeMultiplier;
+            }
 
             switch (effect.EffectType)
             {

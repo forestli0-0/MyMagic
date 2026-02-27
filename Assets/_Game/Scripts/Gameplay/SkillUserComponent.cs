@@ -65,6 +65,9 @@ namespace CombatSystem.Gameplay
         private bool currentIsChannel;
         private float currentPostCastTime;
         private float currentQueueWindow;
+        private float currentChargeDuration;
+        private float currentChargeRatio;
+        private float currentChargeMultiplier = 1f;
         private SkillRuntimeContext currentContext;
         private bool currentHasAimPoint;
         private Vector3 currentAimPoint;
@@ -221,7 +224,15 @@ namespace CombatSystem.Gameplay
                 {
                     var context = currentContext.Skill != null
                         ? currentContext
-                        : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
+                        : CreateContext(
+                            currentSkill,
+                            currentHasAimPoint,
+                            currentAimPoint,
+                            currentAimDirection,
+                            null,
+                            currentChargeDuration,
+                            currentChargeRatio,
+                            currentChargeMultiplier);
                     RaiseSkillCastCompleted(context, currentCastTime, currentChannelTime, currentIsChannel);
                 }
 
@@ -410,7 +421,7 @@ namespace CombatSystem.Gameplay
         /// <returns>若成功开始施法则返回 true</returns>
         public bool TryCast(SkillDefinition skill, GameObject explicitTarget = null)
         {
-            return TryCast(skill, explicitTarget, false, default, default);
+            return TryCast(skill, explicitTarget, false, default, default, 0f);
         }
 
         /// <summary>
@@ -421,8 +432,15 @@ namespace CombatSystem.Gameplay
         /// <param name="hasAimPoint">是否有瞄准点</param>
         /// <param name="aimPoint">瞄准点</param>
         /// <param name="aimDirection">瞄准方向</param>
+        /// <param name="chargeDurationSeconds">按住蓄力时长（秒）</param>
         /// <returns>若成功开始施法则返回 true</returns>
-        public bool TryCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+        public bool TryCast(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            float chargeDurationSeconds = 0f)
         {
             if (skill == null)
             {
@@ -450,7 +468,7 @@ namespace CombatSystem.Gameplay
             if (!CanCast(skill))
             {
                 // 施法/后摇/GCD期间允许进入输入缓冲
-                if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+                if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, chargeDurationSeconds))
                 {
                     return false;
                 }
@@ -464,6 +482,23 @@ namespace CombatSystem.Gameplay
                 {
                     aimPoint = explicitTarget.transform.position;
                     hasAimPoint = true;
+                }
+            }
+
+            // 锁定目标技能：有显式目标时强制使用“指向目标”的朝向，避免沿鼠标方向发射。
+            if (skill.Targeting != null && skill.Targeting.RequireExplicitTarget && explicitTarget != null && unitRoot != null)
+            {
+                if (skill.Targeting.Origin == TargetingOrigin.TargetPoint)
+                {
+                    aimPoint = explicitTarget.transform.position;
+                    hasAimPoint = true;
+                }
+
+                var toExplicitTarget = explicitTarget.transform.position - unitRoot.transform.position;
+                toExplicitTarget.y = 0f;
+                if (toExplicitTarget.sqrMagnitude > 0.0001f)
+                {
+                    aimDirection = toExplicitTarget.normalized;
                 }
             }
 
@@ -501,8 +536,20 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            var chargeDuration = Mathf.Max(0f, chargeDurationSeconds);
+            var chargeRatio = skill.ResolveChargeRatio(chargeDuration);
+            var chargeMultiplier = skill.ResolveChargeMultiplier(chargeDuration);
+
             // 创建技能上下文
-            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget);
+            var context = CreateContext(
+                skill,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                explicitTarget,
+                chargeDuration,
+                chargeRatio,
+                chargeMultiplier);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ResourceCost, skill, context, primaryTarget, ModifierParameters.SkillResourceCost));
             var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
@@ -583,6 +630,9 @@ namespace CombatSystem.Gameplay
                 currentHasAimPoint = hasAimPoint;
                 currentAimPoint = aimPoint;
                 currentAimDirection = aimDirection;
+                currentChargeDuration = chargeDuration;
+                currentChargeRatio = chargeRatio;
+                currentChargeMultiplier = chargeMultiplier;
                 // 后摇锁定开始于施法结束
                 recoveryEndTime = castEndTime + postCastTime;
             }
@@ -609,7 +659,15 @@ namespace CombatSystem.Gameplay
 
             var context = currentContext.Skill != null
                 ? currentContext
-                : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
+                : CreateContext(
+                    currentSkill,
+                    currentHasAimPoint,
+                    currentAimPoint,
+                    currentAimDirection,
+                    null,
+                    currentChargeDuration,
+                    currentChargeRatio,
+                    currentChargeMultiplier);
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
             recoveryEndTime = Time.time + Mathf.Max(0f, currentPostCastTime);
@@ -647,7 +705,15 @@ namespace CombatSystem.Gameplay
 
             var context = currentContext.Skill != null
                 ? currentContext
-                : CreateContext(currentSkill, currentHasAimPoint, currentAimPoint, currentAimDirection);
+                : CreateContext(
+                    currentSkill,
+                    currentHasAimPoint,
+                    currentAimPoint,
+                    currentAimDirection,
+                    null,
+                    currentChargeDuration,
+                    currentChargeRatio,
+                    currentChargeMultiplier);
 
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
@@ -817,6 +883,11 @@ namespace CombatSystem.Gameplay
             Vector3 aimPoint = default,
             Vector3 aimDirection = default)
         {
+            if (skill != null && skill.Targeting != null && skill.Targeting.RequireExplicitTarget && target == null)
+            {
+                return false;
+            }
+
             return IsTargetInRange(skill, target, hasAimPoint, aimPoint, aimDirection);
         }
 
@@ -890,7 +961,13 @@ namespace CombatSystem.Gameplay
             return HasResource(skill, skill.ResourceCost);
         }
 
-        private bool TryQueueCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+        private bool TryQueueCast(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            float chargeDurationSeconds)
         {
             if (skill == null || !CanCastIgnoringLockouts(skill))
             {
@@ -907,7 +984,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            queuedCast = new QueuedCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            queuedCast = new QueuedCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, chargeDurationSeconds);
             hasQueuedCast = true;
             return true;
         }
@@ -961,7 +1038,13 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            TryCast(request.Skill, request.ExplicitTarget, request.HasAimPoint, request.AimPoint, request.AimDirection);
+            TryCast(
+                request.Skill,
+                request.ExplicitTarget,
+                request.HasAimPoint,
+                request.AimPoint,
+                request.AimDirection,
+                request.ChargeDurationSeconds);
         }
 
         /// <summary>
@@ -1014,11 +1097,21 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            if (skill.Targeting.RequireExplicitTarget && explicitTarget == null)
+            {
+                return false;
+            }
+
             // 使用目标系统收集目标
             targetingSystem.CollectTargets(skill.Targeting, unitRoot, explicitTarget, targets, hasAimPoint, aimPoint, aimDirection);
             if (targets.Count > 0)
             {
                 return true;
+            }
+
+            if (skill.Targeting.RequireExplicitTarget)
+            {
+                return false;
             }
 
             return skill.Targeting.AllowEmpty;
@@ -1270,6 +1363,23 @@ namespace CombatSystem.Gameplay
                     SimpleListPool<CombatTarget>.Release(targets);
                 }
 
+                // 允许“无目标释放”的技能（例如指向性投射物/召唤等）在没有命中单位时仍执行一次。
+                // 这里用 default(CombatTarget) 作为占位目标：需要单位目标的效果会自然 no-op（Health/Stats 等为空），
+                // 而依赖 AimPoint/AimDirection 的效果（如 Projectile/Summon）仍可正常工作。
+                if (context.Skill != null && context.Skill.Targeting != null && context.Skill.Targeting.AllowEmpty)
+                {
+                    var emptyTarget = default(CombatTarget);
+
+                    // 检查步骤级别的条件（允许仅依赖 Caster 的条件通过）
+                    if (step.condition == null || ConditionEvaluator.Evaluate(step.condition, context, emptyTarget))
+                    {
+                        for (int j = 0; j < effects.Count; j++)
+                        {
+                            effectExecutor.ExecuteEffect(effects[j], context, emptyTarget, pending.Trigger);
+                        }
+                    }
+                }
+
                 return;
             }
 
@@ -1348,9 +1458,25 @@ namespace CombatSystem.Gameplay
             bool hasAimPoint = false,
             Vector3 aimPoint = default,
             Vector3 aimDirection = default,
-            GameObject explicitTarget = null)
+            GameObject explicitTarget = null,
+            float chargeDuration = 0f,
+            float chargeRatio = 0f,
+            float chargeMultiplier = 1f)
         {
-            return new SkillRuntimeContext(this, unitRoot, skill, eventHub, targetingSystem, effectExecutor, hasAimPoint, aimPoint, aimDirection, explicitTarget);
+            return new SkillRuntimeContext(
+                this,
+                unitRoot,
+                skill,
+                eventHub,
+                targetingSystem,
+                effectExecutor,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                explicitTarget,
+                chargeDuration,
+                chargeRatio,
+                chargeMultiplier);
         }
 
         /// <summary>
@@ -1419,6 +1545,9 @@ namespace CombatSystem.Gameplay
             currentHasAimPoint = false;
             currentAimPoint = default;
             currentAimDirection = default;
+            currentChargeDuration = 0f;
+            currentChargeRatio = 0f;
+            currentChargeMultiplier = 1f;
         }
 
         /// <summary>
@@ -1543,14 +1672,22 @@ namespace CombatSystem.Gameplay
             public bool HasAimPoint;
             public Vector3 AimPoint;
             public Vector3 AimDirection;
+            public float ChargeDurationSeconds;
 
-            public QueuedCast(SkillDefinition skill, GameObject explicitTarget, bool hasAimPoint, Vector3 aimPoint, Vector3 aimDirection)
+            public QueuedCast(
+                SkillDefinition skill,
+                GameObject explicitTarget,
+                bool hasAimPoint,
+                Vector3 aimPoint,
+                Vector3 aimDirection,
+                float chargeDurationSeconds)
             {
                 Skill = skill;
                 ExplicitTarget = explicitTarget;
                 HasAimPoint = hasAimPoint;
                 AimPoint = aimPoint;
                 AimDirection = aimDirection;
+                ChargeDurationSeconds = Mathf.Max(0f, chargeDurationSeconds);
             }
         }
 

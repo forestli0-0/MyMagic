@@ -43,6 +43,11 @@ namespace CombatSystem.Gameplay
         [SerializeField] private InputReader inputReader;
         [SerializeField] private bool autoFindInputReader = true;
 
+        [Header("HUD")]
+        [Tooltip("技能栏 UI（用于显示蓄力进度）")]
+        [SerializeField] private SkillBarUI skillBarUI;
+        [SerializeField] private bool autoFindSkillBarUI = true;
+
         #endregion
 
         #region 私有字段
@@ -51,6 +56,8 @@ namespace CombatSystem.Gameplay
         private SkillDefinition activeSkill;
         /// <summary>当前激活的技能槽位</summary>
         private int activeSlot = -1;
+        /// <summary>当前技能按下时间（用于蓄力）</summary>
+        private float activeSkillPressedAt;
         /// <summary>上一帧的瞄准方向</summary>
         private Vector3 lastAimDirection = Vector3.forward;
         /// <summary>上一帧的瞄准点</summary>
@@ -62,6 +69,8 @@ namespace CombatSystem.Gameplay
         private readonly List<CombatTarget> cachedTargets = new List<CombatTarget>(8);
         /// <summary>非普攻技能缓存（用于数字键映射）</summary>
         private readonly List<SkillDefinition> nonBasicSkillBuffer = new List<SkillDefinition>(8);
+        /// <summary>鼠标命中检测缓存（避免GC）</summary>
+        private readonly RaycastHit[] hoverHitBuffer = new RaycastHit[32];
 
         /// <summary>当前高亮的目标</summary>
         private Transform currentTarget;
@@ -105,6 +114,7 @@ namespace CombatSystem.Gameplay
 
             ResolveInputReader();
             ResolveTargetingSystem();
+            ResolveSkillBarUI();
         }
 
         /// <summary>
@@ -126,7 +136,9 @@ namespace CombatSystem.Gameplay
 
             activeSkill = null;
             activeSlot = -1;
+            activeSkillPressedAt = 0f;
             hasAimPoint = false;
+            ClearSkillChargeVisual();
         }
 
         private void OnEnable()
@@ -138,6 +150,7 @@ namespace CombatSystem.Gameplay
 
             ResolveTargetingSystem();
             ResolveInputReader();
+            ResolveSkillBarUI();
             if (inputReader != null)
             {
                 inputReader.SkillStarted += HandleSkillStarted;
@@ -172,6 +185,9 @@ namespace CombatSystem.Gameplay
 
             // 更新目标高亮
             UpdateTargetHighlight();
+
+            // 更新技能槽蓄力进度
+            UpdateChargeVisual();
         }
 
         #endregion
@@ -196,6 +212,37 @@ namespace CombatSystem.Gameplay
             }
 
             targetingSystem = FindFirstObjectByType<TargetingSystem>();
+        }
+
+        private void ResolveSkillBarUI()
+        {
+            if (skillBarUI != null || !autoFindSkillBarUI)
+            {
+                return;
+            }
+
+            if (UIRoot.Instance != null && UIRoot.Instance.HudCanvas != null)
+            {
+                skillBarUI = UIRoot.Instance.HudCanvas.GetComponentInChildren<SkillBarUI>(true);
+            }
+
+            if (skillBarUI == null)
+            {
+                skillBarUI = FindFirstObjectByType<SkillBarUI>(FindObjectsInactive.Include);
+            }
+        }
+
+        private void ClearSkillChargeVisual()
+        {
+            if (skillBarUI == null)
+            {
+                ResolveSkillBarUI();
+            }
+
+            if (skillBarUI != null)
+            {
+                skillBarUI.ClearSkillCharge();
+            }
         }
 
         private void HandleSkillStarted(int slotIndex)
@@ -237,6 +284,29 @@ namespace CombatSystem.Gameplay
             }
 
             CancelAim();
+        }
+
+        private void UpdateChargeVisual()
+        {
+            if (skillBarUI == null)
+            {
+                ResolveSkillBarUI();
+            }
+
+            if (skillBarUI == null)
+            {
+                return;
+            }
+
+            if (activeSkill == null || !activeSkill.SupportsCharge)
+            {
+                skillBarUI.ClearSkillCharge();
+                return;
+            }
+
+            var elapsed = Mathf.Max(0f, Time.time - activeSkillPressedAt);
+            var ratio = activeSkill.ResolveChargeRatio(elapsed);
+            skillBarUI.NotifySkillCharge(activeSkill, ratio, true);
         }
 
         /// <summary>
@@ -293,6 +363,8 @@ namespace CombatSystem.Gameplay
 
             activeSkill = skill;
             activeSlot = slotIndex;
+            activeSkillPressedAt = Time.time;
+            ClearSkillChargeVisual();
             indicator.Show(skill);
             UpdateAimDirection();
             UpdateTargetHighlight();
@@ -379,6 +451,14 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            // 显式目标技能优先按配置排序自动选择（通常为最近目标），降低对鼠标位置的依赖。
+            if (targeting.RequireExplicitTarget)
+            {
+                var explicitTarget = SelectMousePreferredTarget(cachedTargets, targeting.Sort);
+                SetHighlightIfChanged(explicitTarget);
+                return;
+            }
+
             // 多个目标时，选择距离鼠标最近的
             var bestTarget = SelectClosestToMouse(cachedTargets);
             SetHighlightIfChanged(bestTarget);
@@ -430,6 +510,170 @@ namespace CombatSystem.Gameplay
             }
 
             return closest ?? candidates[0].Transform;
+        }
+
+        private Transform SelectAutoTargetBySort(List<CombatTarget> candidates, TargetSort sort)
+        {
+            if (candidates == null || candidates.Count == 0)
+            {
+                return null;
+            }
+
+            var origin = transform.position;
+            CombatTarget best = default;
+            var hasBest = false;
+            var bestDistance = 0f;
+            var bestHealth = 0f;
+
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                var candidate = candidates[i];
+                if (!candidate.IsValid || candidate.Transform == null)
+                {
+                    continue;
+                }
+
+                var distance = GetHorizontalDistanceSqr(origin, candidate.Transform.position);
+                var healthValue = candidate.Health != null ? candidate.Health.Current : float.MaxValue;
+
+                if (!hasBest)
+                {
+                    best = candidate;
+                    bestDistance = distance;
+                    bestHealth = healthValue;
+                    hasBest = true;
+                    continue;
+                }
+
+                if (IsBetterCandidate(sort, distance, healthValue, bestDistance, bestHealth))
+                {
+                    best = candidate;
+                    bestDistance = distance;
+                    bestHealth = healthValue;
+                }
+            }
+
+            return hasBest ? best.Transform : candidates[0].Transform;
+        }
+
+        private Transform SelectMousePreferredTarget(List<CombatTarget> candidates, TargetSort sort)
+        {
+            var hovered = SelectHoveredCandidate(candidates);
+            if (hovered != null)
+            {
+                return hovered;
+            }
+
+            return SelectAutoTargetBySort(candidates, sort);
+        }
+
+        private Transform SelectHoveredCandidate(List<CombatTarget> candidates)
+        {
+            if (candidates == null || candidates.Count == 0)
+            {
+                return null;
+            }
+
+            if (viewCamera == null)
+            {
+                viewCamera = Camera.main;
+            }
+
+            if (viewCamera == null || inputReader == null)
+            {
+                return null;
+            }
+
+            var ray = viewCamera.ScreenPointToRay(inputReader.AimPoint);
+            var hitCount = Physics.RaycastNonAlloc(ray, hoverHitBuffer, raycastDistance, ~0, QueryTriggerInteraction.Ignore);
+            if (hitCount <= 0)
+            {
+                return null;
+            }
+
+            Transform best = null;
+            var bestDistance = float.MaxValue;
+
+            for (var i = 0; i < hitCount; i++)
+            {
+                var hit = hoverHitBuffer[i];
+                if (hit.collider == null)
+                {
+                    continue;
+                }
+
+                var candidate = ResolveCandidateFromHit(hit.collider.transform, candidates);
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                if (hit.distance < bestDistance)
+                {
+                    bestDistance = hit.distance;
+                    best = candidate;
+                }
+            }
+
+            return best;
+        }
+
+        private static Transform ResolveCandidateFromHit(Transform hitTransform, List<CombatTarget> candidates)
+        {
+            if (hitTransform == null || candidates == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                var candidate = candidates[i];
+                if (!candidate.IsValid || candidate.Transform == null)
+                {
+                    continue;
+                }
+
+                var candidateTransform = candidate.Transform;
+                if (hitTransform == candidateTransform ||
+                    hitTransform.IsChildOf(candidateTransform) ||
+                    candidateTransform.IsChildOf(hitTransform))
+                {
+                    return candidateTransform;
+                }
+            }
+
+            return null;
+        }
+
+        private static float GetHorizontalDistanceSqr(Vector3 from, Vector3 to)
+        {
+            var dx = to.x - from.x;
+            var dz = to.z - from.z;
+            return dx * dx + dz * dz;
+        }
+
+        private static bool IsBetterCandidate(
+            TargetSort sort,
+            float candidateDistance,
+            float candidateHealth,
+            float bestDistance,
+            float bestHealth)
+        {
+            switch (sort)
+            {
+                case TargetSort.Farthest:
+                    return candidateDistance > bestDistance;
+                case TargetSort.LowestHealth:
+                    return candidateHealth < bestHealth;
+                case TargetSort.HighestHealth:
+                    return candidateHealth > bestHealth;
+                case TargetSort.Random:
+                    return Random.value > 0.5f;
+                case TargetSort.None:
+                case TargetSort.Closest:
+                default:
+                    return candidateDistance < bestDistance;
+            }
         }
 
         /// <summary>
@@ -530,6 +774,12 @@ namespace CombatSystem.Gameplay
             var direction = lastAimDirection;
             var aimPoint = lastAimPoint;
             var hadAimPoint = hasAimPoint;
+            // 只有蓄力技能才记录蓄力时长，避免“按住瞄准”被误认为所有技能都在蓄力。
+            var chargeDuration = Mathf.Max(0f, Time.time - activeSkillPressedAt);
+            if (skill != null && !skill.SupportsCharge)
+            {
+                chargeDuration = 0f;
+            }
             // 保存当前选中的目标，用于传递给技能系统
             var selectedTarget = currentTarget != null ? currentTarget.gameObject : null;
 
@@ -541,14 +791,27 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            // 如果启用了朝向瞄准方向旋转，则旋转角色
-            if (rotateCasterToAim && direction.sqrMagnitude > 0.0001f)
+            // 如果启用了施法转向：显式目标技能优先面向目标，其次面向瞄准方向。
+            if (rotateCasterToAim)
             {
-                transform.rotation = Quaternion.LookRotation(direction);
+                var facingDirection = direction;
+                if (skill != null &&
+                    skill.Targeting != null &&
+                    skill.Targeting.RequireExplicitTarget &&
+                    selectedTarget != null)
+                {
+                    facingDirection = selectedTarget.transform.position - transform.position;
+                    facingDirection.y = 0f;
+                }
+
+                if (facingDirection.sqrMagnitude > 0.0001f)
+                {
+                    transform.rotation = Quaternion.LookRotation(facingDirection.normalized);
+                }
             }
 
             // 尝试施放技能，传递选中的目标作为显式目标
-            skillUser.TryCast(skill, selectedTarget, hadAimPoint, aimPoint, lastAimDirection);
+            skillUser.TryCast(skill, selectedTarget, hadAimPoint, aimPoint, direction, chargeDuration);
         }
 
         /// <summary>
@@ -559,10 +822,12 @@ namespace CombatSystem.Gameplay
         {
             activeSkill = null;
             activeSlot = -1;
+            activeSkillPressedAt = 0f;
             hasAimPoint = false;
             indicator.Hide();
             indicator.ClearAimPoint();
             ClearTargetHighlight();
+            ClearSkillChargeVisual();
         }
 
         private void NotifyTargetChanged(Transform target)

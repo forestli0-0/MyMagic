@@ -26,6 +26,16 @@ namespace CombatSystem.Data
         [SerializeField] private bool canMoveWhileCasting;
         [SerializeField] private bool canRotateWhileCasting = true;
 
+        [Header("蓄力参数")]
+        [Tooltip("是否启用蓄力（按住技能键提升强度，松开释放）")]
+        [SerializeField] private bool enableCharge;
+        [Tooltip("蓄力达到满值所需时长（秒）")]
+        [SerializeField] private float maxChargeTime = 1.2f;
+        [Tooltip("零蓄力时的效果倍率")]
+        [SerializeField] private float minChargeMultiplier = 1f;
+        [Tooltip("满蓄力时的效果倍率")]
+        [SerializeField] private float maxChargeMultiplier = 1.8f;
+
         // 施法节奏与输入缓冲配置
         [Header("施法节奏")]
         [Tooltip("施法后摇时间（技能释放完毕后的恢复时间）")]
@@ -59,6 +69,11 @@ namespace CombatSystem.Data
         public float ChannelTime => channelTime;
         public bool CanMoveWhileCasting => canMoveWhileCasting;
         public bool CanRotateWhileCasting => canRotateWhileCasting;
+        public bool EnableCharge => enableCharge;
+        public float MaxChargeTime => maxChargeTime;
+        public float MinChargeMultiplier => minChargeMultiplier;
+        public float MaxChargeMultiplier => maxChargeMultiplier;
+        public bool SupportsCharge => enableCharge && maxChargeTime > 0.01f;
         public float PostCastTime => postCastTime;
         public float GcdDuration => gcdDuration;
         public float ChannelTickInterval => channelTickInterval;
@@ -68,6 +83,36 @@ namespace CombatSystem.Data
         public TargetingDefinition Targeting => targeting;
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<SkillStep> Steps => steps;
+
+        /// <summary>
+        /// 根据蓄力时长计算归一化蓄力比例（0~1）。
+        /// </summary>
+        public float ResolveChargeRatio(float chargeDurationSeconds)
+        {
+            if (!SupportsCharge)
+            {
+                return 0f;
+            }
+
+            var safeMax = Mathf.Max(0.01f, maxChargeTime);
+            return Mathf.Clamp01(Mathf.Max(0f, chargeDurationSeconds) / safeMax);
+        }
+
+        /// <summary>
+        /// 根据蓄力时长计算效果倍率。
+        /// </summary>
+        public float ResolveChargeMultiplier(float chargeDurationSeconds)
+        {
+            if (!SupportsCharge)
+            {
+                return 1f;
+            }
+
+            var ratio = ResolveChargeRatio(chargeDurationSeconds);
+            var minMul = Mathf.Max(0f, minChargeMultiplier);
+            var maxMul = Mathf.Max(minMul, maxChargeMultiplier);
+            return Mathf.Lerp(minMul, maxMul, ratio);
+        }
     }
 
     /// <summary>

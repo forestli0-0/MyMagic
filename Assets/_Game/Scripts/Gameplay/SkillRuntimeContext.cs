@@ -19,6 +19,9 @@ namespace CombatSystem.Gameplay
         public readonly Vector3 AimPoint;
         public readonly Vector3 AimDirection;
         public readonly GameObject ExplicitTarget;
+        public readonly float ChargeDuration;
+        public readonly float ChargeRatio;
+        public readonly float ChargeMultiplier;
 
         // 施法者组件缓存，避免热路径 GetComponent 调用
         /// <summary>施法者属性组件缓存</summary>
@@ -38,7 +41,10 @@ namespace CombatSystem.Gameplay
             bool hasAimPoint = false,
             Vector3 aimPoint = default,
             Vector3 aimDirection = default,
-            GameObject explicitTarget = null)
+            GameObject explicitTarget = null,
+            float chargeDuration = 0f,
+            float chargeRatio = 0f,
+            float chargeMultiplier = 1f)
         {
             Caster = caster;
             CasterUnit = casterUnit;
@@ -50,6 +56,9 @@ namespace CombatSystem.Gameplay
             AimPoint = aimPoint;
             AimDirection = aimDirection;
             ExplicitTarget = explicitTarget;
+            ChargeDuration = Mathf.Max(0f, chargeDuration);
+            ChargeRatio = Mathf.Clamp01(chargeRatio);
+            ChargeMultiplier = Mathf.Max(0f, chargeMultiplier);
 
             if (casterUnit != null)
             {

@@ -93,6 +93,13 @@ namespace CombatSystem.Gameplay
                     {
                         return;
                     }
+
+                    // 锁定目标模式：不允许自动兜底补选
+                    if (definition.RequireExplicitTarget)
+                    {
+                        return;
+                    }
+
                     SelectSingle(definition, caster, includeSelf, origin, forward, results);
                     return;
                 case TargetingMode.Cone:
@@ -114,6 +121,11 @@ namespace CombatSystem.Gameplay
                     return;
                 case TargetingMode.Chain:
                     // 链式模式：先选定首目标，再依次跳跃
+                    if (definition.RequireExplicitTarget && explicitTarget == null)
+                    {
+                        return;
+                    }
+
                     CollectChainTargets(definition, caster, explicitTarget, includeSelf, origin, forward, results);
                     return;
                 default:
@@ -527,6 +539,11 @@ namespace CombatSystem.Gameplay
                         origin = explicitCombatTarget.Transform.position;
                     }
                 }
+            }
+
+            if (definition.RequireExplicitTarget && !hasExplicit)
+            {
+                return;
             }
 
             var candidates = SimpleListPool<CombatTarget>.Get();
