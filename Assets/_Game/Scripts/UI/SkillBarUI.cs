@@ -99,6 +99,7 @@ namespace CombatSystem.UI
             
             CollectSlots();
             RebuildSlots(maxSlots);
+            ClearSkillCharge();
         }
 
         /// <summary>
@@ -144,6 +145,38 @@ namespace CombatSystem.UI
             }
         }
 
+        /// <summary>
+        /// 更新技能槽的蓄力进度表现。
+        /// </summary>
+        public void NotifySkillCharge(SkillDefinition skill, float normalizedRatio, bool charging)
+        {
+            if (slots == null || slots.Count == 0)
+            {
+                return;
+            }
+
+            var ratio = Mathf.Clamp01(normalizedRatio);
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                var shouldShow = charging && skill != null && slot.Skill == skill;
+                slot.SetChargeProgress(shouldShow ? ratio : 0f, shouldShow);
+            }
+        }
+
+        /// <summary>
+        /// 清空所有技能槽的蓄力显示。
+        /// </summary>
+        public void ClearSkillCharge()
+        {
+            NotifySkillCharge(null, 0f, false);
+        }
+
         private void Update()
         {
             if (cooldown == null || slots.Count == 0)
@@ -180,6 +213,8 @@ namespace CombatSystem.UI
             {
                 skillUser.SkillsChanged -= HandleSkillsChanged;
             }
+
+            ClearSkillCharge();
         }
 
         private void HandleSkillsChanged()

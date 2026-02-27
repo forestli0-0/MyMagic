@@ -37,6 +37,16 @@ namespace CombatSystem.UI
         [SerializeField] private bool pulseUseUnscaledTime = true;
         [SerializeField] private Color castPulseTint = new Color(1f, 0.96f, 0.7f, 1f);
 
+        [Header("Charge FX")]
+        [SerializeField] private bool autoCreateChargeFrame = true;
+        [SerializeField] private float chargeFrameThickness = 2f;
+        [SerializeField] private Color chargeFrameColor = new Color(1f, 0.84f, 0.24f, 0.95f);
+        [SerializeField] private RectTransform chargeFrameRoot;
+        [SerializeField] private Image chargeEdgeTop;
+        [SerializeField] private Image chargeEdgeRight;
+        [SerializeField] private Image chargeEdgeBottom;
+        [SerializeField] private Image chargeEdgeLeft;
+
         /// <summary>
         /// 当前绑定的技能定义
         /// </summary>
@@ -53,6 +63,7 @@ namespace CombatSystem.UI
         private int lastCooldownSeconds = -1;
         private float lastCooldownFillAmount = -1f;
         private bool cooldownVisualVisible;
+        private bool chargeVisualVisible;
         private RectTransform rectTransform;
         private Vector3 baseScale = Vector3.one;
         private Color baseIconColor = Color.white;
@@ -60,6 +71,8 @@ namespace CombatSystem.UI
         private Coroutine castPulseRoutine;
         private const float CooldownEndThreshold = 0.02f;
         private const float FillUpdateEpsilon = 0.001f;
+        private const float ChargeUpdateEpsilon = 0.002f;
+        private float lastChargeRatio = -1f;
 
         /// <summary>
         /// 当前绑定的技能定义（只读）
@@ -94,6 +107,9 @@ namespace CombatSystem.UI
                     occupiedBackgroundColor = baseSlotColor;
                 }
             }
+
+            EnsureChargeFrameVisual();
+            SetChargeProgress(0f, false, true);
         }
 
         /// <summary>
@@ -127,11 +143,17 @@ namespace CombatSystem.UI
             {
                 cooldownDuration = 0f;
                 ResetCooldownVisuals(true);
+                SetChargeProgress(0f, false, true);
             }
 
             if (slotBackground != null)
             {
                 slotBackground.color = skillDef != null ? occupiedBackgroundColor : emptyBackgroundColor;
+            }
+
+            if (skillDef == null)
+            {
+                SetChargeProgress(0f, false, true);
             }
         }
 
@@ -143,6 +165,11 @@ namespace CombatSystem.UI
             }
 
             gameObject.SetActive(visible);
+        }
+
+        public void SetChargeProgress(float normalizedRatio, bool charging)
+        {
+            SetChargeProgress(normalizedRatio, charging, false);
         }
 
         public void PlayCastPulse()
@@ -159,6 +186,36 @@ namespace CombatSystem.UI
             }
 
             castPulseRoutine = StartCoroutine(PlayCastPulseRoutine());
+        }
+
+        private void SetChargeProgress(float normalizedRatio, bool charging, bool force)
+        {
+            if (skill == null || !charging || !skill.SupportsCharge)
+            {
+                HideChargeVisual(force);
+                return;
+            }
+
+            EnsureChargeFrameVisual();
+            if (chargeFrameRoot == null
+                || chargeEdgeTop == null
+                || chargeEdgeRight == null
+                || chargeEdgeBottom == null
+                || chargeEdgeLeft == null)
+            {
+                return;
+            }
+
+            var ratio = Mathf.Clamp01(normalizedRatio);
+            if (!force && chargeVisualVisible && Mathf.Abs(ratio - lastChargeRatio) <= ChargeUpdateEpsilon)
+            {
+                return;
+            }
+
+            chargeVisualVisible = true;
+            chargeFrameRoot.gameObject.SetActive(true);
+            UpdateChargeEdges(ratio);
+            lastChargeRatio = ratio;
         }
 
         /// <summary>
@@ -334,6 +391,148 @@ namespace CombatSystem.UI
             cooldownFill.fillOrigin = (int)Image.Origin360.Top;
             cooldownFill.fillClockwise = false;
             cooldownFill.fillCenter = true;
+        }
+
+        private void EnsureChargeFrameVisual()
+        {
+            if (chargeFrameRoot == null && autoCreateChargeFrame)
+            {
+                chargeFrameRoot = CreateChargeFrameRoot();
+            }
+
+            if (chargeFrameRoot == null)
+            {
+                return;
+            }
+
+            if (chargeEdgeTop == null)
+            {
+                chargeEdgeTop = CreateChargeEdge("Top", new Vector2(0f, 1f), new Vector2(0f, 1f));
+            }
+
+            if (chargeEdgeRight == null)
+            {
+                chargeEdgeRight = CreateChargeEdge("Right", new Vector2(1f, 1f), new Vector2(1f, 1f));
+            }
+
+            if (chargeEdgeBottom == null)
+            {
+                chargeEdgeBottom = CreateChargeEdge("Bottom", new Vector2(1f, 0f), new Vector2(1f, 0f));
+            }
+
+            if (chargeEdgeLeft == null)
+            {
+                chargeEdgeLeft = CreateChargeEdge("Left", new Vector2(0f, 0f), new Vector2(0f, 0f));
+            }
+
+            ApplyChargeEdgeStyle(chargeEdgeTop);
+            ApplyChargeEdgeStyle(chargeEdgeRight);
+            ApplyChargeEdgeStyle(chargeEdgeBottom);
+            ApplyChargeEdgeStyle(chargeEdgeLeft);
+            chargeFrameRoot.SetAsLastSibling();
+        }
+
+        private RectTransform CreateChargeFrameRoot()
+        {
+            var root = new GameObject("ChargeFrame", typeof(RectTransform));
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.SetParent(transform, false);
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.localScale = Vector3.one;
+            rootRect.localRotation = Quaternion.identity;
+            rootRect.SetAsLastSibling();
+            return rootRect;
+        }
+
+        private Image CreateChargeEdge(string name, Vector2 anchor, Vector2 pivot)
+        {
+            if (chargeFrameRoot == null)
+            {
+                return null;
+            }
+
+            var edgeObject = new GameObject($"ChargeEdge_{name}", typeof(RectTransform), typeof(Image));
+            var edgeRect = edgeObject.GetComponent<RectTransform>();
+            edgeRect.SetParent(chargeFrameRoot, false);
+            edgeRect.anchorMin = anchor;
+            edgeRect.anchorMax = anchor;
+            edgeRect.pivot = pivot;
+            edgeRect.anchoredPosition = Vector2.zero;
+            edgeRect.localScale = Vector3.one;
+            edgeRect.localRotation = Quaternion.identity;
+
+            var image = edgeObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private void ApplyChargeEdgeStyle(Image edge)
+        {
+            if (edge == null)
+            {
+                return;
+            }
+
+            edge.color = chargeFrameColor;
+            edge.raycastTarget = false;
+        }
+
+        private void UpdateChargeEdges(float ratio)
+        {
+            if (chargeFrameRoot == null)
+            {
+                return;
+            }
+
+            var width = Mathf.Max(1f, chargeFrameRoot.rect.width);
+            var height = Mathf.Max(1f, chargeFrameRoot.rect.height);
+            var thickness = Mathf.Max(1f, chargeFrameThickness);
+            var perimeterProgress = Mathf.Clamp01(ratio) * 4f;
+
+            var topProgress = Mathf.Clamp01(perimeterProgress);
+            var rightProgress = Mathf.Clamp01(perimeterProgress - 1f);
+            var bottomProgress = Mathf.Clamp01(perimeterProgress - 2f);
+            var leftProgress = Mathf.Clamp01(perimeterProgress - 3f);
+
+            UpdateChargeEdgeRect(chargeEdgeTop, width * topProgress, thickness, topProgress > 0f);
+            UpdateChargeEdgeRect(chargeEdgeRight, thickness, height * rightProgress, rightProgress > 0f);
+            UpdateChargeEdgeRect(chargeEdgeBottom, width * bottomProgress, thickness, bottomProgress > 0f);
+            UpdateChargeEdgeRect(chargeEdgeLeft, thickness, height * leftProgress, leftProgress > 0f);
+        }
+
+        private static void UpdateChargeEdgeRect(Image edge, float width, float height, bool visible)
+        {
+            if (edge == null)
+            {
+                return;
+            }
+
+            var rect = edge.rectTransform;
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(Mathf.Max(0f, width), Mathf.Max(0f, height));
+            }
+
+            edge.enabled = visible;
+        }
+
+        private void HideChargeVisual(bool force)
+        {
+            if (!force && !chargeVisualVisible)
+            {
+                return;
+            }
+
+            chargeVisualVisible = false;
+            lastChargeRatio = -1f;
+            if (chargeFrameRoot != null)
+            {
+                chargeFrameRoot.gameObject.SetActive(false);
+            }
         }
 
         private IEnumerator PlayCastPulseRoutine()
