@@ -48,7 +48,8 @@ namespace CombatSystem.Data
         TriggerSkill,   // 触发另一个技能
         Shield,         // 护盾
         ResetBasicAttack, // 重置普攻冷却/后摇
-        Cleanse         // 净化/驱散
+        Cleanse,        // 净化/驱散
+        CombatState     // 战斗状态位操作（不可选取/无敌/法术护盾等）
     }
 
     /// <summary>
@@ -248,6 +249,30 @@ namespace CombatSystem.Data
     }
 
     /// <summary>
+    /// 单位战斗状态标记。
+    /// </summary>
+    [System.Flags]
+    public enum CombatStateFlags
+    {
+        None = 0,
+        Untargetable = 1 << 0, // 不可被选中
+        Invulnerable = 1 << 1, // 不会受到伤害
+        Invisible = 1 << 2,    // 隐形
+        Camouflaged = 1 << 3,  // 伪装/潜行
+        SpellShielded = 1 << 4 // 法术护盾
+    }
+
+    /// <summary>
+    /// 战斗状态效果执行模式。
+    /// </summary>
+    public enum CombatStateEffectMode
+    {
+        AddFlags,         // 添加状态位
+        RemoveFlags,      // 移除状态位
+        GrantSpellShield  // 授予法术护盾层数
+    }
+
+    /// <summary>
     /// 技能输入缓冲策略。
     /// </summary>
     public enum SkillQueuePolicy
@@ -275,5 +300,28 @@ namespace CombatSystem.Data
         AliveOnly,          // 只校验存活
         InRange,            // 校验范围/形状
         InRangeAndLoS       // 校验范围并检查视线
+    }
+
+    /// <summary>
+    /// 技能重施目标策略。
+    /// </summary>
+    public enum RecastTargetPolicy
+    {
+        AnyValid,                // 任意有效目标
+        KeepOriginalIfPossible,  // 优先原目标，原目标失效则允许切换
+        RequireOriginal          // 必须原目标
+    }
+
+    /// <summary>
+    /// 投射物行为类型。
+    /// </summary>
+    public enum ProjectileBehaviorType
+    {
+        Straight,   // 直线飞行
+        Homing,     // 追踪
+        Return,     // 命中后回返
+        Split,      // 命中后分裂
+        Orbit,      // 围绕施法者旋转
+        BeamLike    // 光束式（锚定长度）
     }
 }

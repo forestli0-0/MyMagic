@@ -54,6 +54,10 @@ namespace CombatSystem.Gameplay
         private readonly List<SkillDefinition> runtimeSkills = new List<SkillDefinition>(8);
         // 等待执行的技能步骤队列
         private readonly List<PendingStep> pendingSteps = new List<PendingStep>(16);
+        // 技能弹药运行时状态
+        private readonly Dictionary<SkillDefinition, AmmoRuntimeState> ammoStates = new Dictionary<SkillDefinition, AmmoRuntimeState>(16);
+        // 技能重施运行时状态
+        private readonly Dictionary<SkillDefinition, RecastRuntimeState> recastStates = new Dictionary<SkillDefinition, RecastRuntimeState>(16);
 
         // 施法状态
         private bool isCasting;
@@ -197,6 +201,9 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void Update()
         {
+            UpdateAmmoRecharge(Time.time);
+            UpdateRecastExpiry(Time.time);
+
             // 处理延迟执行的技能步骤
             if (pendingSteps.Count > 0)
             {
@@ -282,6 +289,7 @@ namespace CombatSystem.Gameplay
                 AddRuntimeSkillUnique(skills[i]);
             }
 
+            RefreshSkillRuntimeStates();
             SkillsChanged?.Invoke();
         }
 
@@ -311,6 +319,7 @@ namespace CombatSystem.Gameplay
                 }
             }
 
+            RefreshSkillRuntimeStates();
             SkillsChanged?.Invoke();
         }
 
@@ -325,12 +334,79 @@ namespace CombatSystem.Gameplay
             return true;
         }
 
+        private void RefreshSkillRuntimeStates()
+        {
+            ammoStates.Clear();
+            recastStates.Clear();
+
+            for (int i = 0; i < runtimeSkills.Count; i++)
+            {
+                EnsureAmmoState(runtimeSkills[i], true);
+                EnsureRecastState(runtimeSkills[i]);
+            }
+        }
+
+        private void EnsureAmmoState(SkillDefinition skill, bool resetIfMissing)
+        {
+            if (skill == null || !skill.SupportsAmmo || skill.AmmoConfig == null)
+            {
+                return;
+            }
+
+            if (ammoStates.ContainsKey(skill))
+            {
+                return;
+            }
+
+            var initial = skill.AmmoConfig.InitialCharges;
+            if (!resetIfMissing)
+            {
+                initial = skill.AmmoConfig.MaxCharges;
+            }
+
+            ammoStates[skill] = new AmmoRuntimeState(initial, 0f);
+        }
+
+        private void EnsureRecastState(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsRecast)
+            {
+                return;
+            }
+
+            if (!recastStates.ContainsKey(skill))
+            {
+                recastStates[skill] = default;
+            }
+        }
+
         /// <summary>
         /// 检查当前技能列表中是否已包含指定技能。
         /// </summary>
         public bool HasSkill(SkillDefinition skill)
         {
             return skill != null && runtimeSkills.Contains(skill);
+        }
+
+        public int GetCurrentAmmo(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsAmmo || skill.AmmoConfig == null)
+            {
+                return -1;
+            }
+
+            EnsureAmmoState(skill, true);
+            if (ammoStates.TryGetValue(skill, out var state))
+            {
+                return state.CurrentCharges;
+            }
+
+            return skill.AmmoConfig.InitialCharges;
+        }
+
+        public bool HasActiveRecast(SkillDefinition skill)
+        {
+            return TryGetRecastState(skill, out _);
         }
 
         /// <summary>
@@ -369,6 +445,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            RefreshSkillRuntimeStates();
             SkillsChanged?.Invoke();
             return true;
         }
@@ -409,6 +486,7 @@ namespace CombatSystem.Gameplay
             }
 
             runtimeSkills[index] = skill;
+            RefreshSkillRuntimeStates();
             SkillsChanged?.Invoke();
             return true;
         }
@@ -447,6 +525,8 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            var isRecastCast = TryGetRecastState(skill, out var activeRecast);
+
             if (TryGetTauntSource(out var taunter))
             {
                 if (skill != BasicAttack)
@@ -463,6 +543,18 @@ namespace CombatSystem.Gameplay
                 hasAimPoint = false;
                 aimPoint = default;
                 aimDirection = default;
+            }
+
+            GameObject resolvedRecastTarget = explicitTarget;
+            if (isRecastCast
+                && !ResolveRecastTarget(skill, activeRecast, explicitTarget, out resolvedRecastTarget))
+            {
+                return false;
+            }
+
+            if (isRecastCast)
+            {
+                explicitTarget = resolvedRecastTarget;
             }
 
             if (!IsExplicitTargetAlive(explicitTarget))
@@ -563,6 +655,11 @@ namespace CombatSystem.Gameplay
                 chargeMultiplier);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = ResolveModifiedResourceCost(skill, context, primaryTarget);
+            if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
+            {
+                resourceCost = 0f;
+            }
+
             var cooldownDuration = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.Cooldown, skill, context, primaryTarget, ModifierParameters.SkillCooldown));
             var castTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.CastTime, skill, context, primaryTarget, ModifierParameters.SkillCastTime));
             var channelTime = Mathf.Max(0f, ModifierResolver.ApplySkillModifiers(skill.ChannelTime, skill, context, primaryTarget, ModifierParameters.SkillChannelTime));
@@ -589,13 +686,40 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            if (!ConsumeAmmo(skill))
+            {
+                // 极端情况下（并发消耗）确保状态回滚
+                if (resourceCost > 0f)
+                {
+                    resource?.Restore(resourceCost);
+                }
+
+                SimpleListPool<CombatTarget>.Release(targets);
+                return false;
+            }
+
+            var delayCooldownForRecast = skill.SupportsRecast
+                && skill.RecastConfig != null
+                && skill.RecastConfig.DelayCooldownUntilRecastEnds;
+            var startCooldownNow = !delayCooldownForRecast;
+
             // 开始冷却
-            if (cooldown != null && cooldownDuration > 0f)
+            if (startCooldownNow && cooldown != null && cooldownDuration > 0f)
             {
                 cooldown.StartCooldown(skill, cooldownDuration);
             }
 
             var now = Time.time;
+            UpdateRecastAfterSuccessfulCast(
+                skill,
+                isRecastCast,
+                activeRecast,
+                now,
+                explicitTarget,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                cooldownDuration);
 
             if (gcdDuration > 0f)
             {
@@ -783,6 +907,11 @@ namespace CombatSystem.Gameplay
                 return true;
             }
 
+            if (!HasAmmo(basicAttack))
+            {
+                return true;
+            }
+
             var resourceCost = ResolveModifiedResourceCost(basicAttack, source.gameObject, false, default, default);
             if (!HasResource(basicAttack, resourceCost))
             {
@@ -954,7 +1083,14 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            if (cooldown != null && !cooldown.IsReady(skill))
+            var isRecastCast = TryGetRecastState(skill, out var recastState);
+            if (isRecastCast
+                && !ResolveRecastTarget(skill, recastState, explicitTarget, out _))
+            {
+                return false;
+            }
+
+            if (!isRecastCast && cooldown != null && !cooldown.IsReady(skill))
             {
                 return false;
             }
@@ -964,7 +1100,17 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            if (!HasAmmo(skill))
+            {
+                return false;
+            }
+
             var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
+            {
+                cost = 0f;
+            }
+
             return HasResource(skill, cost);
         }
 
@@ -1311,6 +1457,11 @@ namespace CombatSystem.Gameplay
                 return true;
             }
 
+            if (!HitResolutionSystem.CanSelectTarget(context.CasterUnit, targeting, target))
+            {
+                return false;
+            }
+
             var policy = targeting.HitValidation;
             if (policy == HitValidationPolicy.None)
             {
@@ -1490,6 +1641,279 @@ namespace CombatSystem.Gameplay
                 primaryTarget,
                 ModifierParameters.SkillResourceCost);
             return Mathf.Max(0f, modifiedCost);
+        }
+
+        private bool HasAmmo(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsAmmo || skill.AmmoConfig == null)
+            {
+                return true;
+            }
+
+            EnsureAmmoState(skill, true);
+            if (!ammoStates.TryGetValue(skill, out var state))
+            {
+                return true;
+            }
+
+            return state.CurrentCharges > 0;
+        }
+
+        private bool ConsumeAmmo(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsAmmo || skill.AmmoConfig == null)
+            {
+                return true;
+            }
+
+            EnsureAmmoState(skill, true);
+            if (!ammoStates.TryGetValue(skill, out var state))
+            {
+                return false;
+            }
+
+            if (state.CurrentCharges <= 0)
+            {
+                return false;
+            }
+
+            state.CurrentCharges--;
+            var rechargeTime = skill.AmmoConfig.RechargeTime;
+            if (state.CurrentCharges < skill.AmmoConfig.MaxCharges && rechargeTime > 0f && state.NextRechargeTime <= 0f)
+            {
+                state.NextRechargeTime = Time.time + rechargeTime;
+            }
+
+            ammoStates[skill] = state;
+            return true;
+        }
+
+        private void UpdateAmmoRecharge(float now)
+        {
+            if (ammoStates.Count == 0)
+            {
+                return;
+            }
+
+            var keys = SimpleListPool<SkillDefinition>.Get();
+            foreach (var pair in ammoStates)
+            {
+                keys.Add(pair.Key);
+            }
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                var skill = keys[i];
+                if (skill == null || !skill.SupportsAmmo || skill.AmmoConfig == null)
+                {
+                    continue;
+                }
+
+                if (!ammoStates.TryGetValue(skill, out var state))
+                {
+                    continue;
+                }
+
+                if (state.CurrentCharges >= skill.AmmoConfig.MaxCharges)
+                {
+                    state.NextRechargeTime = 0f;
+                    ammoStates[skill] = state;
+                    continue;
+                }
+
+                var rechargeTime = skill.AmmoConfig.RechargeTime;
+                if (rechargeTime <= 0f)
+                {
+                    state.CurrentCharges = skill.AmmoConfig.MaxCharges;
+                    state.NextRechargeTime = 0f;
+                    ammoStates[skill] = state;
+                    continue;
+                }
+
+                if (state.NextRechargeTime <= 0f)
+                {
+                    state.NextRechargeTime = now + rechargeTime;
+                    ammoStates[skill] = state;
+                    continue;
+                }
+
+                while (state.CurrentCharges < skill.AmmoConfig.MaxCharges && now >= state.NextRechargeTime)
+                {
+                    state.CurrentCharges++;
+                    if (state.CurrentCharges >= skill.AmmoConfig.MaxCharges)
+                    {
+                        state.NextRechargeTime = 0f;
+                        break;
+                    }
+
+                    state.NextRechargeTime += rechargeTime;
+                }
+
+                ammoStates[skill] = state;
+            }
+
+            SimpleListPool<SkillDefinition>.Release(keys);
+        }
+
+        private bool TryGetRecastState(SkillDefinition skill, out RecastRuntimeState state)
+        {
+            state = default;
+            if (skill == null || !skill.SupportsRecast)
+            {
+                return false;
+            }
+
+            if (!recastStates.TryGetValue(skill, out var runtime) || !runtime.Active)
+            {
+                return false;
+            }
+
+            if (runtime.ExpireTime > 0f && Time.time > runtime.ExpireTime)
+            {
+                runtime = default;
+                recastStates[skill] = runtime;
+                return false;
+            }
+
+            if (runtime.RemainingRecasts <= 0)
+            {
+                runtime = default;
+                recastStates[skill] = runtime;
+                return false;
+            }
+
+            state = runtime;
+            return true;
+        }
+
+        private bool ResolveRecastTarget(
+            SkillDefinition skill,
+            RecastRuntimeState state,
+            GameObject requestTarget,
+            out GameObject resolvedTarget)
+        {
+            resolvedTarget = requestTarget;
+            if (skill == null || !skill.SupportsRecast || skill.RecastConfig == null)
+            {
+                return true;
+            }
+
+            switch (skill.RecastConfig.TargetPolicy)
+            {
+                case RecastTargetPolicy.RequireOriginal:
+                    if (state.LockedTarget == null)
+                    {
+                        return false;
+                    }
+
+                    resolvedTarget = state.LockedTarget;
+                    return IsExplicitTargetAlive(resolvedTarget);
+                case RecastTargetPolicy.KeepOriginalIfPossible:
+                    if (state.LockedTarget != null && IsExplicitTargetAlive(state.LockedTarget))
+                    {
+                        resolvedTarget = state.LockedTarget;
+                    }
+
+                    return true;
+                case RecastTargetPolicy.AnyValid:
+                default:
+                    return true;
+            }
+        }
+
+        private void UpdateRecastAfterSuccessfulCast(
+            SkillDefinition skill,
+            bool wasRecastCast,
+            RecastRuntimeState activeState,
+            float now,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            float cooldownDuration)
+        {
+            if (skill == null || !skill.SupportsRecast || skill.RecastConfig == null)
+            {
+                return;
+            }
+
+            var config = skill.RecastConfig;
+            if (!wasRecastCast)
+            {
+                var next = new RecastRuntimeState(
+                    true,
+                    config.MaxRecasts,
+                    now + config.RecastWindow,
+                    cooldownDuration,
+                    explicitTarget,
+                    hasAimPoint,
+                    aimPoint,
+                    aimDirection);
+                recastStates[skill] = next;
+                return;
+            }
+
+            var remaining = Mathf.Max(0, activeState.RemainingRecasts - 1);
+            if (remaining > 0)
+            {
+                activeState.Active = true;
+                activeState.RemainingRecasts = remaining;
+                activeState.ExpireTime = now + config.RecastWindow;
+                recastStates[skill] = activeState;
+                return;
+            }
+
+            recastStates[skill] = default;
+            var cooldownToApply = Mathf.Max(activeState.CooldownOnFinish, cooldownDuration);
+            if (config.DelayCooldownUntilRecastEnds && cooldown != null && cooldownToApply > 0f)
+            {
+                cooldown.StartCooldown(skill, cooldownToApply);
+            }
+        }
+
+        private void UpdateRecastExpiry(float now)
+        {
+            if (recastStates.Count == 0)
+            {
+                return;
+            }
+
+            var keys = SimpleListPool<SkillDefinition>.Get();
+            foreach (var pair in recastStates)
+            {
+                keys.Add(pair.Key);
+            }
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                var skill = keys[i];
+                if (!recastStates.TryGetValue(skill, out var state))
+                {
+                    continue;
+                }
+
+                if (!state.Active)
+                {
+                    continue;
+                }
+
+                if (state.ExpireTime > 0f && now > state.ExpireTime)
+                {
+                    if (skill != null
+                        && skill.SupportsRecast
+                        && skill.RecastConfig != null
+                        && skill.RecastConfig.DelayCooldownUntilRecastEnds
+                        && cooldown != null
+                        && state.CooldownOnFinish > 0f)
+                    {
+                        cooldown.StartCooldown(skill, state.CooldownOnFinish);
+                    }
+
+                    recastStates[skill] = default;
+                }
+            }
+
+            SimpleListPool<SkillDefinition>.Release(keys);
         }
 
         /// <summary>
@@ -1743,6 +2167,50 @@ namespace CombatSystem.Gameplay
         #endregion
 
         #region Internal Types
+        private struct AmmoRuntimeState
+        {
+            public int CurrentCharges;
+            public float NextRechargeTime;
+
+            public AmmoRuntimeState(int currentCharges, float nextRechargeTime)
+            {
+                CurrentCharges = Mathf.Max(0, currentCharges);
+                NextRechargeTime = nextRechargeTime;
+            }
+        }
+
+        private struct RecastRuntimeState
+        {
+            public bool Active;
+            public int RemainingRecasts;
+            public float ExpireTime;
+            public float CooldownOnFinish;
+            public GameObject LockedTarget;
+            public bool HasAimPoint;
+            public Vector3 AimPoint;
+            public Vector3 AimDirection;
+
+            public RecastRuntimeState(
+                bool active,
+                int remainingRecasts,
+                float expireTime,
+                float cooldownOnFinish,
+                GameObject lockedTarget,
+                bool hasAimPoint,
+                Vector3 aimPoint,
+                Vector3 aimDirection)
+            {
+                Active = active;
+                RemainingRecasts = Mathf.Max(0, remainingRecasts);
+                ExpireTime = expireTime;
+                CooldownOnFinish = Mathf.Max(0f, cooldownOnFinish);
+                LockedTarget = lockedTarget;
+                HasAimPoint = hasAimPoint;
+                AimPoint = aimPoint;
+                AimDirection = aimDirection;
+            }
+        }
+
         /// <summary>
         /// 排队的技能释放请求。
         /// </summary>

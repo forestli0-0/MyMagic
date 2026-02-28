@@ -16,7 +16,10 @@ namespace CombatSystem.Gameplay
         private Vector3 direction;
         private float expireTime;
         private int remainingPierce;
+        private int splitDepth;
         private bool active;
+        private bool returning;
+        private float orbitAngle;
         private Rigidbody body;
         private SphereCollider runtimeHitCollider;
         private readonly List<int> hitIds = new List<int>(8);
@@ -49,7 +52,10 @@ namespace CombatSystem.Gameplay
             direction = initialDirection.sqrMagnitude > 0f ? initialDirection.normalized : transform.forward;
             expireTime = definition.Lifetime > 0f ? Time.time + definition.Lifetime : float.PositiveInfinity;
             remainingPierce = definition.Pierce ? Mathf.Max(1, definition.MaxPierce) : 1;
+            splitDepth = 0;
             active = true;
+            returning = false;
+            orbitAngle = 0f;
             hitIds.Clear();
             ApplyHitRadius();
         }
@@ -69,23 +75,115 @@ namespace CombatSystem.Gameplay
 
             UpdateDirection();
             MoveProjectile();
+
+            if (definition.BehaviorType == ProjectileBehaviorType.Return
+                && returning
+                && context.CasterUnit != null
+                && (context.CasterUnit.transform.position - transform.position).sqrMagnitude <= 0.25f)
+            {
+                Despawn();
+            }
         }
 
         private void UpdateDirection()
         {
-            if (!definition.Homing || target.Transform == null)
+            if (definition == null)
             {
                 return;
             }
 
-            var desired = (target.Transform.position - transform.position).normalized;
-            var maxRadians = Mathf.Deg2Rad * Mathf.Max(0f, definition.HomingTurnSpeed) * Time.deltaTime;
-            direction = Vector3.RotateTowards(direction, desired, maxRadians, 0f);
+            switch (definition.BehaviorType)
+            {
+                case ProjectileBehaviorType.Homing:
+                    if (target.Transform != null)
+                    {
+                        RotateTowards(target.Transform.position, definition.HomingTurnSpeed);
+                    }
+                    break;
+                case ProjectileBehaviorType.Return:
+                    if (returning && context.CasterUnit != null)
+                    {
+                        RotateTowards(context.CasterUnit.transform.position, definition.HomingTurnSpeed);
+                    }
+                    else if (definition.Homing && target.Transform != null)
+                    {
+                        RotateTowards(target.Transform.position, definition.HomingTurnSpeed);
+                    }
+                    break;
+                default:
+                    if (definition.Homing && target.Transform != null)
+                    {
+                        RotateTowards(target.Transform.position, definition.HomingTurnSpeed);
+                    }
+                    break;
+            }
         }
 
         private void MoveProjectile()
         {
-            var velocity = direction * definition.Speed * Time.deltaTime;
+            if (definition == null)
+            {
+                return;
+            }
+
+            switch (definition.BehaviorType)
+            {
+                case ProjectileBehaviorType.Orbit:
+                    if (context.CasterUnit == null)
+                    {
+                        MoveLinear(definition.Speed);
+                        return;
+                    }
+
+                    orbitAngle += definition.OrbitAngularSpeed * Time.deltaTime;
+                    var orbitOffset = Quaternion.Euler(0f, orbitAngle, 0f) * Vector3.forward * definition.OrbitRadius;
+                    var orbitPos = context.CasterUnit.transform.position + orbitOffset;
+                    if (body != null)
+                    {
+                        body.MovePosition(orbitPos);
+                    }
+                    else
+                    {
+                        transform.position = orbitPos;
+                    }
+
+                    break;
+                case ProjectileBehaviorType.BeamLike:
+                    if (context.CasterUnit == null)
+                    {
+                        MoveLinear(definition.Speed);
+                        return;
+                    }
+
+                    var forward = direction.sqrMagnitude > 0.0001f
+                        ? direction.normalized
+                        : context.CasterUnit.transform.forward;
+                    var beamPos = context.CasterUnit.transform.position + forward * definition.BeamLength;
+                    if (body != null)
+                    {
+                        body.MovePosition(beamPos);
+                    }
+                    else
+                    {
+                        transform.position = beamPos;
+                    }
+
+                    break;
+                case ProjectileBehaviorType.Return:
+                    var returnSpeed = returning
+                        ? definition.Speed * Mathf.Max(0.01f, definition.ReturnSpeedMultiplier)
+                        : definition.Speed;
+                    MoveLinear(returnSpeed);
+                    break;
+                default:
+                    MoveLinear(definition.Speed);
+                    break;
+            }
+        }
+
+        private void MoveLinear(float speed)
+        {
+            var velocity = direction * speed * Time.deltaTime;
             if (body != null)
             {
                 body.MovePosition(body.position + velocity);
@@ -93,6 +191,18 @@ namespace CombatSystem.Gameplay
             }
 
             transform.position += velocity;
+        }
+
+        private void RotateTowards(Vector3 worldTarget, float turnSpeedDegrees)
+        {
+            var desired = (worldTarget - transform.position).normalized;
+            if (desired.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            var maxRadians = Mathf.Deg2Rad * Mathf.Max(0f, turnSpeedDegrees) * Time.deltaTime;
+            direction = Vector3.RotateTowards(direction, desired, maxRadians, 0f);
         }
 
         private void OnTriggerEnter(Collider other)
@@ -108,6 +218,11 @@ namespace CombatSystem.Gameplay
         private void TryHit(Collider other)
         {
             if (!active || other == null)
+            {
+                return;
+            }
+
+            if (TryInterceptVolume(other))
             {
                 return;
             }
@@ -130,6 +245,10 @@ namespace CombatSystem.Gameplay
 
             hitIds.Add(id);
             ApplyHitEffects(hitTarget);
+            if (HandlePostHitBehavior(hitTarget))
+            {
+                return;
+            }
 
             remainingPierce--;
             if (remainingPierce <= 0)
@@ -141,6 +260,11 @@ namespace CombatSystem.Gameplay
         private bool IsValidTarget(CombatTarget hitTarget)
         {
             if (hitTarget.Health != null && !hitTarget.Health.IsAlive)
+            {
+                return false;
+            }
+
+            if (!HitResolutionSystem.CanProjectileHit(context, hitTarget))
             {
                 return false;
             }
@@ -194,6 +318,19 @@ namespace CombatSystem.Gameplay
 
         private void ApplyHitEffects(CombatTarget hitTarget)
         {
+            if (hitTarget.State != null
+                && hitTarget.State.HasFlag(CombatStateFlags.SpellShielded)
+                && IsHostileTarget(hitTarget)
+                && hitTarget.State.ConsumeSpellShield())
+            {
+                return;
+            }
+
+            if (definition.BehaviorType == ProjectileBehaviorType.Split && definition.SplitCount > 0)
+            {
+                SpawnSplitProjectiles();
+            }
+
             if (definition.OnHitEffects == null || definition.OnHitEffects.Count == 0)
             {
                 return;
@@ -205,6 +342,90 @@ namespace CombatSystem.Gameplay
             }
 
             context.Caster?.NotifyProjectileHit(context, hitTarget);
+        }
+
+        private bool IsHostileTarget(CombatTarget hitTarget)
+        {
+            if (context.CasterUnit == null || context.CasterUnit.Team == null || hitTarget.Team == null)
+            {
+                return true;
+            }
+
+            return !context.CasterUnit.Team.IsSameTeam(hitTarget.Team);
+        }
+
+        private bool HandlePostHitBehavior(CombatTarget hitTarget)
+        {
+            if (definition == null)
+            {
+                return false;
+            }
+
+            if (definition.BehaviorType == ProjectileBehaviorType.Return && !returning && context.CasterUnit != null)
+            {
+                returning = true;
+                target = default;
+                hitIds.Clear();
+                return true;
+            }
+
+            return false;
+        }
+
+        private void SpawnSplitProjectiles()
+        {
+            if (pool == null || definition == null || splitDepth >= definition.MaxSplitDepth)
+            {
+                return;
+            }
+
+            var count = definition.SplitCount;
+            if (count <= 0)
+            {
+                return;
+            }
+
+            var centerAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+            var total = Mathf.Max(0f, definition.SplitAngle);
+            var step = count > 1 ? total / (count - 1) : 0f;
+            var start = centerAngle - total * 0.5f;
+
+            for (int i = 0; i < count; i++)
+            {
+                var angle = start + step * i;
+                var dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                var rot = Quaternion.LookRotation(dir);
+                var child = pool.Spawn(definition, transform.position, rot);
+                if (child == null)
+                {
+                    continue;
+                }
+
+                child.Initialize(definition, context, default, dir, targetingDefinition, targetingSystem);
+                child.SetSplitDepth(splitDepth + 1);
+            }
+        }
+
+        private bool TryInterceptVolume(Collider other)
+        {
+            var interceptor = other.GetComponentInParent<ProjectileInterceptorVolume>();
+            if (interceptor == null || !interceptor.ShouldIntercept(context.CasterUnit))
+            {
+                return false;
+            }
+
+            remainingPierce--;
+            if (remainingPierce <= 0)
+            {
+                Despawn();
+            }
+
+            return true;
+        }
+
+        private void SetSplitDepth(int depth)
+        {
+            splitDepth = Mathf.Max(0, depth);
         }
 
         private void Despawn()

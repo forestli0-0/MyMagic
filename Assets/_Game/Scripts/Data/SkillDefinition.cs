@@ -50,6 +50,12 @@ namespace CombatSystem.Data
         [SerializeField] private SkillQueuePolicy queuePolicy = SkillQueuePolicy.Replace;
         [Tooltip("目标快照策略（决定何时锁定目标）")]
         [SerializeField] private TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart;
+
+        [Header("弹药与重施")]
+        [Tooltip("弹药配置（启用后技能使用弹药并自动回复）")]
+        [SerializeField] private SkillAmmoConfig ammoConfig = new SkillAmmoConfig();
+        [Tooltip("重施配置（启用后技能可在窗口内再次释放）")]
+        [SerializeField] private SkillRecastConfig recastConfig = new SkillRecastConfig();
         
         [Header("逻辑与筛选")]
         [Tooltip("该技能寻找目标的方式")]
@@ -80,6 +86,10 @@ namespace CombatSystem.Data
         public float QueueWindow => queueWindow;
         public SkillQueuePolicy QueuePolicy => queuePolicy;
         public TargetSnapshotPolicy TargetSnapshotPolicy => targetSnapshotPolicy;
+        public SkillAmmoConfig AmmoConfig => ammoConfig;
+        public SkillRecastConfig RecastConfig => recastConfig;
+        public bool SupportsAmmo => ammoConfig != null && ammoConfig.Enabled && ammoConfig.MaxCharges > 0;
+        public bool SupportsRecast => recastConfig != null && recastConfig.Enabled && recastConfig.MaxRecasts > 0 && recastConfig.RecastWindow > 0f;
         public TargetingDefinition Targeting => targeting;
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<SkillStep> Steps => steps;
@@ -135,5 +145,43 @@ namespace CombatSystem.Data
         
         [Header("战斗效果")]
         public List<EffectDefinition> effects = new List<EffectDefinition>(); // 该步骤产生的所有直接效果
+    }
+
+    /// <summary>
+    /// 技能弹药配置。
+    /// </summary>
+    [Serializable]
+    public class SkillAmmoConfig
+    {
+        [SerializeField] private bool enabled;
+        [SerializeField] private int maxCharges = 3;
+        [SerializeField] private int initialCharges = 3;
+        [SerializeField] private float rechargeTime = 4f;
+
+        public bool Enabled => enabled;
+        public int MaxCharges => Mathf.Max(0, maxCharges);
+        public int InitialCharges => Mathf.Clamp(initialCharges, 0, MaxCharges);
+        public float RechargeTime => Mathf.Max(0f, rechargeTime);
+    }
+
+    /// <summary>
+    /// 技能重施配置。
+    /// </summary>
+    [Serializable]
+    public class SkillRecastConfig
+    {
+        [SerializeField] private bool enabled;
+        [SerializeField] private int maxRecasts = 1;
+        [SerializeField] private float recastWindow = 3f;
+        [SerializeField] private bool consumesResourceOnRecast = true;
+        [SerializeField] private bool delayCooldownUntilRecastEnds = true;
+        [SerializeField] private RecastTargetPolicy targetPolicy = RecastTargetPolicy.AnyValid;
+
+        public bool Enabled => enabled;
+        public int MaxRecasts => Mathf.Max(0, maxRecasts);
+        public float RecastWindow => Mathf.Max(0f, recastWindow);
+        public bool ConsumesResourceOnRecast => consumesResourceOnRecast;
+        public bool DelayCooldownUntilRecastEnds => delayCooldownUntilRecastEnds;
+        public RecastTargetPolicy TargetPolicy => targetPolicy;
     }
 }

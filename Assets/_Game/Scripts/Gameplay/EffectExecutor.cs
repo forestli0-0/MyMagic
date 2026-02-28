@@ -21,6 +21,7 @@ namespace CombatSystem.Gameplay
     /// - TriggerSkill: 触发另一个技能
     /// - ResetBasicAttack: 重置普攻冷却/后摇
     /// - Cleanse: 净化/驱散
+    /// - CombatState: 战斗状态位操作
     /// </remarks>
     public class EffectExecutor : MonoBehaviour
     {
@@ -126,6 +127,8 @@ namespace CombatSystem.Gameplay
                 effectValue *= context.ChargeMultiplier;
             }
 
+            ApplyReveal(effect, context, target);
+
             switch (effect.EffectType)
             {
                 case EffectType.Damage:
@@ -185,7 +188,28 @@ namespace CombatSystem.Gameplay
                     // 净化/驱散
                     ApplyCleanse(effect, target);
                     break;
+                case EffectType.CombatState:
+                    // 战斗状态位操作（不可选取/无敌/法术护盾）
+                    ApplyCombatState(effect, target);
+                    break;
             }
+        }
+
+        private static void ApplyReveal(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
+        {
+            if (effect == null || !effect.RevealTarget || !target.IsValid || target.Visibility == null)
+            {
+                return;
+            }
+
+            if (context.CasterUnit == null || context.CasterUnit.Team == null)
+            {
+                return;
+            }
+
+            // <= 0 视为一帧显形，这里按极短时长处理，便于命中链路与后续技能判定。
+            var duration = effect.RevealDuration > 0f ? effect.RevealDuration : 0.01f;
+            target.Visibility.RevealToTeam(context.CasterUnit.Team.TeamId, duration);
         }
 
         private void ExecuteEffectInternal(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target, SkillStepTrigger trigger, bool allowPeriodic)
@@ -197,6 +221,11 @@ namespace CombatSystem.Gameplay
 
             // 检查效果的前置条件
             if (effect.Condition != null && !ConditionEvaluator.Evaluate(effect.Condition, context, target))
+            {
+                return;
+            }
+
+            if (!HitResolutionSystem.CanApplyEffect(effect, context, target, trigger))
             {
                 return;
             }
@@ -487,7 +516,15 @@ namespace CombatSystem.Gameplay
             }
             
             // [性能] 直接 Instantiate 会产生 GC，高频召唤场景建议使用对象池
-            Object.Instantiate(prefab, spawnPosition, Quaternion.identity);
+            var spawned = Object.Instantiate(prefab, spawnPosition, Quaternion.identity);
+            if (spawned != null && context.CasterUnit != null && context.CasterUnit.Team != null)
+            {
+                var summonedTeam = spawned.GetComponent<TeamComponent>();
+                if (summonedTeam != null)
+                {
+                    summonedTeam.SetTeamId(context.CasterUnit.Team.TeamId);
+                }
+            }
         }
 
         /// <summary>
@@ -536,6 +573,35 @@ namespace CombatSystem.Gameplay
             }
 
             target.Buffs.Cleanse(effect.CleanseAll, effect.CleanseDebuffs, effect.CleanseControls, effect.CleanseControlTypes);
+        }
+
+        private static void ApplyCombatState(EffectDefinition effect, CombatTarget target)
+        {
+            if (effect == null || target.State == null)
+            {
+                return;
+            }
+
+            switch (effect.CombatStateMode)
+            {
+                case CombatStateEffectMode.AddFlags:
+                    if (effect.CombatStateFlags != CombatStateFlags.None)
+                    {
+                        target.State.AddFlag(effect.CombatStateFlags);
+                    }
+
+                    break;
+                case CombatStateEffectMode.RemoveFlags:
+                    if (effect.CombatStateFlags != CombatStateFlags.None)
+                    {
+                        target.State.RemoveFlag(effect.CombatStateFlags);
+                    }
+
+                    break;
+                case CombatStateEffectMode.GrantSpellShield:
+                    target.State.GrantSpellShield(effect.SpellShieldCharges);
+                    break;
+            }
         }
 
         private struct PendingEffect

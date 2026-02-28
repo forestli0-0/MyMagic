@@ -21,6 +21,11 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (HitResolutionSystem.IsInvulnerable(target))
+            {
+                return;
+            }
+
             var scaling = GetScalingValue(effect, context);
             var finalAmount = amount + scaling;
             if (finalAmount <= 0f)

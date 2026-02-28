@@ -55,6 +55,20 @@ namespace CombatSystem.Data
         [Tooltip("要净化的控制类型列表（空 = 任意）")]
         [SerializeField] private List<ControlType> cleanseControlTypes = new List<ControlType>();
 
+        [Header("视野/显形")]
+        [Tooltip("是否对目标施加显形")]
+        [SerializeField] private bool revealTarget;
+        [Tooltip("显形持续时长（秒，<=0 表示仅当前帧）")]
+        [SerializeField] private float revealDuration;
+
+        [Header("战斗状态")]
+        [Tooltip("状态效果执行模式（Add/Remove/GrantSpellShield）")]
+        [SerializeField] private CombatStateEffectMode combatStateMode = CombatStateEffectMode.AddFlags;
+        [Tooltip("要增减的状态位")]
+        [SerializeField] private CombatStateFlags combatStateFlags = CombatStateFlags.None;
+        [Tooltip("授予法术护盾层数（GrantSpellShield 模式时使用）")]
+        [SerializeField] private int spellShieldCharges = 1;
+
         [Header("位移相关")]
         [SerializeField] private MoveStyle moveStyle;
         [SerializeField] private float moveDistance;
@@ -99,6 +113,11 @@ namespace CombatSystem.Data
         public bool CleanseDebuffs => cleanseDebuffs;
         public bool CleanseControls => cleanseControls;
         public IReadOnlyList<ControlType> CleanseControlTypes => cleanseControlTypes;
+        public bool RevealTarget => revealTarget;
+        public float RevealDuration => revealDuration;
+        public CombatStateEffectMode CombatStateMode => combatStateMode;
+        public CombatStateFlags CombatStateFlags => combatStateFlags;
+        public int SpellShieldCharges => Mathf.Max(0, spellShieldCharges);
         public BuffDefinition Buff => buff;
         public ProjectileDefinition Projectile => projectile;
         public SkillDefinition TriggeredSkill => triggeredSkill;

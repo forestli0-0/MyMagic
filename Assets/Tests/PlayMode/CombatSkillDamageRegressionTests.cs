@@ -4,12 +4,15 @@ using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace CombatSystem.Tests
 {
     public class CombatSkillDamageRegressionTests
     {
         private readonly List<UnityEngine.Object> cleanup = new List<UnityEngine.Object>(64);
+        private Component effectExecutorSystem;
+        private Component targetingSystem;
 
         [TearDown]
         public void TearDown()
@@ -24,6 +27,73 @@ namespace CombatSystem.Tests
             }
 
             cleanup.Clear();
+            effectExecutorSystem = null;
+            targetingSystem = null;
+        }
+
+        [Test]
+        public void CombatStateEffect_AddRemoveUntargetable_ViaBuffTriggers()
+        {
+            CreateSystems();
+            var target = CreateUnit("CombatState_Untargetable_Target");
+            var addUntargetable = CreateCombatStateEffect("AddFlags", "Untargetable");
+            var removeUntargetable = CreateCombatStateEffect("RemoveFlags", "Untargetable");
+            var buff = CreateBuffWithApplyAndExpire(addUntargetable, removeUntargetable, 1f);
+
+            CallMethod(target.Buffs, "ApplyBuff", buff, target.Unit);
+            Assert.IsTrue(CallBoolMethod(target.State, "HasFlag", ParseEnum("CombatSystem.Data.CombatStateFlags", "Untargetable")));
+
+            CallMethod(target.Buffs, "RemoveBuff", buff);
+            Assert.IsFalse(CallBoolMethod(target.State, "HasFlag", ParseEnum("CombatSystem.Data.CombatStateFlags", "Untargetable")));
+        }
+
+        [Test]
+        public void CombatStateEffect_AddRemoveInvulnerable_ViaBuffTriggers()
+        {
+            CreateSystems();
+            var caster = CreateUnit("CombatState_Invulnerable_Caster");
+            var target = CreateUnit("CombatState_Invulnerable_Target");
+            CallMethod(target.Health, "SetCurrent", 100f);
+
+            var addInvulnerable = CreateCombatStateEffect("AddFlags", "Invulnerable");
+            var removeInvulnerable = CreateCombatStateEffect("RemoveFlags", "Invulnerable");
+            var buff = CreateBuffWithApplyAndExpire(addInvulnerable, removeInvulnerable, 1f);
+            CallMethod(target.Buffs, "ApplyBuff", buff, caster.Unit);
+
+            var damage = CreateDamageEffect(20f, "True");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var trigger = ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart");
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(100f, GetFloatProperty(target.Health, "Current"), 0.01f);
+
+            CallMethod(target.Buffs, "RemoveBuff", buff);
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(80f, GetFloatProperty(target.Health, "Current"), 0.01f);
+        }
+
+        [Test]
+        public void CombatStateEffect_GrantSpellShield_FromSkill()
+        {
+            CreateSystems();
+            var target = CreateUnit("CombatState_SpellShield_Target");
+            CallMethod(target.Health, "SetCurrent", 100f);
+
+            var grantShield = CreateCombatStateEffect("GrantSpellShield", "None", 1);
+            var damage = CreateDamageEffect(20f, "True");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var trigger = ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart");
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", grantShield, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(1, Convert.ToInt32(GetPropertyValue(target.State, "SpellShieldCharges")));
+            Assert.IsTrue(CallBoolMethod(target.State, "HasFlag", ParseEnum("CombatSystem.Data.CombatStateFlags", "SpellShielded")));
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(100f, GetFloatProperty(target.Health, "Current"), 0.01f);
+            Assert.AreEqual(0, Convert.ToInt32(GetPropertyValue(target.State, "SpellShieldCharges")));
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(80f, GetFloatProperty(target.Health, "Current"), 0.01f);
         }
 
         [Test]
@@ -209,6 +279,212 @@ namespace CombatSystem.Tests
             Assert.AreEqual(1.25f, existingCollider.radius, 0.0001f);
         }
 
+        [Test]
+        public void Untargetable_TargetingAndProjectileBlocked()
+        {
+            CreateSystems();
+            var caster = CreateUnit("UntargetableCaster");
+            var target = CreateUnit("UntargetableTarget");
+            CallMethod(caster.Team, "SetTeamId", 1);
+            CallMethod(target.Team, "SetTeamId", 2);
+            CallMethod(target.State, "AddFlag", ParseEnum("CombatSystem.Data.CombatStateFlags", "Untargetable"));
+
+            var targeting = CreateTargeting(true, false, "AliveOnly");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var valid = CallBoolMethod(targetingSystem, "IsValidTarget", caster.Unit, targeting, targetData, false);
+            Assert.IsFalse(valid);
+
+            var projectileGo = Track(new GameObject("Projectile_UntargetableFilter"));
+            var projectile = projectileGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            var definition = CreateProjectileDefinition(0.2f);
+            CallMethod(
+                projectile,
+                "Initialize",
+                definition,
+                CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"),
+                CreateDefaultValue("CombatSystem.Gameplay.CombatTarget"),
+                Vector3.forward,
+                null,
+                targetingSystem);
+
+            var canHit = InvokePrivateIsValidTarget(projectile, targetData);
+            Assert.IsFalse(canHit);
+        }
+
+        [Test]
+        public void Invulnerable_DamageAndOnHitSuppressed()
+        {
+            CreateSystems();
+            var caster = CreateUnit("InvulCaster");
+            var target = CreateUnit("InvulTarget");
+            CallMethod(target.Health, "SetCurrent", 100f);
+            CallMethod(target.State, "AddFlag", ParseEnum("CombatSystem.Data.CombatStateFlags", "Invulnerable"));
+
+            var damage = CreateDamageEffect(35f, "True");
+            var targetData = CreateCombatTarget(target.GameObject);
+            CallMethod(
+                effectExecutorSystem,
+                "ExecuteEffect",
+                damage,
+                CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"),
+                targetData,
+                ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+
+            Assert.AreEqual(100f, GetFloatProperty(target.Health, "Current"), 0.01f);
+        }
+
+        [Test]
+        public void SpellShield_ConsumesFirstSpell_SecondSpellApplies()
+        {
+            CreateSystems();
+            var target = CreateUnit("SpellShieldTarget");
+            CallMethod(target.Health, "SetCurrent", 100f);
+            CallMethod(target.State, "GrantSpellShield", 1);
+
+            var damage = CreateDamageEffect(20f, "True");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var trigger = ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart");
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(100f, GetFloatProperty(target.Health, "Current"), 0.01f);
+            Assert.AreEqual(0, Convert.ToInt32(GetPropertyValue(target.State, "SpellShieldCharges")));
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, CreateDefaultValue("CombatSystem.Gameplay.SkillRuntimeContext"), targetData, trigger);
+            Assert.AreEqual(80f, GetFloatProperty(target.Health, "Current"), 0.01f);
+        }
+
+        [UnityTest]
+        public IEnumerator AmmoSkill_ConsumeAndRechargeDeterministic()
+        {
+            var caster = CreateUnit("AmmoCaster");
+            var skill = CreateSkill(0f, 0f, null);
+            SetPrivateField(skill, "ammoConfig", CreateAmmoConfig(true, 2, 2, 0.05f));
+
+            Assert.AreEqual(2, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentAmmo", skill)));
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.IsFalse(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+
+            yield return new WaitForSeconds(0.07f);
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+        }
+
+        [UnityTest]
+        public IEnumerator RecastSkill_WindowValidAndTimeoutReset()
+        {
+            var caster = CreateUnit("RecastCaster");
+            var skill = CreateSkill(0f, 0.5f, null);
+            SetPrivateField(skill, "recastConfig", CreateRecastConfig(true, 1, 0.1f, false, true, "AnyValid"));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "HasActiveRecast", skill));
+            Assert.IsTrue(CallBoolMethod(caster.Cooldown, "IsReady", skill));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.IsFalse(CallBoolMethod(caster.SkillUser, "HasActiveRecast", skill));
+            Assert.IsFalse(CallBoolMethod(caster.Cooldown, "IsReady", skill));
+
+            yield return new WaitForSeconds(0.12f);
+            Assert.IsFalse(CallBoolMethod(caster.SkillUser, "HasActiveRecast", skill));
+        }
+
+        [Test]
+        public void SampleSkill_ReturnAndSplitProjectile_BehaviorWorks()
+        {
+            CreateSystems();
+            var caster = CreateUnit("ProjectileBehaviorCaster");
+            var target = CreateUnit("ProjectileBehaviorTarget");
+            var context = CreateRuntimeContext(caster);
+            var targetData = CreateCombatTarget(target.GameObject);
+
+            var returnDefinition = CreateProjectileDefinition(0.2f);
+            SetPrivateField(returnDefinition, "behaviorType", ParseEnum("CombatSystem.Data.ProjectileBehaviorType", "Return"));
+            SetPrivateField(returnDefinition, "returnSpeedMultiplier", 1.2f);
+
+            var returnProjectileGo = Track(new GameObject("Projectile_ReturnBehavior"));
+            returnProjectileGo.AddComponent<SphereCollider>().isTrigger = true;
+            var returnProjectile = returnProjectileGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            CallMethod(returnProjectile, "Initialize", returnDefinition, context, targetData, Vector3.forward, null, targetingSystem);
+            var handled = InvokePrivateBoolMethod(returnProjectile, "HandlePostHitBehavior", targetData);
+            Assert.IsTrue(handled);
+            Assert.IsTrue(Convert.ToBoolean(GetPrivateFieldValue(returnProjectile, "returning")));
+
+            var splitDefinition = CreateProjectileDefinition(0.2f);
+            SetPrivateField(splitDefinition, "behaviorType", ParseEnum("CombatSystem.Data.ProjectileBehaviorType", "Split"));
+            SetPrivateField(splitDefinition, "splitCount", 3);
+            SetPrivateField(splitDefinition, "maxSplitDepth", 1);
+            SetPrivateField(splitDefinition, "onHitEffects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition")));
+
+            var splitPrefab = Track(new GameObject("Projectile_SplitPrefab"));
+            splitPrefab.AddComponent<SphereCollider>().isTrigger = true;
+            splitPrefab.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            SetPrivateField(splitDefinition, "prefab", splitPrefab);
+
+            var poolGo = Track(new GameObject("ProjectilePool"));
+            var pool = poolGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectilePool"));
+
+            var splitProjectileGo = Track(new GameObject("Projectile_SplitBehavior"));
+            splitProjectileGo.AddComponent<SphereCollider>().isTrigger = true;
+            var splitProjectile = splitProjectileGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            CallMethod(splitProjectile, "SetPool", pool, splitPrefab);
+            CallMethod(splitProjectile, "Initialize", splitDefinition, context, CreateDefaultValue("CombatSystem.Gameplay.CombatTarget"), Vector3.forward, null, targetingSystem);
+
+            InvokePrivateMethod(splitProjectile, "SpawnSplitProjectiles");
+            Assert.GreaterOrEqual(Convert.ToInt32(GetPropertyValue(pool, "TotalCreated")), 3);
+        }
+
+        [Test]
+        public void Stealth_NotVisibleCannotBeTargeted()
+        {
+            CreateSystems();
+            var caster = CreateUnit("StealthCaster");
+            var target = CreateUnit("StealthTarget");
+            CallMethod(caster.Team, "SetTeamId", 1);
+            CallMethod(target.Team, "SetTeamId", 2);
+            CallMethod(target.Visibility, "AddConcealment", true);
+
+            var targeting = CreateTargeting(true, false, "AliveOnly");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var visible = CallBoolMethod(targetingSystem, "IsValidTarget", caster.Unit, targeting, targetData, false);
+            Assert.IsFalse(visible);
+        }
+
+        [Test]
+        public void Reveal_MakesStealthTargetableWithinDuration()
+        {
+            CreateSystems();
+            var caster = CreateUnit("RevealCaster");
+            var target = CreateUnit("RevealTarget");
+            CallMethod(caster.Team, "SetTeamId", 1);
+            CallMethod(target.Team, "SetTeamId", 2);
+            CallMethod(target.Visibility, "AddConcealment", true);
+            CallMethod(target.Visibility, "RevealToTeam", 1, 0.5f);
+
+            var targeting = CreateTargeting(true, false, "AliveOnly");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var visible = CallBoolMethod(targetingSystem, "IsValidTarget", caster.Unit, targeting, targetData, false);
+            Assert.IsTrue(visible);
+        }
+
+        [Test]
+        public void WindWall_InterceptsEnemyProjectilesOnly()
+        {
+            var wallGo = Track(new GameObject("WindWall"));
+            var wallTeam = wallGo.AddComponent(RequireType("CombatSystem.Core.TeamComponent"));
+            CallMethod(wallTeam, "SetTeamId", 1);
+            wallGo.AddComponent<BoxCollider>().isTrigger = true;
+            var wall = wallGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileInterceptorVolume"));
+            SetPrivateField(wall, "team", wallTeam);
+
+            var allyCaster = CreateUnit("WindWallAlly");
+            var enemyCaster = CreateUnit("WindWallEnemy");
+            CallMethod(allyCaster.Team, "SetTeamId", 1);
+            CallMethod(enemyCaster.Team, "SetTeamId", 2);
+
+            Assert.IsFalse(CallBoolMethod(wall, "ShouldIntercept", allyCaster.Unit));
+            Assert.IsTrue(CallBoolMethod(wall, "ShouldIntercept", enemyCaster.Unit));
+        }
+
         private UnitRig CreateUnit(string name)
         {
             var go = Track(new GameObject(name));
@@ -218,6 +494,8 @@ namespace CombatSystem.Tests
             var resource = go.AddComponent(RequireType("CombatSystem.Core.ResourceComponent"));
             var cooldown = go.AddComponent(RequireType("CombatSystem.Core.CooldownComponent"));
             var buffs = go.AddComponent(RequireType("CombatSystem.Core.BuffController"));
+            var state = go.AddComponent(RequireType("CombatSystem.Core.CombatStateComponent"));
+            var visibility = go.AddComponent(RequireType("CombatSystem.Gameplay.VisibilityComponent"));
             var skillUser = go.AddComponent(RequireType("CombatSystem.Gameplay.SkillUserComponent"));
             var team = go.AddComponent(RequireType("CombatSystem.Core.TeamComponent"));
 
@@ -234,6 +512,9 @@ namespace CombatSystem.Tests
                 Resource = resource,
                 Cooldown = cooldown,
                 Buffs = buffs,
+                State = state,
+                Visibility = visibility,
+                Team = team,
                 SkillUser = skillUser
             };
         }
@@ -241,7 +522,10 @@ namespace CombatSystem.Tests
         private void CreateSystems()
         {
             var go = Track(new GameObject("Systems"));
-            go.AddComponent(RequireType("CombatSystem.Gameplay.EffectExecutor"));
+            targetingSystem = go.AddComponent(RequireType("CombatSystem.Gameplay.TargetingSystem"));
+            effectExecutorSystem = go.AddComponent(RequireType("CombatSystem.Gameplay.EffectExecutor"));
+            go.AddComponent(RequireType("CombatSystem.Gameplay.HitResolutionSystem"));
+            go.AddComponent(RequireType("CombatSystem.Gameplay.VisionSystem"));
         }
 
         private object CreateStat(string id)
@@ -265,6 +549,36 @@ namespace CombatSystem.Tests
             SetPrivateField(skill, "gcdDuration", 0f);
             SetPrivateField(skill, "targeting", targeting);
             return skill;
+        }
+
+        private object CreateAmmoConfig(bool enabled, int maxCharges, int initialCharges, float rechargeTime)
+        {
+            var type = RequireType("CombatSystem.Data.SkillAmmoConfig");
+            var config = Activator.CreateInstance(type);
+            SetPrivateField(config, "enabled", enabled);
+            SetPrivateField(config, "maxCharges", maxCharges);
+            SetPrivateField(config, "initialCharges", initialCharges);
+            SetPrivateField(config, "rechargeTime", rechargeTime);
+            return config;
+        }
+
+        private object CreateRecastConfig(
+            bool enabled,
+            int maxRecasts,
+            float recastWindow,
+            bool consumesResourceOnRecast,
+            bool delayCooldownUntilRecastEnds,
+            string targetPolicy)
+        {
+            var type = RequireType("CombatSystem.Data.SkillRecastConfig");
+            var config = Activator.CreateInstance(type);
+            SetPrivateField(config, "enabled", enabled);
+            SetPrivateField(config, "maxRecasts", maxRecasts);
+            SetPrivateField(config, "recastWindow", recastWindow);
+            SetPrivateField(config, "consumesResourceOnRecast", consumesResourceOnRecast);
+            SetPrivateField(config, "delayCooldownUntilRecastEnds", delayCooldownUntilRecastEnds);
+            SetPrivateField(config, "targetPolicy", ParseEnum("CombatSystem.Data.RecastTargetPolicy", targetPolicy));
+            return config;
         }
 
         private object CreateTargeting(bool requireExplicitTarget, bool allowEmpty, string hitValidationName)
@@ -298,6 +612,16 @@ namespace CombatSystem.Tests
             return effect;
         }
 
+        private object CreateCombatStateEffect(string modeName, string flagsName, int spellShieldCharges = 0)
+        {
+            var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetPrivateField(effect, "effectType", ParseEnum("CombatSystem.Data.EffectType", "CombatState"));
+            SetPrivateField(effect, "combatStateMode", ParseEnum("CombatSystem.Data.CombatStateEffectMode", modeName));
+            SetPrivateField(effect, "combatStateFlags", ParseEnum("CombatSystem.Data.CombatStateFlags", flagsName));
+            SetPrivateField(effect, "spellShieldCharges", spellShieldCharges);
+            return effect;
+        }
+
         private object CreateApplyBuffEffect(object buff)
         {
             var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
@@ -321,6 +645,29 @@ namespace CombatSystem.Tests
             SetPrivateField(buff, "maxStacks", 1);
             SetPrivateField(buff, "modifiers", CreateTypedList(RequireType("CombatSystem.Data.ModifierDefinition")));
             SetPrivateField(buff, "triggers", CreateTypedList(triggerType, trigger));
+            return buff;
+        }
+
+        private object CreateBuffWithApplyAndExpire(object onApplyEffect, object onExpireEffect, float duration)
+        {
+            var triggerType = RequireType("CombatSystem.Data.BuffTrigger");
+            var onApply = Activator.CreateInstance(triggerType);
+            SetField(onApply, "triggerType", ParseEnum("CombatSystem.Data.BuffTriggerType", "OnApply"));
+            SetField(onApply, "chance", 1f);
+            SetField(onApply, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition"), onApplyEffect));
+
+            var onExpire = Activator.CreateInstance(triggerType);
+            SetField(onExpire, "triggerType", ParseEnum("CombatSystem.Data.BuffTriggerType", "OnExpire"));
+            SetField(onExpire, "chance", 1f);
+            SetField(onExpire, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition"), onExpireEffect));
+
+            var buff = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.BuffDefinition")));
+            SetPrivateField(buff, "duration", duration);
+            SetPrivateField(buff, "tickInterval", 0f);
+            SetPrivateField(buff, "stackingRule", ParseEnum("CombatSystem.Data.BuffStackingRule", "Refresh"));
+            SetPrivateField(buff, "maxStacks", 1);
+            SetPrivateField(buff, "modifiers", CreateTypedList(RequireType("CombatSystem.Data.ModifierDefinition")));
+            SetPrivateField(buff, "triggers", CreateTypedList(triggerType, onApply, onExpire));
             return buff;
         }
 
@@ -375,6 +722,29 @@ namespace CombatSystem.Tests
             return Activator.CreateInstance(RequireType(typeName));
         }
 
+        private object CreateRuntimeContext(UnitRig caster)
+        {
+            var contextType = RequireType("CombatSystem.Gameplay.SkillRuntimeContext");
+            var args = new object[]
+            {
+                caster != null ? caster.SkillUser : null,
+                caster != null ? caster.Unit : null,
+                null,
+                null,
+                targetingSystem,
+                effectExecutorSystem,
+                false,
+                Vector3.zero,
+                Vector3.forward,
+                null,
+                0f,
+                0f,
+                1f
+            };
+
+            return Activator.CreateInstance(contextType, args);
+        }
+
         private void InvokePrivateTriggerBuff(object buffController, object buffInstance, string triggerTypeName)
         {
             var method = buffController.GetType().GetMethod("TriggerBuff", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -395,6 +765,19 @@ namespace CombatSystem.Tests
             var method = projectileController.GetType().GetMethod("IsValidTarget", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(method);
             var result = method.Invoke(projectileController, new[] { target });
+            return result is bool value && value;
+        }
+
+        private static object InvokePrivateMethod(object target, string methodName, params object[] args)
+        {
+            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(method, $"Private method '{methodName}' not found on {target.GetType().Name}");
+            return method.Invoke(target, args);
+        }
+
+        private static bool InvokePrivateBoolMethod(object target, string methodName, params object[] args)
+        {
+            var result = InvokePrivateMethod(target, methodName, args);
             return result is bool value && value;
         }
 
@@ -603,6 +986,9 @@ namespace CombatSystem.Tests
             public Component Resource;
             public Component Cooldown;
             public Component Buffs;
+            public Component State;
+            public Component Visibility;
+            public Component Team;
             public Component SkillUser;
         }
     }

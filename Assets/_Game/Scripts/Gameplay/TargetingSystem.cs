@@ -382,6 +382,11 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            if (!HitResolutionSystem.CanSelectTarget(caster, definition, target))
+            {
+                return false;
+            }
+
             return true;
         }
 

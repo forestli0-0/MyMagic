@@ -24,6 +24,8 @@ namespace CombatSystem.Gameplay
         public ResourceComponent Resource;
         public UnitTagsComponent Tags;
         public TeamComponent Team;
+        public CombatStateComponent State;
+        public VisibilityComponent Visibility;
         /// <summary>
         /// Buff 控制器引用，用于条件判断等场景。
         /// </summary>
@@ -80,6 +82,8 @@ namespace CombatSystem.Gameplay
                 target.Resource = target.Unit.GetComponent<ResourceComponent>();
                 target.Tags = target.Unit.GetComponent<UnitTagsComponent>();
                 target.Team = target.Unit.GetComponent<TeamComponent>();
+                target.State = target.Unit.GetComponent<CombatStateComponent>();
+                target.Visibility = target.Unit.GetComponent<VisibilityComponent>();
                 target.Buffs = target.Unit.GetComponent<BuffController>();
             }
             else
@@ -88,6 +92,8 @@ namespace CombatSystem.Gameplay
                 target.Resource = target.GameObject.GetComponent<ResourceComponent>();
                 target.Tags = target.GameObject.GetComponent<UnitTagsComponent>();
                 target.Team = target.GameObject.GetComponent<TeamComponent>();
+                target.State = target.GameObject.GetComponent<CombatStateComponent>();
+                target.Visibility = target.GameObject.GetComponent<VisibilityComponent>();
                 target.Buffs = target.GameObject.GetComponent<BuffController>();
             }
 
