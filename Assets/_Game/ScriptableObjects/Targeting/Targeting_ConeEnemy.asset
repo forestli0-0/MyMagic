@@ -16,12 +16,19 @@ MonoBehaviour:
   displayName: Cone Enemy
   mode: 3
   team: 3
-  range: 2.5
+  origin: 0
+  range: 6
   radius: 0
   angle: 60
   maxTargets: 3
   sort: 1
   includeSelf: 0
-  allowEmpty: 1
+  allowEmpty: 0
+  requireExplicitTarget: 0
   requiredTags: []
   blockedTags: []
+  hitValidation: 1
+  lineOfSightMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  lineOfSightHeight: 1.5

@@ -16,12 +16,19 @@ MonoBehaviour:
   displayName: Sphere Enemy
   mode: 2
   team: 3
+  origin: 0
   range: 0
   radius: 4
   angle: 0
   maxTargets: 6
   sort: 1
   includeSelf: 0
-  allowEmpty: 1
+  allowEmpty: 0
+  requireExplicitTarget: 0
   requiredTags: []
   blockedTags: []
+  hitValidation: 1
+  lineOfSightMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  lineOfSightHeight: 1.5

@@ -22,13 +22,29 @@ MonoBehaviour:
   channelTime: 0
   canMoveWhileCasting: 0
   canRotateWhileCasting: 1
+  enableCharge: 0
+  maxChargeTime: 1.2
+  minChargeMultiplier: 1
+  maxChargeMultiplier: 1.8
   postCastTime: 0
   gcdDuration: 0
   channelTickInterval: 0
   queueWindow: 0
   queuePolicy: 0
   targetSnapshotPolicy: 0
-  targeting: {fileID: 11400000, guid: d36f4193e8284459b1db3d24d719ef3d, type: 2}
+  ammoConfig:
+    enabled: 0
+    maxCharges: 0
+    initialCharges: 0
+    rechargeTime: 0
+  recastConfig:
+    enabled: 0
+    maxRecasts: 0
+    recastWindow: 0
+    consumesResourceOnRecast: 1
+    delayCooldownUntilRecastEnds: 1
+    targetPolicy: 0
+  targeting: {fileID: 11400000, guid: edf6f826bdbc46948b7be81b3a9e63f7, type: 2}
   tags:
   - {fileID: 11400000, guid: bafe2afedf9c59d438eeca2417c7003d, type: 2}
   - {fileID: 11400000, guid: 3c125633f625b144a985216b688a7efc, type: 2}

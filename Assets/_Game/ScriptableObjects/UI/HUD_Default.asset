@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: HUD_Default
   displayName: Default HUD
-  maxSkillSlots: 6
+  maxSkillSlots: 12
   maxBuffSlots: 12
   showCastBar: 1
   showCombatLog: 1

@@ -95,6 +95,7 @@ namespace CombatSystem.Editor
             public TargetingDefinition TargetingLineEnemy;
             public TargetingDefinition TargetingBoxEnemy;
             public TargetingDefinition TargetingAllySingle;
+            public TargetingDefinition TargetingPointAny;
 
             public ModifierDefinition ModifierSkillCost;
             public ModifierDefinition ModifierSkillCooldown;
@@ -115,6 +116,8 @@ namespace CombatSystem.Editor
             public BuffDefinition BuffMagicWard;
             public BuffDefinition BuffQuickCast;
             public BuffDefinition BuffTimeWarp;
+            public BuffDefinition BuffGhostStep;
+            public BuffDefinition BuffIronShell;
 
             public EffectDefinition EffectBasicAttack;
             public EffectDefinition EffectFireball;
@@ -143,6 +146,21 @@ namespace CombatSystem.Editor
             public EffectDefinition EffectApplyMagicWard;
             public EffectDefinition EffectApplyQuickCast;
             public EffectDefinition EffectApplyTimeWarp;
+            public EffectDefinition EffectCombatStateAddUntargetable;
+            public EffectDefinition EffectCombatStateRemoveUntargetable;
+            public EffectDefinition EffectCombatStateAddInvulnerable;
+            public EffectDefinition EffectCombatStateRemoveInvulnerable;
+            public EffectDefinition EffectCombatStateGrantSpellShield;
+            public EffectDefinition EffectApplyGhostStep;
+            public EffectDefinition EffectApplyIronShell;
+            public EffectDefinition EffectAmmoBurstDamage;
+            public EffectDefinition EffectRecastLungeMove;
+            public EffectDefinition EffectReturnBladeDamage;
+            public EffectDefinition EffectReturnBladeProjectile;
+            public EffectDefinition EffectShardVolleyDamage;
+            public EffectDefinition EffectShardVolleyProjectile;
+            public EffectDefinition EffectRevealBoltDamage;
+            public EffectDefinition EffectWindWallSummon;
 
             public SkillDefinition SkillBasicAttack;
             public SkillDefinition SkillFireball;
@@ -166,6 +184,15 @@ namespace CombatSystem.Editor
             public SkillDefinition SkillManaSurge;
             public SkillDefinition SkillSummonTotem;
             public SkillDefinition SkillTriggerFocus;
+            public SkillDefinition SkillGhostStep;
+            public SkillDefinition SkillIronShell;
+            public SkillDefinition SkillSpellAegis;
+            public SkillDefinition SkillAmmoBurst;
+            public SkillDefinition SkillRecastLunge;
+            public SkillDefinition SkillReturnBlade;
+            public SkillDefinition SkillShardVolley;
+            public SkillDefinition SkillRevealBolt;
+            public SkillDefinition SkillWindWall;
 
             public UnitDefinition UnitPlayer;
             public UnitDefinition UnitEnemy;
@@ -176,10 +203,13 @@ namespace CombatSystem.Editor
             public ProgressionDefinition ProgressionDefault;
 
             public ProjectileDefinition ProjectileArcaneBolt;
+            public ProjectileDefinition ProjectileReturnBlade;
+            public ProjectileDefinition ProjectileShardVolley;
             public ConditionDefinition ConditionTargetLowHealth;
 
             public GameObject PrefabArcaneBolt;
             public GameObject PrefabSummonTotem;
+            public GameObject PrefabWindWall;
 
             public GameDatabase Database;
             public CombatEventHub EventHub;
@@ -231,6 +261,7 @@ namespace CombatSystem.Editor
 
             assets.PrefabArcaneBolt = CreateProjectilePrefab($"{folders.Prefabs}/Prefab_ArcaneBolt.prefab");
             assets.PrefabSummonTotem = CreateSummonPrefab($"{folders.Prefabs}/Prefab_SummonTotem.prefab");
+            assets.PrefabWindWall = CreateWindWallPrefab($"{folders.Prefabs}/Prefab_WindWall.prefab");
 
             AssetDatabase.StartAssetEditing();
             try
@@ -477,6 +508,25 @@ namespace CombatSystem.Editor
                     null,
                     null);
 
+                assets.TargetingPointAny = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_PointAny.asset");
+                ConfigureTargeting(
+                    assets.TargetingPointAny,
+                    "Targeting_PointAny",
+                    "Point Any",
+                    TargetingMode.Sphere,
+                    TargetTeam.Any,
+                    8f,
+                    0.5f,
+                    0f,
+                    1,
+                    TargetSort.None,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.TargetPoint,
+                    true,
+                    HitValidationPolicy.None);
+
                 assets.ModifierSkillCost = LoadOrCreate<ModifierDefinition>($"{folders.Modifiers}/Modifier_ArcaneFocus_Cost.asset");
                 ConfigureModifier(
                     assets.ModifierSkillCost,
@@ -631,8 +681,12 @@ namespace CombatSystem.Editor
                 assets.BuffMagicWard = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_MagicWard.asset");
                 assets.BuffQuickCast = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_QuickCast.asset");
                 assets.BuffTimeWarp = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_TimeWarp.asset");
+                assets.BuffGhostStep = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_GhostStep.asset");
+                assets.BuffIronShell = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_IronShell.asset");
 
                 assets.ProjectileArcaneBolt = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ArcaneBolt.asset");
+                assets.ProjectileReturnBlade = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ReturnBlade.asset");
+                assets.ProjectileShardVolley = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ShardVolley.asset");
                 assets.UnitSummonTotem = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_SummonTotem.asset");
                 assets.ConditionTargetLowHealth = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_TargetLowHealth.asset");
 
@@ -903,6 +957,21 @@ namespace CombatSystem.Editor
                     assets.BuffTimeWarp);
 
                 assets.EffectTriggerArcaneFocus = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_TriggerArcaneFocus.asset");
+                assets.EffectCombatStateAddUntargetable = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_CombatState_Add_Untargetable.asset");
+                assets.EffectCombatStateRemoveUntargetable = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_CombatState_Remove_Untargetable.asset");
+                assets.EffectCombatStateAddInvulnerable = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_CombatState_Add_Invulnerable.asset");
+                assets.EffectCombatStateRemoveInvulnerable = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_CombatState_Remove_Invulnerable.asset");
+                assets.EffectCombatStateGrantSpellShield = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_CombatState_Grant_SpellShield.asset");
+                assets.EffectApplyGhostStep = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyGhostStep.asset");
+                assets.EffectApplyIronShell = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ApplyIronShell.asset");
+                assets.EffectAmmoBurstDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_AmmoBurstDamage.asset");
+                assets.EffectRecastLungeMove = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_RecastLungeMove.asset");
+                assets.EffectReturnBladeDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ReturnBladeDamage.asset");
+                assets.EffectReturnBladeProjectile = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ReturnBladeProjectile.asset");
+                assets.EffectShardVolleyDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ShardVolleyDamage.asset");
+                assets.EffectShardVolleyProjectile = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ShardVolleyProjectile.asset");
+                assets.EffectRevealBoltDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_RevealBoltDamage.asset");
+                assets.EffectWindWallSummon = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_WindWallSummon.asset");
 
                 ConfigureProjectile(
                     assets.ProjectileArcaneBolt,
@@ -917,6 +986,175 @@ namespace CombatSystem.Editor
                     false,
                     1,
                     new Object[] { assets.EffectArcaneBoltHit });
+
+                ConfigureEffectCombatState(
+                    assets.EffectCombatStateAddUntargetable,
+                    "Effect_CombatState_Add_Untargetable",
+                    "Add Untargetable",
+                    CombatStateEffectMode.AddFlags,
+                    CombatStateFlags.Untargetable);
+
+                ConfigureEffectCombatState(
+                    assets.EffectCombatStateRemoveUntargetable,
+                    "Effect_CombatState_Remove_Untargetable",
+                    "Remove Untargetable",
+                    CombatStateEffectMode.RemoveFlags,
+                    CombatStateFlags.Untargetable);
+
+                ConfigureEffectCombatState(
+                    assets.EffectCombatStateAddInvulnerable,
+                    "Effect_CombatState_Add_Invulnerable",
+                    "Add Invulnerable",
+                    CombatStateEffectMode.AddFlags,
+                    CombatStateFlags.Invulnerable);
+
+                ConfigureEffectCombatState(
+                    assets.EffectCombatStateRemoveInvulnerable,
+                    "Effect_CombatState_Remove_Invulnerable",
+                    "Remove Invulnerable",
+                    CombatStateEffectMode.RemoveFlags,
+                    CombatStateFlags.Invulnerable);
+
+                ConfigureEffectCombatState(
+                    assets.EffectCombatStateGrantSpellShield,
+                    "Effect_CombatState_Grant_SpellShield",
+                    "Grant Spell Shield",
+                    CombatStateEffectMode.GrantSpellShield,
+                    CombatStateFlags.None,
+                    1);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectApplyGhostStep,
+                    "Effect_ApplyGhostStep",
+                    "Apply Ghost Step",
+                    assets.BuffGhostStep);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectApplyIronShell,
+                    "Effect_ApplyIronShell",
+                    "Apply Iron Shell",
+                    assets.BuffIronShell);
+
+                ConfigureEffectDamage(
+                    assets.EffectAmmoBurstDamage,
+                    "Effect_AmmoBurstDamage",
+                    "Ammo Burst Damage",
+                    22f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
+
+                ConfigureEffectMove(
+                    assets.EffectRecastLungeMove,
+                    "Effect_RecastLungeMove",
+                    "Recast Lunge Move",
+                    MoveStyle.Dash,
+                    3.5f,
+                    14f);
+
+                ConfigureEffectDamage(
+                    assets.EffectReturnBladeDamage,
+                    "Effect_ReturnBladeDamage",
+                    "Return Blade Damage",
+                    20f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
+
+                ConfigureEffectProjectile(
+                    assets.EffectReturnBladeProjectile,
+                    "Effect_ReturnBladeProjectile",
+                    "Return Blade Projectile",
+                    assets.ProjectileReturnBlade);
+
+                ConfigureEffectDamage(
+                    assets.EffectShardVolleyDamage,
+                    "Effect_ShardVolleyDamage",
+                    "Shard Volley Damage",
+                    12f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    0.8f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier);
+
+                ConfigureEffectProjectile(
+                    assets.EffectShardVolleyProjectile,
+                    "Effect_ShardVolleyProjectile",
+                    "Shard Volley Projectile",
+                    assets.ProjectileShardVolley);
+
+                ConfigureEffectDamage(
+                    assets.EffectRevealBoltDamage,
+                    "Effect_RevealBoltDamage",
+                    "Reveal Bolt Damage",
+                    14f,
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AbilityPower,
+                    0.8f,
+                    false,
+                    null,
+                    null,
+                    false,
+                    true,
+                    2f);
+
+                ConfigureEffectSummon(
+                    assets.EffectWindWallSummon,
+                    "Effect_WindWallSummon",
+                    "Wind Wall Summon",
+                    null,
+                    assets.PrefabWindWall);
+
+                ConfigureProjectile(
+                    assets.ProjectileReturnBlade,
+                    "Projectile_ReturnBlade",
+                    "Return Blade",
+                    assets.PrefabArcaneBolt,
+                    14f,
+                    2.5f,
+                    0.2f,
+                    false,
+                    360f,
+                    false,
+                    1,
+                    new Object[] { assets.EffectReturnBladeDamage },
+                    ProjectileBehaviorType.Return,
+                    1.2f);
+
+                ConfigureProjectile(
+                    assets.ProjectileShardVolley,
+                    "Projectile_ShardVolley",
+                    "Shard Volley",
+                    assets.PrefabArcaneBolt,
+                    16f,
+                    2.5f,
+                    0.18f,
+                    false,
+                    0f,
+                    false,
+                    1,
+                    new Object[] { assets.EffectShardVolleyDamage },
+                    ProjectileBehaviorType.Split,
+                    1f,
+                    3,
+                    35f,
+                    1);
 
                 ConfigureBuffBurn(assets.BuffBurn, assets.TagFire, assets.EffectBurnTick);
                 ConfigureBuffArcaneFocus(
@@ -1031,6 +1269,64 @@ namespace CombatSystem.Editor
                     new Object[] { assets.TagNature },
                     new Object[] { assets.ModifierEffectDuration, assets.ModifierEffectInterval },
                     null);
+
+                ConfigureBuff(
+                    assets.BuffGhostStep,
+                    "Buff_GhostStep",
+                    "Ghost Step",
+                    false,
+                    2f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagMagic },
+                    null,
+                    new BuffTriggerData[]
+                    {
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnApply,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[] { assets.EffectCombatStateAddUntargetable }
+                        },
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnExpire,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[] { assets.EffectCombatStateRemoveUntargetable }
+                        }
+                    });
+
+                ConfigureBuff(
+                    assets.BuffIronShell,
+                    "Buff_IronShell",
+                    "Iron Shell",
+                    false,
+                    2.5f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagPhysical },
+                    null,
+                    new BuffTriggerData[]
+                    {
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnApply,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[] { assets.EffectCombatStateAddInvulnerable }
+                        },
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnExpire,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[] { assets.EffectCombatStateRemoveInvulnerable }
+                        }
+                    });
 
                 ConfigureUnit(
                     assets.UnitSummonTotem,
@@ -1518,6 +1814,221 @@ namespace CombatSystem.Editor
                         Effects = new Object[] { assets.EffectTriggerArcaneFocus }
                     });
 
+                assets.SkillGhostStep = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_GhostStep.asset");
+                ConfigureSkill(
+                    assets.SkillGhostStep,
+                    "Skill_GhostStep",
+                    "Ghost Step",
+                    ResourceType.Mana,
+                    8f,
+                    8f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSelf,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectApplyGhostStep }
+                    });
+
+                assets.SkillIronShell = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_IronShell.asset");
+                ConfigureSkill(
+                    assets.SkillIronShell,
+                    "Skill_IronShell",
+                    "Iron Shell",
+                    ResourceType.Mana,
+                    10f,
+                    10f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSelf,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectApplyIronShell }
+                    });
+
+                assets.SkillSpellAegis = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_SpellAegis.asset");
+                ConfigureSkill(
+                    assets.SkillSpellAegis,
+                    "Skill_SpellAegis",
+                    "Spell Aegis",
+                    ResourceType.Mana,
+                    8f,
+                    6f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSelf,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectCombatStateGrantSpellShield }
+                    });
+
+                assets.SkillAmmoBurst = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_AmmoBurst.asset");
+                ConfigureSkill(
+                    assets.SkillAmmoBurst,
+                    "Skill_AmmoBurst",
+                    "Ammo Burst",
+                    ResourceType.Mana,
+                    6f,
+                    1f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSingleEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectAmmoBurstDamage }
+                    },
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    SkillQueuePolicy.Replace,
+                    TargetSnapshotPolicy.AtCastStart,
+                    true,
+                    2,
+                    2,
+                    3f);
+
+                assets.SkillRecastLunge = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_RecastLunge.asset");
+                ConfigureSkill(
+                    assets.SkillRecastLunge,
+                    "Skill_RecastLunge",
+                    "Recast Lunge",
+                    ResourceType.Mana,
+                    8f,
+                    6f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingPointAny,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectRecastLungeMove }
+                    },
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    SkillQueuePolicy.Replace,
+                    TargetSnapshotPolicy.AtCastStart,
+                    false,
+                    0,
+                    0,
+                    0f,
+                    true,
+                    1,
+                    2.5f,
+                    false,
+                    true,
+                    RecastTargetPolicy.AnyValid);
+
+                assets.SkillReturnBlade = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_ReturnBlade.asset");
+                ConfigureSkill(
+                    assets.SkillReturnBlade,
+                    "Skill_ReturnBlade",
+                    "Return Blade",
+                    ResourceType.Mana,
+                    10f,
+                    7f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSingleEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectReturnBladeProjectile }
+                    });
+
+                assets.SkillShardVolley = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_ShardVolley.asset");
+                ConfigureSkill(
+                    assets.SkillShardVolley,
+                    "Skill_ShardVolley",
+                    "Shard Volley",
+                    ResourceType.Mana,
+                    10f,
+                    8f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSingleEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectShardVolleyProjectile }
+                    });
+
+                assets.SkillRevealBolt = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_RevealBolt.asset");
+                ConfigureSkill(
+                    assets.SkillRevealBolt,
+                    "Skill_RevealBolt",
+                    "Reveal Bolt",
+                    ResourceType.Mana,
+                    8f,
+                    5f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingSingleEnemy,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectRevealBoltDamage }
+                    });
+
+                assets.SkillWindWall = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_WindWall.asset");
+                ConfigureSkill(
+                    assets.SkillWindWall,
+                    "Skill_WindWall",
+                    "Wind Wall",
+                    ResourceType.Mana,
+                    12f,
+                    12f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingPointAny,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectWindWallSummon }
+                    });
+
                 assets.AIBasic = LoadOrCreate<AIProfile>($"{folders.AI}/AI_Basic.asset");
                 ConfigureAIProfile(assets.AIBasic, "AI_Basic", "Basic AI", 12f, 2f, 0.5f);
 
@@ -1536,7 +2047,20 @@ namespace CombatSystem.Editor
                         new StatValueData(assets.MoveSpeed, 5f)
                     },
                     assets.SkillBasicAttack,
-                    new Object[] { assets.SkillFireball, assets.SkillArcaneFocus },
+                    new Object[]
+                    {
+                        assets.SkillFireball,
+                        assets.SkillArcaneFocus,
+                        assets.SkillGhostStep,
+                        assets.SkillIronShell,
+                        assets.SkillSpellAegis,
+                        assets.SkillAmmoBurst,
+                        assets.SkillRecastLunge,
+                        assets.SkillReturnBlade,
+                        assets.SkillShardVolley,
+                        assets.SkillRevealBolt,
+                        assets.SkillWindWall
+                    },
                     null);
 
                 assets.UnitEnemy = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Enemy.asset");
@@ -1558,7 +2082,7 @@ namespace CombatSystem.Editor
                     assets.AIBasic);
 
                 assets.HUDDefault = LoadOrCreate<HUDConfig>($"{folders.UI}/HUD_Default.asset");
-                ConfigureHUD(assets.HUDDefault, "HUD_Default", "Default HUD", 6, 12, true, true, true);
+                ConfigureHUD(assets.HUDDefault, "HUD_Default", "Default HUD", 12, 12, true, true, true);
 
                 assets.ProgressionDefault = LoadOrCreate<ProgressionDefinition>($"{folders.Progression}/Progression_Default.asset");
                 ConfigureProgression(assets.ProgressionDefault, "Progression_Default", "Default Progression", 1, 20, 100, 1.2f, 0, 1);
@@ -1587,6 +2111,9 @@ namespace CombatSystem.Editor
             RemoveRootObject(scene, "Sample_Enemies");
             RemoveRootObject(scene, "HUD");
             RemoveRootObject(scene, "EventSystem");  // 删除旧的事件系统，后面会重新创建
+            RemoveRootObject(scene, "Validation_Lane");
+            RemoveRootObject(scene, "LevelFlow");
+            RemoveRootObjectsWithComponent<LevelFlowController>(scene);
 
             SetupTopdownCamera();
 
@@ -1594,6 +2121,8 @@ namespace CombatSystem.Editor
             var targetingSystem = combatSystems.AddComponent<TargetingSystem>();
             var effectExecutor = combatSystems.AddComponent<EffectExecutor>();
             var projectilePool = combatSystems.AddComponent<ProjectilePool>();
+            combatSystems.AddComponent<HitResolutionSystem>();
+            combatSystems.AddComponent<VisionSystem>();
 
             SetComponentReference(effectExecutor, "targetingSystem", targetingSystem);
             SetComponentReference(effectExecutor, "projectilePool", projectilePool);
@@ -1653,6 +2182,9 @@ namespace CombatSystem.Editor
             SetComponentValue(indicatorDriver, "rotateCasterToAim", true);
 
             var skillBar = BuildUISystemHud(assets, player.GetComponent<UnitRoot>(), projectilePool);
+            ConfigureSampleUiEntry();
+
+            CreateValidationLane(assets, targetingSystem, effectExecutor);
 
             // 确保 EventSystem/InputReader 存在（用于 UI 交互与输入）
             EnsureEventSystem();
@@ -1672,6 +2204,52 @@ namespace CombatSystem.Editor
                     Object.DestroyImmediate(roots[i]);
                     return;
                 }
+            }
+        }
+
+        private static void RemoveRootObjectsWithComponent<T>(Scene scene) where T : Component
+        {
+            var roots = scene.GetRootGameObjects();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                var root = roots[i];
+                if (root == null)
+                {
+                    continue;
+                }
+
+                if (root.GetComponentInChildren<T>(true) != null)
+                {
+                    Object.DestroyImmediate(root);
+                }
+            }
+        }
+
+        private static void ConfigureSampleUiEntry()
+        {
+            var uiRoot = Object.FindFirstObjectByType<UIRoot>(FindObjectsInactive.Include);
+            if (uiRoot == null)
+            {
+                return;
+            }
+
+            var uiManager = uiRoot.Manager != null
+                ? uiRoot.Manager
+                : Object.FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
+            var inGame = Object.FindFirstObjectByType<InGameScreen>(FindObjectsInactive.Include);
+            var mainMenu = Object.FindFirstObjectByType<MainMenuScreen>(FindObjectsInactive.Include);
+
+            if (uiManager != null && inGame != null)
+            {
+                SetComponentReference(uiManager, "initialScreen", inGame);
+                SetComponentValue(uiManager, "hideHudOnStart", false);
+                SetComponentValue(uiManager, "hideAllScreensOnStart", true);
+            }
+
+            if (mainMenu != null)
+            {
+                // SampleScene 不走章节关卡流，避免 New Game 跳转 Town。
+                SetComponentReference(mainMenu, "levelFlow", null);
             }
         }
 
@@ -1696,6 +2274,54 @@ namespace CombatSystem.Editor
             return result;
         }
 
+        private static void CreateValidationLane(
+            SampleAssets assets,
+            TargetingSystem targetingSystem,
+            EffectExecutor effectExecutor)
+        {
+            var laneRoot = new GameObject("Validation_Lane");
+
+            var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            strip.name = "Lane_Strip";
+            strip.transform.SetParent(laneRoot.transform, true);
+            strip.transform.position = new Vector3(0f, -0.45f, 14f);
+            strip.transform.localScale = new Vector3(4f, 0.1f, 18f);
+
+            var enemyDummy = CreateUnitPrimitive("Lane_EnemyDummy", new Vector3(1.2f, 0f, 20f));
+            enemyDummy.transform.SetParent(laneRoot.transform, true);
+            ConfigureUnitObject(
+                enemyDummy,
+                assets.UnitEnemy,
+                assets.EventHub,
+                targetingSystem,
+                effectExecutor,
+                2,
+                assets.MaxHealth,
+                assets.HealthRegen,
+                assets.MaxMana,
+                assets.ManaRegen);
+
+            var allyDummy = CreateUnitPrimitive("Lane_AllyDummy", new Vector3(-1.2f, 0f, 20f));
+            allyDummy.transform.SetParent(laneRoot.transform, true);
+            ConfigureUnitObject(
+                allyDummy,
+                assets.UnitPlayer,
+                assets.EventHub,
+                targetingSystem,
+                effectExecutor,
+                1,
+                assets.MaxHealth,
+                assets.HealthRegen,
+                assets.MaxMana,
+                assets.ManaRegen);
+
+            var wallPoint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            wallPoint.name = "Lane_WindWallPoint";
+            wallPoint.transform.SetParent(laneRoot.transform, true);
+            wallPoint.transform.position = new Vector3(0f, 0.1f, 16f);
+            wallPoint.transform.localScale = new Vector3(0.5f, 0.05f, 0.5f);
+        }
+
         private static void ConfigureUnitObject(
             GameObject unitObject,
             UnitDefinition definition,
@@ -1715,6 +2341,8 @@ namespace CombatSystem.Editor
             var cooldown = unitObject.AddComponent<CooldownComponent>();
             var unitTags = unitObject.AddComponent<UnitTagsComponent>();
             var buffController = unitObject.AddComponent<BuffController>();
+            var combatState = unitObject.AddComponent<CombatStateComponent>();
+            var visibility = unitObject.AddComponent<VisibilityComponent>();
             var team = unitObject.AddComponent<TeamComponent>();
             var skillUser = unitObject.AddComponent<SkillUserComponent>();
             var characterController = unitObject.AddComponent<CharacterController>();
@@ -1728,6 +2356,7 @@ namespace CombatSystem.Editor
             SetComponentReference(unitRoot, "cooldown", cooldown);
             SetComponentReference(unitRoot, "unitTags", unitTags);
             SetComponentReference(unitRoot, "buffController", buffController);
+            SetComponentReference(unitRoot, "team", team);
 
             SetComponentReference(stats, "unitDefinition", definition);
             SetComponentReference(stats, "eventHub", eventHub);
@@ -1749,6 +2378,8 @@ namespace CombatSystem.Editor
             SetComponentReference(cooldown, "eventHub", eventHub);
 
             SetComponentReference(unitTags, "unitRoot", unitRoot);
+            SetComponentReference(visibility, "ownerTeam", team);
+            SetComponentReference(visibility, "combatState", combatState);
 
             SetComponentReference(buffController, "unitRoot", unitRoot);
             SetComponentReference(buffController, "skillUser", skillUser);
@@ -2441,6 +3072,39 @@ namespace CombatSystem.Editor
             return saved;
         }
 
+        private static GameObject CreateWindWallPrefab(string path)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab != null)
+            {
+                return prefab;
+            }
+
+            var root = new GameObject("WindWall");
+            root.transform.localScale = new Vector3(2.2f, 2f, 0.3f);
+            root.AddComponent<TeamComponent>();
+
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visual.name = "Visual";
+            visual.transform.SetParent(root.transform, false);
+            visual.transform.localScale = Vector3.one;
+            var visualCollider = visual.GetComponent<Collider>();
+            if (visualCollider != null)
+            {
+                Object.DestroyImmediate(visualCollider);
+            }
+
+            var volume = root.AddComponent<BoxCollider>();
+            volume.isTrigger = true;
+            volume.size = Vector3.one;
+            var interceptor = root.AddComponent<ProjectileInterceptorVolume>();
+            SetComponentReference(interceptor, "team", root.GetComponent<TeamComponent>());
+
+            var saved = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return saved;
+        }
+
         private static T LoadOrCreate<T>(string path) where T : ScriptableObject
         {
             var asset = AssetDatabase.LoadAssetAtPath<T>(path);
@@ -2568,7 +3232,9 @@ namespace CombatSystem.Editor
             bool canCrit = false,
             StatDefinition critChanceStat = null,
             StatDefinition critMultiplierStat = null,
-            bool triggersOnHit = false)
+            bool triggersOnHit = false,
+            bool revealTarget = false,
+            float revealDuration = 0f)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
@@ -2583,6 +3249,8 @@ namespace CombatSystem.Editor
             so.FindProperty("critChanceStat").objectReferenceValue = critChanceStat;
             so.FindProperty("critMultiplierStat").objectReferenceValue = critMultiplierStat;
             so.FindProperty("triggersOnHit").boolValue = triggersOnHit;
+            so.FindProperty("revealTarget").boolValue = revealTarget;
+            so.FindProperty("revealDuration").floatValue = revealDuration;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -2596,6 +3264,23 @@ namespace CombatSystem.Editor
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("effectType").enumValueIndex = (int)EffectType.ApplyBuff;
             so.FindProperty("buff").objectReferenceValue = buff;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureEffectCombatState(
+            EffectDefinition effect,
+            string id,
+            string displayName,
+            CombatStateEffectMode mode,
+            CombatStateFlags flags,
+            int spellShieldCharges = 1)
+        {
+            var so = new SerializedObject(effect);
+            SetDefinitionBase(so, id, displayName);
+            so.FindProperty("effectType").enumValueIndex = (int)EffectType.CombatState;
+            so.FindProperty("combatStateMode").enumValueIndex = (int)mode;
+            so.FindProperty("combatStateFlags").intValue = (int)flags;
+            so.FindProperty("spellShieldCharges").intValue = Mathf.Max(0, spellShieldCharges);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -2688,7 +3373,15 @@ namespace CombatSystem.Editor
             float homingTurnSpeed,
             bool pierce,
             int maxPierce,
-            Object[] onHitEffects)
+            Object[] onHitEffects,
+            ProjectileBehaviorType behaviorType = ProjectileBehaviorType.Straight,
+            float returnSpeedMultiplier = 1f,
+            int splitCount = 0,
+            float splitAngle = 35f,
+            int maxSplitDepth = 1,
+            float orbitRadius = 2.5f,
+            float orbitAngularSpeed = 240f,
+            float beamLength = 6f)
         {
             var so = new SerializedObject(projectile);
             SetDefinitionBase(so, id, displayName);
@@ -2696,10 +3389,18 @@ namespace CombatSystem.Editor
             so.FindProperty("speed").floatValue = speed;
             so.FindProperty("lifetime").floatValue = lifetime;
             so.FindProperty("hitRadius").floatValue = hitRadius;
+            so.FindProperty("behaviorType").enumValueIndex = (int)behaviorType;
             so.FindProperty("homing").boolValue = homing;
             so.FindProperty("homingTurnSpeed").floatValue = homingTurnSpeed;
             so.FindProperty("pierce").boolValue = pierce;
             so.FindProperty("maxPierce").intValue = maxPierce;
+            so.FindProperty("returnSpeedMultiplier").floatValue = returnSpeedMultiplier;
+            so.FindProperty("splitCount").intValue = splitCount;
+            so.FindProperty("splitAngle").floatValue = splitAngle;
+            so.FindProperty("maxSplitDepth").intValue = maxSplitDepth;
+            so.FindProperty("orbitRadius").floatValue = orbitRadius;
+            so.FindProperty("orbitAngularSpeed").floatValue = orbitAngularSpeed;
+            so.FindProperty("beamLength").floatValue = beamLength;
             SetObjectList(so.FindProperty("onHitEffects"), onHitEffects);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -2868,7 +3569,17 @@ namespace CombatSystem.Editor
             float channelTickInterval = 0f,
             float queueWindow = 0f,
             SkillQueuePolicy queuePolicy = SkillQueuePolicy.Replace,
-            TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart)
+            TargetSnapshotPolicy targetSnapshotPolicy = TargetSnapshotPolicy.AtCastStart,
+            bool ammoEnabled = false,
+            int ammoMaxCharges = 0,
+            int ammoInitialCharges = 0,
+            float ammoRechargeTime = 0f,
+            bool recastEnabled = false,
+            int recastMaxCount = 0,
+            float recastWindow = 0f,
+            bool consumesResourceOnRecast = true,
+            bool delayCooldownUntilRecastEnds = true,
+            RecastTargetPolicy recastTargetPolicy = RecastTargetPolicy.AnyValid)
         {
             var so = new SerializedObject(skill);
             SetDefinitionBase(so, id, displayName);
@@ -2887,6 +3598,27 @@ namespace CombatSystem.Editor
             so.FindProperty("targetSnapshotPolicy").enumValueIndex = (int)targetSnapshotPolicy;
             so.FindProperty("targeting").objectReferenceValue = targeting;
             SetObjectList(so.FindProperty("tags"), tags);
+
+            var ammo = so.FindProperty("ammoConfig");
+            if (ammo != null)
+            {
+                var maxCharges = Mathf.Max(0, ammoMaxCharges);
+                ammo.FindPropertyRelative("enabled").boolValue = ammoEnabled && maxCharges > 0;
+                ammo.FindPropertyRelative("maxCharges").intValue = maxCharges;
+                ammo.FindPropertyRelative("initialCharges").intValue = Mathf.Clamp(ammoInitialCharges, 0, maxCharges);
+                ammo.FindPropertyRelative("rechargeTime").floatValue = Mathf.Max(0f, ammoRechargeTime);
+            }
+
+            var recast = so.FindProperty("recastConfig");
+            if (recast != null)
+            {
+                recast.FindPropertyRelative("enabled").boolValue = recastEnabled && recastMaxCount > 0 && recastWindow > 0f;
+                recast.FindPropertyRelative("maxRecasts").intValue = Mathf.Max(0, recastMaxCount);
+                recast.FindPropertyRelative("recastWindow").floatValue = Mathf.Max(0f, recastWindow);
+                recast.FindPropertyRelative("consumesResourceOnRecast").boolValue = consumesResourceOnRecast;
+                recast.FindPropertyRelative("delayCooldownUntilRecastEnds").boolValue = delayCooldownUntilRecastEnds;
+                recast.FindPropertyRelative("targetPolicy").enumValueIndex = (int)recastTargetPolicy;
+            }
 
             var steps = so.FindProperty("steps");
             steps.arraySize = 1;
@@ -3069,7 +3801,16 @@ namespace CombatSystem.Editor
                 assets.SkillTimeWarp,
                 assets.SkillManaSurge,
                 assets.SkillSummonTotem,
-                assets.SkillTriggerFocus
+                assets.SkillTriggerFocus,
+                assets.SkillGhostStep,
+                assets.SkillIronShell,
+                assets.SkillSpellAegis,
+                assets.SkillAmmoBurst,
+                assets.SkillRecastLunge,
+                assets.SkillReturnBlade,
+                assets.SkillShardVolley,
+                assets.SkillRevealBolt,
+                assets.SkillWindWall
             });
             SetObjectList(so.FindProperty("buffs"), new Object[]
             {
@@ -3080,7 +3821,9 @@ namespace CombatSystem.Editor
                 assets.BuffStoneSkin,
                 assets.BuffMagicWard,
                 assets.BuffQuickCast,
-                assets.BuffTimeWarp
+                assets.BuffTimeWarp,
+                assets.BuffGhostStep,
+                assets.BuffIronShell
             });
             SetObjectList(so.FindProperty("effects"), new Object[]
             {
@@ -3110,7 +3853,22 @@ namespace CombatSystem.Editor
                 assets.EffectApplyStoneSkin,
                 assets.EffectApplyMagicWard,
                 assets.EffectApplyQuickCast,
-                assets.EffectApplyTimeWarp
+                assets.EffectApplyTimeWarp,
+                assets.EffectCombatStateAddUntargetable,
+                assets.EffectCombatStateRemoveUntargetable,
+                assets.EffectCombatStateAddInvulnerable,
+                assets.EffectCombatStateRemoveInvulnerable,
+                assets.EffectCombatStateGrantSpellShield,
+                assets.EffectApplyGhostStep,
+                assets.EffectApplyIronShell,
+                assets.EffectAmmoBurstDamage,
+                assets.EffectRecastLungeMove,
+                assets.EffectReturnBladeDamage,
+                assets.EffectReturnBladeProjectile,
+                assets.EffectShardVolleyDamage,
+                assets.EffectShardVolleyProjectile,
+                assets.EffectRevealBoltDamage,
+                assets.EffectWindWallSummon
             });
             SetObjectList(so.FindProperty("conditions"), new Object[] { assets.ConditionTargetLowHealth });
             SetObjectList(so.FindProperty("modifiers"), new Object[]
@@ -3126,7 +3884,7 @@ namespace CombatSystem.Editor
                 assets.ModifierEffectDuration,
                 assets.ModifierEffectInterval
             });
-            SetObjectList(so.FindProperty("projectiles"), new Object[] { assets.ProjectileArcaneBolt });
+            SetObjectList(so.FindProperty("projectiles"), new Object[] { assets.ProjectileArcaneBolt, assets.ProjectileReturnBlade, assets.ProjectileShardVolley });
             SetObjectList(so.FindProperty("targetings"), new Object[]
             {
                 assets.TargetingSingleEnemy,
@@ -3138,7 +3896,8 @@ namespace CombatSystem.Editor
                 assets.TargetingRandomEnemy,
                 assets.TargetingLineEnemy,
                 assets.TargetingBoxEnemy,
-                assets.TargetingAllySingle
+                assets.TargetingAllySingle,
+                assets.TargetingPointAny
             });
             SetObjectList(so.FindProperty("aiProfiles"), new Object[] { assets.AIBasic });
             SetObjectList(so.FindProperty("hudConfigs"), new Object[] { assets.HUDDefault });

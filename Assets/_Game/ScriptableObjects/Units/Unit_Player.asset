@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Unit_Player
   displayName: Player
-  prefab: {fileID: 1962191944521275768, guid: a3f1e526b28879c47886947446b80359, type: 3}
+  prefab: {fileID: 0}
   portrait: {fileID: 0}
   visualProfile: {fileID: 11400000, guid: 637e8451d0dbb1c45a30ffd499e81898, type: 2}
   tags:
@@ -30,19 +30,17 @@ MonoBehaviour:
     value: 5
   - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
     value: 5
-  - stat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
-    value: 10
-  - stat: {fileID: 11400000, guid: 83301ac81240442ebf84e7e14d6f344c, type: 2}
-    value: 0
-  - stat: {fileID: 11400000, guid: 0ec3c9cd3e7b4228a3e413569d7fe5b9, type: 2}
-    value: 0
-  - stat: {fileID: 11400000, guid: 67baa82a57094ad8b7b6d685f327c9fd, type: 2}
-    value: 0
-  - stat: {fileID: 11400000, guid: 7e26bcd9689142afababfc9cfdacd599, type: 2}
-    value: 0
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills:
   - {fileID: 11400000, guid: e260802c8a5d15d4589f0c002e0ff6eb, type: 2}
-  - {fileID: 11400000, guid: 6b4a6e47c0c546efb67dfdc9e78ab8e1, type: 2}
   - {fileID: 11400000, guid: b4334c8f64255634f894c947e4f459c0, type: 2}
+  - {fileID: 11400000, guid: f1481b2ce56aad14baed4bf1a777a619, type: 2}
+  - {fileID: 11400000, guid: eaaf14043b65a4343a6c67dde69e4e1d, type: 2}
+  - {fileID: 11400000, guid: acb035c54fc58c84fab5903cd54d76cb, type: 2}
+  - {fileID: 11400000, guid: 0581d79ae81fd3e44bf215fa9096e618, type: 2}
+  - {fileID: 11400000, guid: 702e8cdc3df621846a58827e8b1156c6, type: 2}
+  - {fileID: 11400000, guid: 3f038f62029ec6b4e92312029c113de6, type: 2}
+  - {fileID: 11400000, guid: d033f21d04ab9b841a09c9f9e369ac8d, type: 2}
+  - {fileID: 11400000, guid: 2b1f0b57c8f4e0d43b9b05c8ca091494, type: 2}
+  - {fileID: 11400000, guid: 44bf95723aff4154ca7f4201401e2640, type: 2}
   aiProfile: {fileID: 0}

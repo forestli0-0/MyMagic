@@ -29,6 +29,12 @@ MonoBehaviour:
   interactionSelectedBoost: 0.08
   interactionDisabledDepth: 0.52
   interactionFadeDuration: 0.08
+  interactionHoverScale: 1.02
+  interactionPressScale: 0.97
+  interactionHoverColorSmoothing: 22
+  interactionHoverScaleSmoothing: 18
+  interactionClickPulseScale: 1.045
+  interactionClickPulseDuration: 0.11
   focusOutlineColor: {r: 0.62, g: 0.78, b: 1, a: 0.95}
   focusOutlineWidth: 1.8
   focusScaleMultiplier: 1.02
