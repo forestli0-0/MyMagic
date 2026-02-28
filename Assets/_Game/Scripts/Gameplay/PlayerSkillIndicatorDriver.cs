@@ -4,6 +4,7 @@ using CombatSystem.Data;
 using CombatSystem.Input;
 using CombatSystem.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace CombatSystem.Gameplay
 {
@@ -42,6 +43,18 @@ namespace CombatSystem.Gameplay
         [Header("Input")]
         [SerializeField] private InputReader inputReader;
         [SerializeField] private bool autoFindInputReader = true;
+        [Tooltip("是否启用 7~12 槽位的键盘补充热键（用于扩展技能栏测试）")]
+        [SerializeField] private bool enableOverflowSkillHotkeys = true;
+        [Tooltip("补充热键，依次对应第 7、8、9... 个非普攻技能槽")]
+        [SerializeField] private Key[] overflowSkillHotkeys =
+        {
+            Key.Digit7,
+            Key.Digit8,
+            Key.Digit9,
+            Key.Digit0,
+            Key.Minus,
+            Key.Equals
+        };
 
         [Header("HUD")]
         [Tooltip("技能栏 UI（用于显示蓄力进度）")]
@@ -74,6 +87,7 @@ namespace CombatSystem.Gameplay
 
         /// <summary>当前高亮的目标</summary>
         private Transform currentTarget;
+        private const int PrimarySkillHotkeyCount = 6;
 
         #endregion
 
@@ -169,6 +183,8 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            PollOverflowSkillHotkeys();
+
             // 必要组件检查
             if (skillUser == null || indicator == null)
             {
@@ -242,6 +258,46 @@ namespace CombatSystem.Gameplay
             if (skillBarUI != null)
             {
                 skillBarUI.ClearSkillCharge();
+            }
+        }
+
+        private void PollOverflowSkillHotkeys()
+        {
+            if (!enableOverflowSkillHotkeys || overflowSkillHotkeys == null || overflowSkillHotkeys.Length == 0)
+            {
+                return;
+            }
+
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < overflowSkillHotkeys.Length; i++)
+            {
+                var key = overflowSkillHotkeys[i];
+                if (key == Key.None)
+                {
+                    continue;
+                }
+
+                var keyControl = keyboard[key];
+                if (keyControl == null)
+                {
+                    continue;
+                }
+
+                var slotIndex = PrimarySkillHotkeyCount + i;
+                if (keyControl.wasPressedThisFrame)
+                {
+                    HandleSkillStarted(slotIndex);
+                }
+
+                if (keyControl.wasReleasedThisFrame)
+                {
+                    HandleSkillCanceled(slotIndex);
+                }
             }
         }
 

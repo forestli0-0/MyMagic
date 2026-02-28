@@ -141,10 +141,72 @@ namespace CombatSystem.UI
                 SetHudVisible(false);
             }
 
+            var startupScreen = ResolveStartupScreen();
+            if (startupScreen != null)
+            {
+                ShowScreen(startupScreen, true);
+            }
+            else if (!hideHudOnStart)
+            {
+                SetHudVisible(true);
+            }
+        }
+
+        private UIScreenBase ResolveStartupScreen()
+        {
             if (initialScreen != null)
             {
-                ShowScreen(initialScreen, true);
+                return initialScreen;
             }
+
+            if (screensRoot == null)
+            {
+                return null;
+            }
+
+            var sceneName = gameObject.scene.name;
+            var isMainMenuScene = !string.IsNullOrWhiteSpace(sceneName)
+                && sceneName.Equals("MainMenu", StringComparison.OrdinalIgnoreCase);
+
+            var screens = screensRoot.GetComponentsInChildren<UIScreenBase>(true);
+            if (screens == null || screens.Length == 0)
+            {
+                return null;
+            }
+
+            UIScreenBase gameplayFallback = null;
+            UIScreenBase menuFallback = null;
+
+            for (int i = 0; i < screens.Length; i++)
+            {
+                var screen = screens[i];
+                if (screen == null)
+                {
+                    continue;
+                }
+
+                if (screen is InGameScreen)
+                {
+                    return screen;
+                }
+
+                if (gameplayFallback == null && screen.InputMode == UIInputMode.Gameplay)
+                {
+                    gameplayFallback = screen;
+                }
+
+                if (menuFallback == null && screen is MainMenuScreen)
+                {
+                    menuFallback = screen;
+                }
+            }
+
+            if (isMainMenuScene)
+            {
+                return menuFallback ?? gameplayFallback;
+            }
+
+            return gameplayFallback ?? menuFallback;
         }
 
         public void ShowScreen(UIScreenBase screen, bool clearStack)

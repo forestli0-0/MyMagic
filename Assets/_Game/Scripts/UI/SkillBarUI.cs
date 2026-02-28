@@ -24,7 +24,7 @@ namespace CombatSystem.UI
         [SerializeField] private int maxSlotsOverride = -1;
         
         [Tooltip("每个槽位对应的快捷键标签")]
-        [SerializeField] private string[] keyLabels = { "1", "2", "3", "4", "5", "6" };
+        [SerializeField] private string[] keyLabels = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=" };
         [SerializeField] private bool keepEmptySlotsVisible = true;
 
         [Header("外观")]
@@ -55,6 +55,12 @@ namespace CombatSystem.UI
         private int lastMaxSlots;
         private readonly List<SkillDefinition> nonBasicSkills = new List<SkillDefinition>(8);
         private static Sprite fallbackSprite;
+        private const int MaxAutoSlotCount = 32;
+        private static readonly string[] DefaultSkillKeyLabels =
+        {
+            "1", "2", "3", "4", "5", "6",
+            "7", "8", "9", "0", "-", "="
+        };
 
         private void Awake()
         {
@@ -75,6 +81,8 @@ namespace CombatSystem.UI
             if (sameBinding)
             {
                 CollectSlots();
+                EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
+                RebuildSlots(maxSlots);
                 return;
             }
 
@@ -98,6 +106,7 @@ namespace CombatSystem.UI
             }
             
             CollectSlots();
+            EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
             RebuildSlots(maxSlots);
             ClearSkillCharge();
         }
@@ -237,6 +246,82 @@ namespace CombatSystem.UI
             {
                 slotRoot.GetComponentsInChildren(true, slots);
             }
+
+            for (var i = slots.Count - 1; i >= 0; i--)
+            {
+                if (slots[i] == null)
+                {
+                    slots.RemoveAt(i);
+                }
+            }
+        }
+
+        private int ResolveRequestedSlotCount(int maxSlots)
+        {
+            var requested = maxSlotsOverride >= 0 ? maxSlotsOverride : maxSlots;
+            if (requested <= 0)
+            {
+                requested = slots.Count;
+            }
+
+            return Mathf.Clamp(requested, 0, MaxAutoSlotCount);
+        }
+
+        private void EnsureSlotCapacity(int requestedCount)
+        {
+            if (requestedCount <= 0 || slots.Count >= requestedCount)
+            {
+                return;
+            }
+
+            if (slotRoot == null)
+            {
+                slotRoot = transform;
+            }
+
+            var templateSlot = FindTemplateSlot();
+            if (templateSlot == null)
+            {
+                Debug.LogWarning("[SkillBarUI] 缺少 SkillSlotUI 模板，无法自动扩容技能槽位。", this);
+                return;
+            }
+
+            for (var i = slots.Count; i < requestedCount; i++)
+            {
+                var clone = Instantiate(templateSlot.gameObject, slotRoot);
+                clone.name = $"Slot_{i + 1}";
+                clone.transform.SetAsLastSibling();
+
+                var slot = clone.GetComponent<SkillSlotUI>();
+                if (slot == null)
+                {
+                    Destroy(clone);
+                    Debug.LogWarning($"[SkillBarUI] 自动扩容失败：克隆槽位缺少 SkillSlotUI，索引 {i}", this);
+                    break;
+                }
+
+                slot.BindSkill(null, string.Empty);
+                slots.Add(slot);
+            }
+
+            var layout = slotRoot.GetComponent<HorizontalLayoutGroup>();
+            if (layout != null)
+            {
+                EnsureSkillBarSize(layout);
+            }
+        }
+
+        private SkillSlotUI FindTemplateSlot()
+        {
+            for (var i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] != null)
+                {
+                    return slots[i];
+                }
+            }
+
+            return slotRoot != null ? slotRoot.GetComponentInChildren<SkillSlotUI>(true) : null;
         }
 
         /// <summary>
@@ -365,12 +450,23 @@ namespace CombatSystem.UI
 
         private string ResolveSkillSlotKeyLabel(int nonBasicIndex)
         {
-            if (nonBasicIndex < 0 || nonBasicIndex >= keyLabels.Length)
+            if (nonBasicIndex < 0)
             {
                 return string.Empty;
             }
 
-            return keyLabels[nonBasicIndex] ?? string.Empty;
+            if (nonBasicIndex < keyLabels.Length && !string.IsNullOrWhiteSpace(keyLabels[nonBasicIndex]))
+            {
+                return keyLabels[nonBasicIndex];
+            }
+
+            if (nonBasicIndex < DefaultSkillKeyLabels.Length)
+            {
+                return DefaultSkillKeyLabels[nonBasicIndex];
+            }
+
+            // 当配置的 keyLabels 不足时，仍提供递增编号，避免新增槽位无标识。
+            return (nonBasicIndex + 1).ToString();
         }
 
         /// <summary>

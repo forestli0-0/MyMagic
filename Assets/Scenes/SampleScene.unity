@@ -5900,9 +5900,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fec8e412ae6b33f43ad5916de394656b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialScreen: {fileID: 1936584465}
+  initialScreen: {fileID: 1475500549}
   hideAllScreensOnStart: 1
-  hideHudOnStart: 1
+  hideHudOnStart: 0
   pauseGameplayOnUiScreens: 1
   recoverFocusInUiMode: 1
   focusRecoveryInterval: 0.12
