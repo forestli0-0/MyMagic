@@ -85,3 +85,15 @@ unit_visual_anim_setup.log
 
 # Local interview prep docs/site (do not track)
 Docs/InterviewKit/
+
+# Local imported free VFX/SFX packs (keep out of repo for now)
+Assets/_Game/Art/VFX/ThirdPartyFree/
+Assets/_Game/Art/VFX/ThirdPartyFree.meta
+Assets/_Game/Art/SFX/ThirdPartyFree/
+Assets/_Game/Art/SFX/ThirdPartyFree.meta
+
+# Local imported character/effect packs (keep out of repo for now)
+Assets/JC_StylizedFantasyCharacters/
+Assets/JC_StylizedFantasyCharacters.meta
+Assets/JMO Assets/
+Assets/JMO Assets.meta
