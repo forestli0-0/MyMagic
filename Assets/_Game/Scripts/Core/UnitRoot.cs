@@ -32,7 +32,18 @@ namespace CombatSystem.Core
 
         public UnitDefinition Definition => unitDefinition;
         public CombatEventHub EventHub => eventHub;
-        public TeamComponent Team => team;
+        public TeamComponent Team
+        {
+            get
+            {
+                if (team == null)
+                {
+                    team = GetComponent<TeamComponent>();
+                }
+
+                return team;
+            }
+        }
 
         private void Reset()
         {
@@ -49,11 +60,55 @@ namespace CombatSystem.Core
 
         private void Awake()
         {
+            CacheComponentsIfMissing();
             EnsureVisualPresenterIfMissing();
 
             if (initializeOnAwake)
             {
                 Initialize(unitDefinition);
+            }
+        }
+
+        private void CacheComponentsIfMissing()
+        {
+            if (stats == null)
+            {
+                stats = GetComponent<StatsComponent>();
+            }
+
+            if (health == null)
+            {
+                health = GetComponent<HealthComponent>();
+            }
+
+            if (resource == null)
+            {
+                resource = GetComponent<ResourceComponent>();
+            }
+
+            if (cooldown == null)
+            {
+                cooldown = GetComponent<CooldownComponent>();
+            }
+
+            if (unitTags == null)
+            {
+                unitTags = GetComponent<UnitTagsComponent>();
+            }
+
+            if (buffController == null)
+            {
+                buffController = GetComponent<BuffController>();
+            }
+
+            if (progression == null)
+            {
+                progression = GetComponent<PlayerProgression>();
+            }
+
+            if (team == null)
+            {
+                team = GetComponent<TeamComponent>();
             }
         }
 

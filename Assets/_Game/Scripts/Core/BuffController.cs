@@ -729,7 +729,9 @@ namespace CombatSystem.Core
                 context.ExplicitTarget,
                 context.ChargeDuration,
                 context.ChargeRatio,
-                context.ChargeMultiplier);
+                context.ChargeMultiplier,
+                context.CastId,
+                context.StepIndex);
         }
 
         #endregion
@@ -917,12 +919,38 @@ namespace CombatSystem.Core
         /// <returns>自身的 CombatTarget</returns>
         private CombatTarget GetSelfTarget()
         {
-            if (!hasSelfTarget)
+            if (NeedsSelfTargetRefresh())
             {
                 RefreshSelfTarget();
             }
 
             return selfTarget;
+        }
+
+        private bool NeedsSelfTargetRefresh()
+        {
+            if (!hasSelfTarget || !selfTarget.IsValid || selfTarget.GameObject != gameObject || selfTarget.Buffs != this)
+            {
+                return true;
+            }
+
+            // 兼容运行时动态补组件（测试中经常先挂 BuffController 再挂 State/Team/Visibility）。
+            if (selfTarget.State == null && TryGetComponent<CombatStateComponent>(out _))
+            {
+                return true;
+            }
+
+            if (selfTarget.Visibility == null && TryGetComponent<VisibilityComponent>(out _))
+            {
+                return true;
+            }
+
+            if (selfTarget.Team == null && TryGetComponent<TeamComponent>(out _))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -34,6 +34,12 @@ namespace CombatSystem.Core
         public event Action<SkillCastEvent> SkillCastCompleted;
         /// <summary> 当技能施法被打断时触发 </summary>
         public event Action<SkillCastEvent> SkillCastInterrupted;
+        /// <summary> 当技能步骤执行时触发 </summary>
+        public event Action<SkillStepExecutedEvent> SkillStepExecuted;
+        /// <summary> 当技能效果执行前/后触发 </summary>
+        public event Action<SkillEffectExecutedEvent> SkillEffectExecuted;
+        /// <summary> 当投射物生命周期变化时触发（Spawn/Hit/Return/Split） </summary>
+        public event Action<ProjectileLifecycleEvent> ProjectileLifecycle;
         /// <summary> 当经验值发生变化时触发 </summary>
         public event Action<ExperienceChangedEvent> ExperienceChanged;
         /// <summary> 当等级发生变化时触发 </summary>
@@ -58,6 +64,9 @@ namespace CombatSystem.Core
         public void RaiseSkillCastStarted(SkillCastEvent evt) => SkillCastStarted?.Invoke(evt);
         public void RaiseSkillCastCompleted(SkillCastEvent evt) => SkillCastCompleted?.Invoke(evt);
         public void RaiseSkillCastInterrupted(SkillCastEvent evt) => SkillCastInterrupted?.Invoke(evt);
+        public void RaiseSkillStepExecuted(SkillStepExecutedEvent evt) => SkillStepExecuted?.Invoke(evt);
+        public void RaiseSkillEffectExecuted(SkillEffectExecutedEvent evt) => SkillEffectExecuted?.Invoke(evt);
+        public void RaiseProjectileLifecycle(ProjectileLifecycleEvent evt) => ProjectileLifecycle?.Invoke(evt);
         public void RaiseExperienceChanged(ExperienceChangedEvent evt) => ExperienceChanged?.Invoke(evt);
         public void RaiseLevelChanged(LevelChangedEvent evt) => LevelChanged?.Invoke(evt);
         public void RaiseAttributePointsChanged(AttributePointsChangedEvent evt) => AttributePointsChanged?.Invoke(evt);
@@ -78,6 +87,9 @@ namespace CombatSystem.Core
             SkillCastStarted = null;
             SkillCastCompleted = null;
             SkillCastInterrupted = null;
+            SkillStepExecuted = null;
+            SkillEffectExecuted = null;
+            ProjectileLifecycle = null;
             ExperienceChanged = null;
             LevelChanged = null;
             AttributePointsChanged = null;

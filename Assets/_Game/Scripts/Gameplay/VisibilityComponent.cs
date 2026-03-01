@@ -36,6 +36,7 @@ namespace CombatSystem.Gameplay
 
         public void AddConcealment(bool camouflage)
         {
+            EnsureReferences();
             concealmentStacks++;
             concealedAsCamouflage = camouflage;
             ApplyConcealFlags();
@@ -43,17 +44,20 @@ namespace CombatSystem.Gameplay
 
         public void RemoveConcealment()
         {
+            EnsureReferences();
             concealmentStacks = Mathf.Max(0, concealmentStacks - 1);
             ApplyConcealFlags();
         }
 
         public void RevealToTeam(int teamId, float durationSeconds)
         {
+            EnsureReferences();
             combatState?.RevealToTeam(teamId, durationSeconds);
         }
 
         public bool IsVisibleTo(TeamComponent observerTeam)
         {
+            EnsureReferences();
             if (concealmentStacks <= 0)
             {
                 return true;
@@ -75,6 +79,19 @@ namespace CombatSystem.Gameplay
             }
 
             return combatState.IsRevealedToTeam(observerTeam.TeamId);
+        }
+
+        private void EnsureReferences()
+        {
+            if (ownerTeam == null)
+            {
+                ownerTeam = GetComponent<TeamComponent>();
+            }
+
+            if (combatState == null)
+            {
+                combatState = GetComponent<CombatStateComponent>();
+            }
         }
 
         private void ApplyConcealFlags()

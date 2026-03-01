@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -388,6 +389,160 @@ namespace CombatSystem.Tests
             Assert.IsFalse(CallBoolMethod(caster.SkillUser, "HasActiveRecast", skill));
         }
 
+        [UnityTest]
+        public IEnumerator SkillStepEvent_DispatchedWithCastId()
+        {
+            CreateSystems();
+            var caster = CreateUnit("StepEventCaster");
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            SetPrivateField(caster.Unit, "eventHub", eventHub);
+            SetPrivateField(caster.SkillUser, "eventHub", eventHub);
+            SetPrivateField(caster.SkillUser, "targetingSystem", targetingSystem);
+            SetPrivateField(caster.SkillUser, "effectExecutor", effectExecutorSystem);
+
+            var targeting = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.TargetingDefinition")));
+            SetPrivateField(targeting, "mode", ParseEnum("CombatSystem.Data.TargetingMode", "Self"));
+            SetPrivateField(targeting, "team", ParseEnum("CombatSystem.Data.TargetTeam", "Self"));
+            SetPrivateField(targeting, "origin", ParseEnum("CombatSystem.Data.TargetingOrigin", "Caster"));
+            SetPrivateField(targeting, "range", 0f);
+            SetPrivateField(targeting, "radius", 0f);
+            SetPrivateField(targeting, "maxTargets", 1);
+            SetPrivateField(targeting, "includeSelf", true);
+            SetPrivateField(targeting, "allowEmpty", true);
+            SetPrivateField(targeting, "requireExplicitTarget", false);
+            SetPrivateField(targeting, "hitValidation", ParseEnum("CombatSystem.Data.HitValidationPolicy", "None"));
+
+            var stepType = RequireType("CombatSystem.Data.SkillStep");
+            var step = Activator.CreateInstance(stepType);
+            SetField(step, "trigger", ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+            SetField(step, "delay", 0f);
+            SetField(step, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetField(step, "presentationCues", CreateTypedList(RequireType("CombatSystem.Data.SkillPresentationCue")));
+
+            var skill = CreateSkill(0f, 0f, targeting);
+            SetPrivateField(skill, "steps", CreateTypedList(stepType, step));
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryAddSkill", skill, -1));
+
+            var eventCount = 0;
+            ulong castId = 0UL;
+            int stepIndex = -1;
+            var subscription = AddEventListener(eventHub, "SkillStepExecuted", evt =>
+            {
+                eventCount++;
+                castId = Convert.ToUInt64(GetFieldValue(evt, "CastId"));
+                stepIndex = Convert.ToInt32(GetFieldValue(evt, "StepIndex"));
+            });
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            yield return null;
+            RemoveEventListener(eventHub, "SkillStepExecuted", subscription);
+
+            Assert.GreaterOrEqual(eventCount, 1);
+            Assert.Greater(castId, 0UL);
+            Assert.AreEqual(0, stepIndex);
+        }
+
+        [Test]
+        public void EffectEvent_DispatchedWithCorrectTarget()
+        {
+            CreateSystems();
+            var caster = CreateUnit("EffectEventCaster");
+            var target = CreateUnit("EffectEventTarget");
+            CallMethod(target.Health, "SetCurrent", 100f);
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            SetPrivateField(caster.Unit, "eventHub", eventHub);
+            SetPrivateField(caster.SkillUser, "eventHub", eventHub);
+
+            var context = CreateRuntimeContext(caster, eventHub, 77UL, 3);
+            var damage = CreateDamageEffect(15f, "True");
+            var targetData = CreateCombatTarget(target.GameObject);
+            var phases = new List<string>(2);
+            ulong castId = 0UL;
+            int stepIndex = -1;
+            object firstTargetHealth = null;
+
+            var subscription = AddEventListener(eventHub, "SkillEffectExecuted", evt =>
+            {
+                phases.Add(GetFieldValue(evt, "Phase").ToString());
+                castId = Convert.ToUInt64(GetFieldValue(evt, "CastId"));
+                stepIndex = Convert.ToInt32(GetFieldValue(evt, "StepIndex"));
+                if (firstTargetHealth == null)
+                {
+                    var eventTarget = GetFieldValue(evt, "Target");
+                    firstTargetHealth = GetFieldValue(eventTarget, "Health");
+                }
+            });
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", damage, context, targetData, ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+            RemoveEventListener(eventHub, "SkillEffectExecuted", subscription);
+
+            Assert.AreEqual(2, phases.Count);
+            Assert.AreEqual("BeforeApply", phases[0]);
+            Assert.AreEqual("AfterApply", phases[1]);
+            Assert.AreEqual(77UL, castId);
+            Assert.AreEqual(3, stepIndex);
+            Assert.AreEqual(target.Health, firstTargetHealth);
+        }
+
+        [Test]
+        public void ProjectileLifecycle_ReturnAndSplit_RaisesEvents()
+        {
+            CreateSystems();
+            var caster = CreateUnit("ProjectileLifecycleCaster");
+            var target = CreateUnit("ProjectileLifecycleTarget");
+            var targetData = CreateCombatTarget(target.GameObject);
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            SetPrivateField(caster.Unit, "eventHub", eventHub);
+            SetPrivateField(caster.SkillUser, "eventHub", eventHub);
+
+            var context = CreateRuntimeContext(caster, eventHub, 88UL, 5);
+            var lifecycleTypes = new List<string>(8);
+            var subscription = AddEventListener(eventHub, "ProjectileLifecycle", evt =>
+            {
+                lifecycleTypes.Add(GetFieldValue(evt, "LifecycleType").ToString());
+            });
+
+            var poolGo = Track(new GameObject("ProjectileLifecyclePool"));
+            var pool = poolGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectilePool"));
+
+            var prefab = Track(new GameObject("ProjectileLifecyclePrefab"));
+            prefab.AddComponent<SphereCollider>().isTrigger = true;
+            prefab.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+
+            var returnDefinition = CreateProjectileDefinition(0.2f);
+            SetPrivateField(returnDefinition, "prefab", prefab);
+            SetPrivateField(returnDefinition, "behaviorType", ParseEnum("CombatSystem.Data.ProjectileBehaviorType", "Return"));
+
+            var returnProjectileGo = Track(new GameObject("ProjectileLifecycle_Return"));
+            returnProjectileGo.AddComponent<SphereCollider>().isTrigger = true;
+            var returnProjectile = returnProjectileGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            CallMethod(returnProjectile, "SetPool", pool, prefab);
+            CallMethod(returnProjectile, "Initialize", returnDefinition, context, targetData, Vector3.forward, null, targetingSystem);
+            InvokePrivateBoolMethod(returnProjectile, "HandlePostHitBehavior", targetData);
+
+            var splitDefinition = CreateProjectileDefinition(0.2f);
+            SetPrivateField(splitDefinition, "prefab", prefab);
+            SetPrivateField(splitDefinition, "behaviorType", ParseEnum("CombatSystem.Data.ProjectileBehaviorType", "Split"));
+            SetPrivateField(splitDefinition, "splitCount", 2);
+            SetPrivateField(splitDefinition, "maxSplitDepth", 1);
+            SetPrivateField(splitDefinition, "onHitEffects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition")));
+
+            var splitProjectileGo = Track(new GameObject("ProjectileLifecycle_Split"));
+            splitProjectileGo.AddComponent<SphereCollider>().isTrigger = true;
+            var splitProjectile = splitProjectileGo.AddComponent(RequireType("CombatSystem.Gameplay.ProjectileController"));
+            CallMethod(splitProjectile, "SetPool", pool, prefab);
+            CallMethod(splitProjectile, "Initialize", splitDefinition, context, CreateDefaultValue("CombatSystem.Gameplay.CombatTarget"), Vector3.forward, null, targetingSystem);
+            InvokePrivateMethod(splitProjectile, "SpawnSplitProjectiles");
+
+            RemoveEventListener(eventHub, "ProjectileLifecycle", subscription);
+
+            Assert.IsTrue(lifecycleTypes.Contains("Spawn"));
+            Assert.IsTrue(lifecycleTypes.Contains("Return"));
+            Assert.IsTrue(lifecycleTypes.Contains("Split"));
+        }
+
         [Test]
         public void SampleSkill_ReturnAndSplitProjectile_BehaviorWorks()
         {
@@ -722,7 +877,7 @@ namespace CombatSystem.Tests
             return Activator.CreateInstance(RequireType(typeName));
         }
 
-        private object CreateRuntimeContext(UnitRig caster)
+        private object CreateRuntimeContext(UnitRig caster, object eventHub = null, ulong castId = 0UL, int stepIndex = -1)
         {
             var contextType = RequireType("CombatSystem.Gameplay.SkillRuntimeContext");
             var args = new object[]
@@ -730,7 +885,7 @@ namespace CombatSystem.Tests
                 caster != null ? caster.SkillUser : null,
                 caster != null ? caster.Unit : null,
                 null,
-                null,
+                eventHub,
                 targetingSystem,
                 effectExecutorSystem,
                 false,
@@ -739,7 +894,9 @@ namespace CombatSystem.Tests
                 null,
                 0f,
                 0f,
-                1f
+                1f,
+                castId,
+                stepIndex
             };
 
             return Activator.CreateInstance(contextType, args);
@@ -806,6 +963,50 @@ namespace CombatSystem.Tests
             }
 
             return list;
+        }
+
+        private static Delegate AddEventListener(object source, string eventName, Action<object> callback)
+        {
+            Assert.NotNull(source);
+            Assert.IsNotEmpty(eventName);
+            Assert.NotNull(callback);
+
+            var eventInfo = source.GetType().GetEvent(eventName, BindingFlags.Instance | BindingFlags.Public);
+            Assert.NotNull(eventInfo, $"Event '{eventName}' not found on {source.GetType().Name}.");
+
+            var handlerType = eventInfo.EventHandlerType;
+            var invoke = handlerType.GetMethod("Invoke");
+            Assert.NotNull(invoke, $"Event handler invoke not found for '{eventName}'.");
+            var parameters = invoke.GetParameters();
+            Assert.AreEqual(1, parameters.Length, $"Event '{eventName}' should have exactly one argument.");
+
+            var argumentType = parameters[0].ParameterType;
+            var callbackConstant = Expression.Constant(callback);
+            var parameterExpr = Expression.Parameter(argumentType, "evt");
+            var body = Expression.Call(
+                callbackConstant,
+                typeof(Action<object>).GetMethod("Invoke"),
+                Expression.Convert(parameterExpr, typeof(object)));
+            var lambda = Expression.Lambda(handlerType, body, parameterExpr);
+            var handler = lambda.Compile();
+            eventInfo.AddEventHandler(source, handler);
+            return handler;
+        }
+
+        private static void RemoveEventListener(object source, string eventName, Delegate handler)
+        {
+            if (source == null || handler == null || string.IsNullOrEmpty(eventName))
+            {
+                return;
+            }
+
+            var eventInfo = source.GetType().GetEvent(eventName, BindingFlags.Instance | BindingFlags.Public);
+            if (eventInfo == null)
+            {
+                return;
+            }
+
+            eventInfo.RemoveEventHandler(source, handler);
         }
 
         private static object ParseEnum(string enumTypeName, string name)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CombatSystem.Core;
 using CombatSystem.Data;
 using UnityEngine;
 
@@ -17,12 +18,15 @@ namespace CombatSystem.Gameplay
         private float expireTime;
         private int remainingPierce;
         private int splitDepth;
+        private int projectileInstanceId;
+        private int parentProjectileInstanceId;
         private bool active;
         private bool returning;
         private float orbitAngle;
         private Rigidbody body;
         private SphereCollider runtimeHitCollider;
         private readonly List<int> hitIds = new List<int>(8);
+        private static int nextRuntimeProjectileInstanceId = 1;
 
         private void Awake()
         {
@@ -44,6 +48,25 @@ namespace CombatSystem.Gameplay
             TargetingDefinition targeting,
             TargetingSystem targetingSystemRef)
         {
+            Initialize(
+                projectileDefinition,
+                runtimeContext,
+                initialTarget,
+                initialDirection,
+                targeting,
+                targetingSystemRef,
+                0);
+        }
+
+        public void Initialize(
+            ProjectileDefinition projectileDefinition,
+            SkillRuntimeContext runtimeContext,
+            CombatTarget initialTarget,
+            Vector3 initialDirection,
+            TargetingDefinition targeting,
+            TargetingSystem targetingSystemRef,
+            int parentInstanceId)
+        {
             definition = projectileDefinition;
             context = runtimeContext;
             target = initialTarget;
@@ -57,7 +80,10 @@ namespace CombatSystem.Gameplay
             returning = false;
             orbitAngle = 0f;
             hitIds.Clear();
+            projectileInstanceId = GenerateProjectileInstanceId();
+            parentProjectileInstanceId = Mathf.Max(0, parentInstanceId);
             ApplyHitRadius();
+            RaiseLifecycleEvent(ProjectileLifecycleType.Spawn, target, parentProjectileInstanceId);
         }
 
         private void Update()
@@ -244,6 +270,7 @@ namespace CombatSystem.Gameplay
             }
 
             hitIds.Add(id);
+            RaiseLifecycleEvent(ProjectileLifecycleType.Hit, hitTarget);
             ApplyHitEffects(hitTarget);
             if (HandlePostHitBehavior(hitTarget))
             {
@@ -366,6 +393,7 @@ namespace CombatSystem.Gameplay
                 returning = true;
                 target = default;
                 hitIds.Clear();
+                RaiseLifecycleEvent(ProjectileLifecycleType.Return, hitTarget);
                 return true;
             }
 
@@ -401,8 +429,9 @@ namespace CombatSystem.Gameplay
                     continue;
                 }
 
-                child.Initialize(definition, context, default, dir, targetingDefinition, targetingSystem);
+                child.Initialize(definition, context, default, dir, targetingDefinition, targetingSystem, projectileInstanceId);
                 child.SetSplitDepth(splitDepth + 1);
+                RaiseLifecycleEvent(ProjectileLifecycleType.Split, default, child.projectileInstanceId);
             }
         }
 
@@ -436,6 +465,8 @@ namespace CombatSystem.Gameplay
             context = default;
             targetingDefinition = null;
             targetingSystem = null;
+            projectileInstanceId = 0;
+            parentProjectileInstanceId = 0;
             hitIds.Clear();
 
             if (pool != null && prefabKey != null)
@@ -445,6 +476,39 @@ namespace CombatSystem.Gameplay
             }
 
             gameObject.SetActive(false);
+        }
+
+        private static int GenerateProjectileInstanceId()
+        {
+            if (nextRuntimeProjectileInstanceId <= 0)
+            {
+                nextRuntimeProjectileInstanceId = 1;
+            }
+
+            return nextRuntimeProjectileInstanceId++;
+        }
+
+        private void RaiseLifecycleEvent(ProjectileLifecycleType lifecycleType, CombatTarget lifecycleTarget, int relatedProjectileInstanceId = 0)
+        {
+            if (definition == null || context.EventHub == null)
+            {
+                return;
+            }
+
+            var evt = new ProjectileLifecycleEvent(
+                context.CasterUnit,
+                context.Skill,
+                definition,
+                lifecycleType,
+                lifecycleTarget,
+                transform.position,
+                direction,
+                gameObject,
+                context.CastId,
+                context.StepIndex,
+                projectileInstanceId,
+                relatedProjectileInstanceId);
+            context.EventHub.RaiseProjectileLifecycle(evt);
         }
     }
 }

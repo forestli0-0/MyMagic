@@ -22,6 +22,8 @@ namespace CombatSystem.Gameplay
         public readonly float ChargeDuration;
         public readonly float ChargeRatio;
         public readonly float ChargeMultiplier;
+        public readonly ulong CastId;
+        public readonly int StepIndex;
 
         // 施法者组件缓存，避免热路径 GetComponent 调用
         /// <summary>施法者属性组件缓存</summary>
@@ -45,6 +47,41 @@ namespace CombatSystem.Gameplay
             float chargeDuration = 0f,
             float chargeRatio = 0f,
             float chargeMultiplier = 1f)
+            : this(
+                caster,
+                casterUnit,
+                skill,
+                eventHub,
+                targeting,
+                executor,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                explicitTarget,
+                chargeDuration,
+                chargeRatio,
+                chargeMultiplier,
+                0UL,
+                -1)
+        {
+        }
+
+        public SkillRuntimeContext(
+            SkillUserComponent caster,
+            UnitRoot casterUnit,
+            SkillDefinition skill,
+            CombatEventHub eventHub,
+            TargetingSystem targeting,
+            EffectExecutor executor,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            GameObject explicitTarget,
+            float chargeDuration,
+            float chargeRatio,
+            float chargeMultiplier,
+            ulong castId,
+            int stepIndex)
         {
             Caster = caster;
             CasterUnit = casterUnit;
@@ -59,6 +96,8 @@ namespace CombatSystem.Gameplay
             ChargeDuration = Mathf.Max(0f, chargeDuration);
             ChargeRatio = Mathf.Clamp01(chargeRatio);
             ChargeMultiplier = Mathf.Max(0f, chargeMultiplier);
+            CastId = castId;
+            StepIndex = stepIndex;
 
             if (casterUnit != null)
             {
@@ -72,6 +111,26 @@ namespace CombatSystem.Gameplay
                 CasterHealth = null;
                 CasterBuffs = null;
             }
+        }
+
+        public SkillRuntimeContext WithStepIndex(int stepIndex)
+        {
+            return new SkillRuntimeContext(
+                Caster,
+                CasterUnit,
+                Skill,
+                EventHub,
+                Targeting,
+                Executor,
+                HasAimPoint,
+                AimPoint,
+                AimDirection,
+                ExplicitTarget,
+                ChargeDuration,
+                ChargeRatio,
+                ChargeMultiplier,
+                CastId,
+                stepIndex);
         }
     }
 }

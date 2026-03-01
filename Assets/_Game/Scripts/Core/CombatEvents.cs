@@ -1,4 +1,6 @@
 using CombatSystem.Data;
+using CombatSystem.Gameplay;
+using UnityEngine;
 
 namespace CombatSystem.Core
 {
@@ -203,6 +205,152 @@ namespace CombatSystem.Core
             CastTime = castTime;
             ChannelTime = channelTime;
             IsChannel = isChannel;
+        }
+    }
+
+    /// <summary>
+    /// 技能步骤执行事件数据（用于表现系统消费）。
+    /// </summary>
+    public struct SkillStepExecutedEvent
+    {
+        public UnitRoot Caster;
+        public SkillDefinition Skill;
+        public SkillStep Step;
+        public SkillStepTrigger Trigger;
+        public CombatTarget PrimaryTarget;
+        public GameObject ExplicitTarget;
+        public bool HasAimPoint;
+        public Vector3 AimPoint;
+        public Vector3 AimDirection;
+        public ulong CastId;
+        public int StepIndex;
+
+        public SkillStepExecutedEvent(
+            UnitRoot caster,
+            SkillDefinition skill,
+            SkillStep step,
+            SkillStepTrigger trigger,
+            CombatTarget primaryTarget,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            ulong castId,
+            int stepIndex)
+        {
+            Caster = caster;
+            Skill = skill;
+            Step = step;
+            Trigger = trigger;
+            PrimaryTarget = primaryTarget;
+            ExplicitTarget = explicitTarget;
+            HasAimPoint = hasAimPoint;
+            AimPoint = aimPoint;
+            AimDirection = aimDirection;
+            CastId = castId;
+            StepIndex = stepIndex;
+        }
+    }
+
+    /// <summary>
+    /// 技能效果执行阶段。
+    /// </summary>
+    public enum SkillEffectExecutionPhase
+    {
+        BeforeApply = 0,
+        AfterApply = 1
+    }
+
+    /// <summary>
+    /// 技能效果执行事件数据（用于表现系统消费）。
+    /// </summary>
+    public struct SkillEffectExecutedEvent
+    {
+        public UnitRoot Caster;
+        public SkillDefinition Skill;
+        public EffectDefinition Effect;
+        public SkillStepTrigger Trigger;
+        public SkillEffectExecutionPhase Phase;
+        public CombatTarget Target;
+        public ulong CastId;
+        public int StepIndex;
+
+        public SkillEffectExecutedEvent(
+            UnitRoot caster,
+            SkillDefinition skill,
+            EffectDefinition effect,
+            SkillStepTrigger trigger,
+            SkillEffectExecutionPhase phase,
+            CombatTarget target,
+            ulong castId,
+            int stepIndex)
+        {
+            Caster = caster;
+            Skill = skill;
+            Effect = effect;
+            Trigger = trigger;
+            Phase = phase;
+            Target = target;
+            CastId = castId;
+            StepIndex = stepIndex;
+        }
+    }
+
+    /// <summary>
+    /// 投射物生命周期事件类型。
+    /// </summary>
+    public enum ProjectileLifecycleType
+    {
+        Spawn = 0,
+        Hit = 1,
+        Return = 2,
+        Split = 3
+    }
+
+    /// <summary>
+    /// 投射物生命周期事件数据（Spawn/Hit/Return/Split）。
+    /// </summary>
+    public struct ProjectileLifecycleEvent
+    {
+        public UnitRoot Caster;
+        public SkillDefinition Skill;
+        public ProjectileDefinition Projectile;
+        public ProjectileLifecycleType LifecycleType;
+        public CombatTarget Target;
+        public Vector3 Position;
+        public Vector3 Direction;
+        public GameObject ProjectileObject;
+        public ulong CastId;
+        public int StepIndex;
+        public int ProjectileInstanceId;
+        public int RelatedProjectileInstanceId;
+
+        public ProjectileLifecycleEvent(
+            UnitRoot caster,
+            SkillDefinition skill,
+            ProjectileDefinition projectile,
+            ProjectileLifecycleType lifecycleType,
+            CombatTarget target,
+            Vector3 position,
+            Vector3 direction,
+            GameObject projectileObject,
+            ulong castId,
+            int stepIndex,
+            int projectileInstanceId,
+            int relatedProjectileInstanceId = 0)
+        {
+            Caster = caster;
+            Skill = skill;
+            Projectile = projectile;
+            LifecycleType = lifecycleType;
+            Target = target;
+            Position = position;
+            Direction = direction;
+            ProjectileObject = projectileObject;
+            CastId = castId;
+            StepIndex = stepIndex;
+            ProjectileInstanceId = projectileInstanceId;
+            RelatedProjectileInstanceId = relatedProjectileInstanceId;
         }
     }
 

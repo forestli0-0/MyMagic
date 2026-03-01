@@ -72,6 +72,7 @@ namespace CombatSystem.Gameplay
         private float currentChargeDuration;
         private float currentChargeRatio;
         private float currentChargeMultiplier = 1f;
+        private ulong nextCastId = 1UL;
         private SkillRuntimeContext currentContext;
         private bool currentHasAimPoint;
         private Vector3 currentAimPoint;
@@ -525,6 +526,9 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            // Ensure presentation listeners exist before any cast events are dispatched.
+            SkillPresentationSystem.EnsureRuntimeInstance();
+
             var isRecastCast = TryGetRecastState(skill, out var activeRecast);
 
             if (TryGetTauntSource(out var taunter))
@@ -642,6 +646,7 @@ namespace CombatSystem.Gameplay
             var chargeDuration = Mathf.Max(0f, chargeDurationSeconds);
             var chargeRatio = skill.ResolveChargeRatio(chargeDuration);
             var chargeMultiplier = skill.ResolveChargeMultiplier(chargeDuration);
+            var castId = GenerateCastId();
 
             // 创建技能上下文
             var context = CreateContext(
@@ -652,7 +657,8 @@ namespace CombatSystem.Gameplay
                 explicitTarget,
                 chargeDuration,
                 chargeRatio,
-                chargeMultiplier);
+                chargeMultiplier,
+                castId);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = ResolveModifiedResourceCost(skill, context, primaryTarget);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
@@ -1351,7 +1357,7 @@ namespace CombatSystem.Gameplay
 
                 // 计算执行时间（基准时间 + 延迟）
                 var executeAt = baseTime + Mathf.Max(0f, step.delay);
-                pendingSteps.Add(new PendingStep(step, trigger, executeAt, targets, context));
+                pendingSteps.Add(new PendingStep(step, trigger, i, executeAt, targets, context));
                 // 增加引用计数，防止过早释放
                 targets.RefCount++;
             }
@@ -1514,24 +1520,13 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private void ExecuteStep(PendingStep pending)
         {
-            if (effectExecutor == null)
-            {
-                return;
-            }
-
             var step = pending.Step;
             if (step == null)
             {
                 return;
             }
 
-            var effects = step.effects;
-            if (effects == null || effects.Count == 0)
-            {
-                return;
-            }
-
-            var context = pending.Context;
+            var context = pending.Context.WithStepIndex(pending.StepIndex);
             var targets = pending.Targets.Targets;
             var useSnapshot = true;
 
@@ -1548,6 +1543,30 @@ namespace CombatSystem.Gameplay
                     SimpleListPool<CombatTarget>.Release(refreshed);
                     return;
                 }
+            }
+
+            var primaryTarget = targets != null && targets.Count > 0 ? targets[0] : default;
+            RaiseSkillStepExecuted(context, step, pending.Trigger, primaryTarget, pending.StepIndex);
+
+            var effects = step.effects;
+            if (effects == null || effects.Count == 0)
+            {
+                if (!useSnapshot)
+                {
+                    SimpleListPool<CombatTarget>.Release(targets);
+                }
+
+                return;
+            }
+
+            if (effectExecutor == null)
+            {
+                if (!useSnapshot)
+                {
+                    SimpleListPool<CombatTarget>.Release(targets);
+                }
+
+                return;
             }
 
             if (targets == null || targets.Count == 0)
@@ -1955,6 +1974,16 @@ namespace CombatSystem.Gameplay
             return resource.Spend(cost);
         }
 
+        private ulong GenerateCastId()
+        {
+            if (nextCastId == 0UL)
+            {
+                nextCastId = 1UL;
+            }
+
+            return nextCastId++;
+        }
+
         /// <summary>
         /// 创建技能运行时上下文。
         /// </summary>
@@ -1966,7 +1995,9 @@ namespace CombatSystem.Gameplay
             GameObject explicitTarget = null,
             float chargeDuration = 0f,
             float chargeRatio = 0f,
-            float chargeMultiplier = 1f)
+            float chargeMultiplier = 1f,
+            ulong castId = 0UL,
+            int stepIndex = -1)
         {
             return new SkillRuntimeContext(
                 this,
@@ -1981,7 +2012,9 @@ namespace CombatSystem.Gameplay
                 explicitTarget,
                 chargeDuration,
                 chargeRatio,
-                chargeMultiplier);
+                chargeMultiplier,
+                castId,
+                stepIndex);
         }
 
         /// <summary>
@@ -2009,6 +2042,34 @@ namespace CombatSystem.Gameplay
             var evt = new SkillCastEvent(context.CasterUnit, context.Skill, castTime, channelTime, isChannel);
             SkillCastInterrupted?.Invoke(evt);
             eventHub?.RaiseSkillCastInterrupted(evt);
+        }
+
+        private void RaiseSkillStepExecuted(
+            SkillRuntimeContext context,
+            SkillStep step,
+            SkillStepTrigger trigger,
+            CombatTarget primaryTarget,
+            int stepIndex)
+        {
+            var hub = context.EventHub != null ? context.EventHub : eventHub;
+            if (hub == null)
+            {
+                return;
+            }
+
+            var evt = new SkillStepExecutedEvent(
+                context.CasterUnit,
+                context.Skill,
+                step,
+                trigger,
+                primaryTarget,
+                context.ExplicitTarget,
+                context.HasAimPoint,
+                context.AimPoint,
+                context.AimDirection,
+                context.CastId,
+                stepIndex);
+            hub.RaiseSkillStepExecuted(evt);
         }
 
         private void ClearPendingSteps(SkillDefinition skill)
@@ -2249,6 +2310,8 @@ namespace CombatSystem.Gameplay
             public SkillStep Step;
             /// <summary>触发时机</summary>
             public SkillStepTrigger Trigger;
+            /// <summary>步骤索引（Skill.Steps 中的位置）</summary>
+            public int StepIndex;
             /// <summary>执行时间戳</summary>
             public float ExecuteAt;
             /// <summary>目标列表句柄</summary>
@@ -2256,10 +2319,17 @@ namespace CombatSystem.Gameplay
             /// <summary>技能运行时上下文</summary>
             public SkillRuntimeContext Context;
 
-            public PendingStep(SkillStep step, SkillStepTrigger trigger, float executeAt, TargetListHandle targets, SkillRuntimeContext context)
+            public PendingStep(
+                SkillStep step,
+                SkillStepTrigger trigger,
+                int stepIndex,
+                float executeAt,
+                TargetListHandle targets,
+                SkillRuntimeContext context)
             {
                 Step = step;
                 Trigger = trigger;
+                StepIndex = stepIndex;
                 ExecuteAt = executeAt;
                 Targets = targets;
                 Context = context;

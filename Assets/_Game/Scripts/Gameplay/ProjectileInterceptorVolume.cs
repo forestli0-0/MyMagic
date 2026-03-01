@@ -30,12 +30,23 @@ namespace CombatSystem.Gameplay
                 return true;
             }
 
-            if (team == null || caster == null || caster.Team == null)
+            if (team == null)
+            {
+                team = GetComponentInParent<TeamComponent>();
+            }
+
+            var casterTeam = caster != null ? caster.Team : null;
+            if (casterTeam == null && caster != null)
+            {
+                casterTeam = caster.GetComponent<TeamComponent>();
+            }
+
+            if (team == null || caster == null || casterTeam == null)
             {
                 return true;
             }
 
-            return !team.IsSameTeam(caster.Team);
+            return !team.IsSameTeam(casterTeam);
         }
 
         private void EnsureTriggerCollider()

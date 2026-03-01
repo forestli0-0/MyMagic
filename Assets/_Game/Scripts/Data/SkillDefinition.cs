@@ -138,7 +138,11 @@ namespace CombatSystem.Data
         [Tooltip("执行此步骤的前提条件")]
         public ConditionDefinition condition;
         
-        [Header("表现效果")]
+        [Header("表现 Cue（新流程）")]
+        [Tooltip("步骤级表现配置，供 SkillPresentationSystem 通过事件总线消费")]
+        public List<SkillPresentationCue> presentationCues = new List<SkillPresentationCue>();
+
+        [Header("表现效果（Legacy 兼容）")]
         public string animationTrigger; // 动画触发参数
         public GameObject vfxPrefab;    // 特效预制体
         public AudioClip sfx;           // 音效

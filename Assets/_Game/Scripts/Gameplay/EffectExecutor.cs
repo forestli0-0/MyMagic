@@ -245,7 +245,9 @@ namespace CombatSystem.Gameplay
             }
 
             // 对原始目标应用效果
+            RaiseSkillEffectExecuted(context, effect, trigger, SkillEffectExecutionPhase.BeforeApply, target);
             ApplyEffectInternal(effect, context, target, trigger);
+            RaiseSkillEffectExecuted(context, effect, trigger, SkillEffectExecutionPhase.AfterApply, target);
         }
 
         private void SchedulePeriodicEffect(
@@ -602,6 +604,30 @@ namespace CombatSystem.Gameplay
                     target.State.GrantSpellShield(effect.SpellShieldCharges);
                     break;
             }
+        }
+
+        private static void RaiseSkillEffectExecuted(
+            SkillRuntimeContext context,
+            EffectDefinition effect,
+            SkillStepTrigger trigger,
+            SkillEffectExecutionPhase phase,
+            CombatTarget target)
+        {
+            if (context.EventHub == null)
+            {
+                return;
+            }
+
+            var evt = new SkillEffectExecutedEvent(
+                context.CasterUnit,
+                context.Skill,
+                effect,
+                trigger,
+                phase,
+                target,
+                context.CastId,
+                context.StepIndex);
+            context.EventHub.RaiseSkillEffectExecuted(evt);
         }
 
         private struct PendingEffect
