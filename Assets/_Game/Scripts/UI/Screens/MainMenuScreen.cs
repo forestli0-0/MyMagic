@@ -71,6 +71,8 @@ namespace CombatSystem.UI
 
         public void StartNewGame()
         {
+            EnterGameplayUiState();
+
             if (levelFlow == null)
             {
                 levelFlow = FindFirstObjectByType<LevelFlowController>();
@@ -97,6 +99,7 @@ namespace CombatSystem.UI
 
             if (saveManager != null && saveManager.TryLoadLatest())
             {
+                EnterGameplayUiState();
                 UIToast.Success("已读取最近存档。");
                 return;
             }
@@ -117,6 +120,22 @@ namespace CombatSystem.UI
         public override string GetFooterHintText()
         {
             return "{CONFIRM} 选择    {BACK} 返回上一页";
+        }
+
+        private void EnterGameplayUiState()
+        {
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            if (inGameScreen != null)
+            {
+                uiManager.ShowScreen(inGameScreen, true);
+                return;
+            }
+
+            uiManager.ForceReturnToGameplay();
         }
     }
 }

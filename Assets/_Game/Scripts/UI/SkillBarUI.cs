@@ -83,6 +83,7 @@ namespace CombatSystem.UI
                 CollectSlots();
                 EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
                 RebuildSlots(maxSlots);
+                RefreshCooldownSnapshot();
                 return;
             }
 
@@ -108,6 +109,7 @@ namespace CombatSystem.UI
             CollectSlots();
             EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
             RebuildSlots(maxSlots);
+            RefreshCooldownSnapshot();
             ClearSkillCharge();
         }
 
@@ -188,32 +190,13 @@ namespace CombatSystem.UI
 
         private void Update()
         {
-            if (cooldown == null || slots.Count == 0)
+            if (slots.Count == 0)
             {
                 return;
             }
 
-            // 没有任何技能处于冷却时，跳过整栏轮询刷新。
-            if (cooldown.ActiveCooldownCount <= 0)
-            {
-                return;
-            }
-
-            // 每帧刷新所有槽位的冷却显示（用于平滑更新进度条）
-            for (int i = 0; i < slots.Count; i++)
-            {
-                var slot = slots[i];
-                if (slot != null && slot.Skill != null)
-                {
-                    var remaining = cooldown.GetRemaining(slot.Skill);
-                    if (remaining <= 0f)
-                    {
-                        continue;
-                    }
-
-                    slot.RefreshCooldown(remaining);
-                }
-            }
+            // 每帧做一次“快照对齐”，兜底处理事件丢失导致的冷却显示卡住。
+            RefreshCooldownSnapshot();
         }
 
         private void OnDisable()
@@ -229,6 +212,27 @@ namespace CombatSystem.UI
         private void HandleSkillsChanged()
         {
             RebuildSlots(lastMaxSlots);
+            RefreshCooldownSnapshot();
+        }
+
+        private void RefreshCooldownSnapshot()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null || slot.Skill == null)
+                {
+                    continue;
+                }
+
+                if (cooldown == null)
+                {
+                    slot.NotifyCooldown(0f, 0f, false);
+                    continue;
+                }
+
+                slot.RefreshCooldown(cooldown);
+            }
         }
 
         /// <summary>

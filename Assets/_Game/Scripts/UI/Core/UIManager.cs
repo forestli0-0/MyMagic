@@ -154,9 +154,23 @@ namespace CombatSystem.UI
 
         private UIScreenBase ResolveStartupScreen()
         {
+            var sceneName = gameObject.scene.name;
+            var isMainMenuScene = !string.IsNullOrWhiteSpace(sceneName)
+                && sceneName.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0;
+
             if (initialScreen != null)
             {
-                return initialScreen;
+                // MainMenu scenes should not boot into gameplay-only screen even if serialized wrong.
+                var invalidMainMenuInitial = isMainMenuScene && initialScreen is InGameScreen;
+                if (!invalidMainMenuInitial)
+                {
+                    return initialScreen;
+                }
+            }
+
+            if (screensRoot == null && root != null && root.ScreensCanvas != null)
+            {
+                screensRoot = root.ScreensCanvas.transform;
             }
 
             if (screensRoot == null)
@@ -164,18 +178,16 @@ namespace CombatSystem.UI
                 return null;
             }
 
-            var sceneName = gameObject.scene.name;
-            var isMainMenuScene = !string.IsNullOrWhiteSpace(sceneName)
-                && sceneName.Equals("MainMenu", StringComparison.OrdinalIgnoreCase);
-
             var screens = screensRoot.GetComponentsInChildren<UIScreenBase>(true);
             if (screens == null || screens.Length == 0)
             {
                 return null;
             }
 
-            UIScreenBase gameplayFallback = null;
             UIScreenBase menuFallback = null;
+            UIScreenBase inGameFallback = null;
+            UIScreenBase gameplayFallback = null;
+            UIScreenBase uiFallback = null;
 
             for (int i = 0; i < screens.Length; i++)
             {
@@ -185,9 +197,14 @@ namespace CombatSystem.UI
                     continue;
                 }
 
-                if (screen is InGameScreen)
+                if (menuFallback == null && screen is MainMenuScreen)
                 {
-                    return screen;
+                    menuFallback = screen;
+                }
+
+                if (inGameFallback == null && screen is InGameScreen)
+                {
+                    inGameFallback = screen;
                 }
 
                 if (gameplayFallback == null && screen.InputMode == UIInputMode.Gameplay)
@@ -195,18 +212,18 @@ namespace CombatSystem.UI
                     gameplayFallback = screen;
                 }
 
-                if (menuFallback == null && screen is MainMenuScreen)
+                if (uiFallback == null && screen.InputMode == UIInputMode.UI)
                 {
-                    menuFallback = screen;
+                    uiFallback = screen;
                 }
             }
 
             if (isMainMenuScene)
             {
-                return menuFallback ?? gameplayFallback;
+                return menuFallback ?? uiFallback ?? inGameFallback ?? gameplayFallback;
             }
 
-            return gameplayFallback ?? menuFallback;
+            return inGameFallback ?? gameplayFallback ?? menuFallback ?? uiFallback;
         }
 
         public void ShowScreen(UIScreenBase screen, bool clearStack)

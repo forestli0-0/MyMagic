@@ -345,17 +345,23 @@ namespace CombatSystem.Gameplay
 
         private UnitDefinition ResolvePlayerDefinition()
         {
-            if (playerDefinition != null)
+            if (playerDefinition != null && playerDefinition.Prefab != null)
             {
                 return playerDefinition;
             }
 
             if (!EnsureDatabase() || string.IsNullOrWhiteSpace(playerUnitId))
             {
-                return null;
+                return playerDefinition;
             }
 
-            return database.GetUnit(playerUnitId);
+            var databaseDefinition = database.GetUnit(playerUnitId);
+            if (databaseDefinition != null && databaseDefinition.Prefab != null)
+            {
+                return databaseDefinition;
+            }
+
+            return playerDefinition != null ? playerDefinition : databaseDefinition;
         }
 
         private LevelDefinition ResolveLevel(string levelId)
