@@ -184,6 +184,7 @@ MonoBehaviour:
   targetUnit: {fileID: 0}
   worldCamera: {fileID: 2024685353}
   autoRebindInterval: 0.5
+  uiManager: {fileID: 0}
   healthBar: {fileID: 1254007915}
   resourceBar: {fileID: 194524639}
   skillBar: {fileID: 156305069}
@@ -1014,6 +1015,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -1032,6 +1034,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -3775,11 +3778,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 829423564}
   cooldownText: {fileID: 610580959}
   keyText: {fileID: 123312224}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &150666299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3883,6 +3897,14 @@ MonoBehaviour:
   - 4
   - 5
   - 6
+  keepEmptySlotsVisible: 1
+  barBackground: {fileID: 0}
+  autoCreateBarBackground: 1
+  barBackgroundColor: {r: 0.03, g: 0.05, b: 0.09, a: 0.82}
+  addBarOutline: 1
+  barOutlineColor: {r: 0.26, g: 0.46, b: 0.82, a: 0.85}
+  autoApplyLayoutPadding: 1
+  layoutPadding: {x: 10, y: 8}
   showBasicAttackSlot: 1
   basicAttackKeyLabel: RMB
 --- !u!114 &156305070
@@ -5598,11 +5620,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 349191973}
   cooldownText: {fileID: 1149420846}
   keyText: {fileID: 1742858856}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &247168589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7468,6 +7501,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -7486,6 +7520,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -9403,6 +9438,9 @@ MonoBehaviour:
   icon: {fileID: 693284850}
   selection: {fileID: 72292818}
   stackText: {fileID: 633899230}
+  skillBadgeRoot: {fileID: 0}
+  skillBadgeBackground: {fileID: 0}
+  skillBadgeText: {fileID: 0}
 --- !u!114 &527058742
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11443,6 +11481,7 @@ MonoBehaviour:
   worldCamera: {fileID: 0}
   barsRoot: {fileID: 649551366}
   barTemplate: {fileID: 0}
+  eventHubResolveInterval: 0.5
   worldOffset: {x: 0, y: 1.6, z: 0}
   screenOffset: {x: 0, y: 24}
   showDuration: 5
@@ -12981,11 +13020,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 230836840}
   cooldownText: {fileID: 360624052}
   keyText: {fileID: 909179673}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &771775459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13956,6 +14006,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotsRoot: {fileID: 848885816}
   slotTemplate: {fileID: 813276146}
+  useCharacterLayout: 1
+  slotSize: {x: 82, y: 82}
+  layoutOffset: {x: 0, y: 0}
+  silhouetteRoot: {fileID: 0}
 --- !u!1 &850094416
 GameObject:
   m_ObjectHideFlags: 0
@@ -16344,11 +16398,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 656447433}
   cooldownText: {fileID: 1233024154}
   keyText: {fileID: 1547858198}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &1027207640
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19124,12 +19189,15 @@ MonoBehaviour:
   uiManager: {fileID: 1246380866}
   inventory: {fileID: 0}
   equipment: {fileID: 0}
+  skillBar: {fileID: 0}
+  playerStats: {fileID: 0}
   inventoryGrid: {fileID: 1321739102}
   equipmentPanel: {fileID: 848885818}
   comparePanel: {fileID: 1893865318}
   allFilterButton: {fileID: 0}
   equipmentFilterButton: {fileID: 0}
   consumableFilterButton: {fileID: 0}
+  skillFilterButton: {fileID: 0}
   questFilterButton: {fileID: 0}
   searchInputField: {fileID: 0}
   sortDropdown: {fileID: 0}
@@ -19147,6 +19215,8 @@ MonoBehaviour:
   filterInactiveColor: {r: 0.2, g: 0.22, b: 0.26, a: 1}
   filterActiveTextColor: {r: 0.97, g: 0.98, b: 1, a: 1}
   filterInactiveTextColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+  equipDoubleClickWindow: 0.28
+  equipmentHoverClearDelay: 0.08
   actionProfiles: []
   categoryActionOverrides: []
 --- !u!224 &1221749210
@@ -19711,6 +19781,7 @@ MonoBehaviour:
   saveResource: 1
   saveCurrency: 1
   saveProgression: 1
+  saveSkills: 1
   saveInventory: 1
   saveEquipment: 1
   saveQuests: 1
@@ -22665,6 +22736,9 @@ MonoBehaviour:
   icon: {fileID: 2051132801}
   selection: {fileID: 2063390982}
   stackText: {fileID: 1433895471}
+  skillBadgeRoot: {fileID: 0}
+  skillBadgeBackground: {fileID: 0}
+  skillBadgeText: {fileID: 0}
 --- !u!114 &1382085870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22816,6 +22890,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -22834,6 +22909,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -23724,11 +23800,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 1964694343}
   cooldownText: {fileID: 912306897}
   keyText: {fileID: 1165833736}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &1420090618
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26494,6 +26581,57 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: "\u63A5\u53D6\u4EFB\u52A1"
+--- !u!1 &1628753955
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1628753957}
+  - component: {fileID: 1628753956}
+  m_Layer: 0
+  m_Name: SkillPresentation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1628753956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628753955}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 310a5d63db7f4bbd9d66ab3ec1149c74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
+  fxPool: {fileID: 0}
+  audioEmitterPool: {fileID: 0}
+  enableStepEvents: 1
+  enableEffectEvents: 1
+  enableProjectileEvents: 1
+  debugLogs: 0
+--- !u!4 &1628753957
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628753955}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1633794144
 GameObject:
   m_ObjectHideFlags: 0
@@ -26862,6 +27000,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -26880,6 +27019,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -30141,6 +30281,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -30159,6 +30300,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -30821,6 +30963,8 @@ MonoBehaviour:
   descriptionText: {fileID: 1609908045}
   statsRoot: {fileID: 762898412}
   statTemplate: {fileID: 689760686}
+  projectedHeaderColor: {r: 0.78, g: 0.84, b: 0.95, a: 1}
+  reservedStatRows: 12
 --- !u!1 &1899095289
 GameObject:
   m_ObjectHideFlags: 0
@@ -32542,11 +32686,22 @@ MonoBehaviour:
   cooldownFill: {fileID: 33440262}
   cooldownText: {fileID: 1374523503}
   keyText: {fileID: 1323528879}
+  slotBackground: {fileID: 0}
+  occupiedBackgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  emptyBackgroundColor: {r: 1, g: 1, b: 1, a: 0.55}
   enableCastPulse: 1
   castPulseScale: 1.12
   castPulseDuration: 0.14
   pulseUseUnscaledTime: 1
   castPulseTint: {r: 1, g: 0.96, b: 0.7, a: 1}
+  autoCreateChargeFrame: 1
+  chargeFrameThickness: 2
+  chargeFrameColor: {r: 1, g: 0.84, b: 0.24, a: 0.95}
+  chargeFrameRoot: {fileID: 0}
+  chargeEdgeTop: {fileID: 0}
+  chargeEdgeRight: {fileID: 0}
+  chargeEdgeBottom: {fileID: 0}
+  chargeEdgeLeft: {fileID: 0}
 --- !u!114 &2024718217
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34300,6 +34455,7 @@ MonoBehaviour:
   targetingSystem: {fileID: 1932640926}
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}
   navAgent: {fileID: 0}
+  bossSkillScheduler: {fileID: 0}
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -34318,6 +34474,7 @@ MonoBehaviour:
   destinationRefreshThreshold: 0.25
   spreadResolveDistancePadding: 1.2
   desiredVelocitySmoothing: 12
+  useBasicAttackFallback: 1
   enableRetreat: 0
   retreatHealthPercent: 0.2
   retreatDistance: 6
@@ -34841,4 +34998,4 @@ SceneRoots:
   - {fileID: 1139200009}
   - {fileID: 886062695}
   - {fileID: 143165987}
-
+  - {fileID: 1628753957}

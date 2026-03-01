@@ -51,6 +51,49 @@ MonoBehaviour:
   - trigger: 0
     delay: 0
     condition: {fileID: 0}
+    presentationCues:
+    - cueId: Auto_StepCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.85
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_MoveTrail
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 1
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.8
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
     animationTrigger: 
     vfxPrefab: {fileID: 0}
     sfx: {fileID: 0}

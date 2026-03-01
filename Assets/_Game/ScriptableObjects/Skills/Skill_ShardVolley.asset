@@ -51,6 +51,91 @@ MonoBehaviour:
   - trigger: 0
     delay: 0
     condition: {fileID: 0}
+    presentationCues:
+    - cueId: Auto_StepCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.5
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.85
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_ProjectileSpawn
+      eventType: 3
+      anchorType: 4
+      spawnSpace: 1
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 1590415177872986601, guid: acdb90624a404aa438447006f1026065,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 1
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_ProjectileHit
+      eventType: 4
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 2504214343621411470, guid: 3ed0d324122d7b24eaec75c55c74aafc,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.55
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_ProjectileSplit
+      eventType: 6
+      anchorType: 4
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 1141330259687333427, guid: 6718dc24203da53468af9ada8fef7d6d,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.5
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.75
+      audioPitch: 1.12
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
     animationTrigger: 
     vfxPrefab: {fileID: 0}
     sfx: {fileID: 0}

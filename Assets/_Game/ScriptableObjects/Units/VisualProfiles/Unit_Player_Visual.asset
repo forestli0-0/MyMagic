@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0d30e698e8e61744842ae7e11044497, type: 3}
   m_Name: Unit_Player_Visual
   m_EditorClassIdentifier: 
-  modelPrefab: {fileID: 3967108684766030035, guid: 1c8950e890f8de640b645d9ccc90ffa4,
+  modelPrefab: {fileID: 8334541636228895817, guid: 005fe1deed272d44996cbd1a7c1caa66,
     type: 3}
   localPosition: {x: 0, y: 0, z: 0}
   localEulerAngles: {x: 0, y: 0, z: 0}

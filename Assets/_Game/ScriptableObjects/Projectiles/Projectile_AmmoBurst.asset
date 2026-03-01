@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f148c1a43f72bc489198a6dac902647, type: 3}
+  m_Name: Projectile_AmmoBurst
+  m_EditorClassIdentifier: 
+  id: Projectile_AmmoBurst
+  displayName: Ammo Burst Projectile
+  prefab: {fileID: 5230172455147454662, guid: 5a3e95747d189484886f09ac625ad627, type: 3}
+  speed: 18
+  lifetime: 2.5
+  hitRadius: 0.16
+  behaviorType: 0
+  homing: 0
+  homingTurnSpeed: 0
+  pierce: 0
+  maxPierce: 1
+  returnSpeedMultiplier: 1
+  splitCount: 0
+  splitAngle: 35
+  maxSplitDepth: 1
+  orbitRadius: 2.5
+  orbitAngularSpeed: 240
+  beamLength: 6
+  onHitEffects:
+  - {fileID: 11400000, guid: 60b288b015146ee4097656b3e5b1fce0, type: 2}
