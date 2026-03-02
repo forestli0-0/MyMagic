@@ -390,6 +390,46 @@ namespace CombatSystem.Tests
         }
 
         [UnityTest]
+        public IEnumerator SequenceSkill_AutoAdvanceAndTimeoutReset()
+        {
+            var caster = CreateUnit("SequenceCaster");
+            var skill = CreateSkill(0f, 0f, null);
+            SetPrivateField(skill, "sequenceConfig", CreateSequenceConfig(true, 3, 0.12f, "LoopToStart", false));
+
+            Assert.AreEqual(1, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(2, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(3, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(1, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(2, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+
+            yield return new WaitForSeconds(0.15f);
+            Assert.AreEqual(1, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", skill)));
+        }
+
+        [Test]
+        public void SequenceSkill_ResetOnOtherSkillCast_Works()
+        {
+            var caster = CreateUnit("SequenceResetCaster");
+            var sequenceSkill = CreateSkill(0f, 0f, null);
+            var otherSkill = CreateSkill(0f, 0f, null);
+            SetPrivateField(sequenceSkill, "sequenceConfig", CreateSequenceConfig(true, 3, 1f, "LoopToStart", true));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", sequenceSkill, null));
+            Assert.AreEqual(2, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", sequenceSkill)));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", otherSkill, null));
+            Assert.AreEqual(1, Convert.ToInt32(CallMethod(caster.SkillUser, "GetCurrentSequencePhase", sequenceSkill)));
+        }
+
+        [UnityTest]
         public IEnumerator SkillStepEvent_DispatchedWithCastId()
         {
             CreateSystems();
@@ -733,6 +773,23 @@ namespace CombatSystem.Tests
             SetPrivateField(config, "consumesResourceOnRecast", consumesResourceOnRecast);
             SetPrivateField(config, "delayCooldownUntilRecastEnds", delayCooldownUntilRecastEnds);
             SetPrivateField(config, "targetPolicy", ParseEnum("CombatSystem.Data.RecastTargetPolicy", targetPolicy));
+            return config;
+        }
+
+        private object CreateSequenceConfig(
+            bool enabled,
+            int maxPhases,
+            float resetWindow,
+            string overflowPolicy,
+            bool resetOnOtherSkillCast)
+        {
+            var type = RequireType("CombatSystem.Data.SkillSequenceConfig");
+            var config = Activator.CreateInstance(type);
+            SetPrivateField(config, "enabled", enabled);
+            SetPrivateField(config, "maxPhases", maxPhases);
+            SetPrivateField(config, "resetWindow", resetWindow);
+            SetPrivateField(config, "overflowPolicy", ParseEnum("CombatSystem.Data.SkillSequenceOverflowPolicy", overflowPolicy));
+            SetPrivateField(config, "resetOnOtherSkillCast", resetOnOtherSkillCast);
             return config;
         }
 
