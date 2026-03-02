@@ -37,6 +37,10 @@ namespace CombatSystem.Data
         public TagDefinition tag;
         [Tooltip("Buff 相关条件时的指定 Buff")]
         public BuffDefinition buff;
+        [Tooltip("Buff 层数阈值（用于 BuffStacksAtLeast / BuffStacksBelow）")]
+        public int stackThreshold = 1;
+        [Tooltip("技能连段阶段阈值（用于 SequencePhaseIs / SequencePhaseAtLeast）")]
+        public int phaseThreshold = 1;
         [Tooltip("数值比较（如血量阈值）时的参考值")]
         public float threshold;
     }

@@ -58,6 +58,8 @@ namespace CombatSystem.Gameplay
         private readonly Dictionary<SkillDefinition, AmmoRuntimeState> ammoStates = new Dictionary<SkillDefinition, AmmoRuntimeState>(16);
         // 技能重施运行时状态
         private readonly Dictionary<SkillDefinition, RecastRuntimeState> recastStates = new Dictionary<SkillDefinition, RecastRuntimeState>(16);
+        // 技能连段运行时状态
+        private readonly Dictionary<SkillDefinition, SequenceRuntimeState> sequenceStates = new Dictionary<SkillDefinition, SequenceRuntimeState>(16);
 
         // 施法状态
         private bool isCasting;
@@ -72,6 +74,7 @@ namespace CombatSystem.Gameplay
         private float currentChargeDuration;
         private float currentChargeRatio;
         private float currentChargeMultiplier = 1f;
+        private int currentSequencePhase = 1;
         private ulong nextCastId = 1UL;
         private SkillRuntimeContext currentContext;
         private bool currentHasAimPoint;
@@ -204,6 +207,7 @@ namespace CombatSystem.Gameplay
         {
             UpdateAmmoRecharge(Time.time);
             UpdateRecastExpiry(Time.time);
+            UpdateSequenceExpiry(Time.time);
 
             // 处理延迟执行的技能步骤
             if (pendingSteps.Count > 0)
@@ -240,7 +244,10 @@ namespace CombatSystem.Gameplay
                             null,
                             currentChargeDuration,
                             currentChargeRatio,
-                            currentChargeMultiplier);
+                            currentChargeMultiplier,
+                            0UL,
+                            -1,
+                            currentSequencePhase);
                     RaiseSkillCastCompleted(context, currentCastTime, currentChannelTime, currentIsChannel);
                 }
 
@@ -339,11 +346,13 @@ namespace CombatSystem.Gameplay
         {
             ammoStates.Clear();
             recastStates.Clear();
+            sequenceStates.Clear();
 
             for (int i = 0; i < runtimeSkills.Count; i++)
             {
                 EnsureAmmoState(runtimeSkills[i], true);
                 EnsureRecastState(runtimeSkills[i]);
+                EnsureSequenceState(runtimeSkills[i]);
             }
         }
 
@@ -381,6 +390,19 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        private void EnsureSequenceState(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsSequence)
+            {
+                return;
+            }
+
+            if (!sequenceStates.ContainsKey(skill))
+            {
+                sequenceStates[skill] = default;
+            }
+        }
+
         /// <summary>
         /// 检查当前技能列表中是否已包含指定技能。
         /// </summary>
@@ -408,6 +430,16 @@ namespace CombatSystem.Gameplay
         public bool HasActiveRecast(SkillDefinition skill)
         {
             return TryGetRecastState(skill, out _);
+        }
+
+        public int GetCurrentSequencePhase(SkillDefinition skill)
+        {
+            if (skill == null || !skill.SupportsSequence)
+            {
+                return 1;
+            }
+
+            return GetSequencePhaseForCast(skill, Time.time);
         }
 
         /// <summary>
@@ -566,7 +598,8 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            if (!CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+            var sequencePhase = GetSequencePhaseForCast(skill, Time.time);
+            if (!CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection, sequencePhase))
             {
                 // 施法/后摇/GCD期间允许进入输入缓冲
                 if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, chargeDurationSeconds))
@@ -658,7 +691,9 @@ namespace CombatSystem.Gameplay
                 chargeDuration,
                 chargeRatio,
                 chargeMultiplier,
-                castId);
+                castId,
+                -1,
+                sequencePhase);
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = ResolveModifiedResourceCost(skill, context, primaryTarget);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
@@ -726,6 +761,8 @@ namespace CombatSystem.Gameplay
                 aimPoint,
                 aimDirection,
                 cooldownDuration);
+            UpdateSequenceAfterSuccessfulCast(skill, sequencePhase, now);
+            ResetSequencesMarkedOnOtherCast(skill);
 
             if (gcdDuration > 0f)
             {
@@ -774,6 +811,7 @@ namespace CombatSystem.Gameplay
                 currentChargeDuration = chargeDuration;
                 currentChargeRatio = chargeRatio;
                 currentChargeMultiplier = chargeMultiplier;
+                currentSequencePhase = sequencePhase;
                 // 后摇锁定开始于施法结束
                 recoveryEndTime = castEndTime + postCastTime;
             }
@@ -808,7 +846,10 @@ namespace CombatSystem.Gameplay
                     null,
                     currentChargeDuration,
                     currentChargeRatio,
-                    currentChargeMultiplier);
+                    currentChargeMultiplier,
+                    0UL,
+                    -1,
+                    currentSequencePhase);
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
             recoveryEndTime = Time.time + Mathf.Max(0f, currentPostCastTime);
@@ -854,7 +895,10 @@ namespace CombatSystem.Gameplay
                     null,
                     currentChargeDuration,
                     currentChargeRatio,
-                    currentChargeMultiplier);
+                    currentChargeMultiplier,
+                    0UL,
+                    -1,
+                    currentSequencePhase);
 
             ClearPendingSteps(currentSkill);
             RaiseSkillCastInterrupted(context, currentCastTime, currentChannelTime, currentIsChannel);
@@ -1056,7 +1100,8 @@ namespace CombatSystem.Gameplay
             GameObject explicitTarget,
             bool hasAimPoint,
             Vector3 aimPoint,
-            Vector3 aimDirection)
+            Vector3 aimDirection,
+            int sequencePhase = -1)
         {
             if (skill == null)
             {
@@ -1111,7 +1156,10 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            var resolvedSequencePhase = sequencePhase > 0
+                ? sequencePhase
+                : GetSequencePhaseForCast(skill, Time.time);
+            var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
             {
                 cost = 0f;
@@ -1629,14 +1677,15 @@ namespace CombatSystem.Gameplay
             GameObject explicitTarget,
             bool hasAimPoint,
             Vector3 aimPoint,
-            Vector3 aimDirection)
+            Vector3 aimDirection,
+            int sequencePhase = 1)
         {
             if (skill == null)
             {
                 return 0f;
             }
 
-            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget);
+            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget, 0f, 0f, 1f, 0UL, -1, sequencePhase);
             var primaryTarget = default(CombatTarget);
             if (explicitTarget != null)
             {
@@ -1935,6 +1984,149 @@ namespace CombatSystem.Gameplay
             SimpleListPool<SkillDefinition>.Release(keys);
         }
 
+        private int GetSequencePhaseForCast(SkillDefinition skill, float now)
+        {
+            if (skill == null || !skill.SupportsSequence || skill.SequenceConfig == null)
+            {
+                return 1;
+            }
+
+            EnsureSequenceState(skill);
+            if (!sequenceStates.TryGetValue(skill, out var state))
+            {
+                return 1;
+            }
+
+            if (!state.Active)
+            {
+                return 1;
+            }
+
+            if (state.ExpireTime > 0f && now > state.ExpireTime)
+            {
+                sequenceStates[skill] = default;
+                return 1;
+            }
+
+            return Mathf.Clamp(state.CurrentPhase, 1, skill.SequenceConfig.MaxPhases);
+        }
+
+        private void UpdateSequenceAfterSuccessfulCast(SkillDefinition skill, int castPhase, float now)
+        {
+            if (skill == null || !skill.SupportsSequence || skill.SequenceConfig == null)
+            {
+                return;
+            }
+
+            var config = skill.SequenceConfig;
+            var maxPhases = config.MaxPhases;
+            if (maxPhases <= 1 || config.ResetWindow <= 0f)
+            {
+                sequenceStates[skill] = default;
+                return;
+            }
+
+            var safeCastPhase = Mathf.Clamp(castPhase, 1, maxPhases);
+            var nextState = new SequenceRuntimeState
+            {
+                Active = true,
+                CurrentPhase = safeCastPhase,
+                ExpireTime = now + config.ResetWindow
+            };
+
+            if (safeCastPhase < maxPhases)
+            {
+                nextState.CurrentPhase = safeCastPhase + 1;
+                sequenceStates[skill] = nextState;
+                return;
+            }
+
+            switch (config.OverflowPolicy)
+            {
+                case SkillSequenceOverflowPolicy.HoldAtMax:
+                    nextState.CurrentPhase = maxPhases;
+                    nextState.Active = true;
+                    sequenceStates[skill] = nextState;
+                    break;
+                case SkillSequenceOverflowPolicy.ResetAfterMax:
+                    sequenceStates[skill] = default;
+                    break;
+                case SkillSequenceOverflowPolicy.LoopToStart:
+                default:
+                    nextState.CurrentPhase = 1;
+                    nextState.Active = true;
+                    sequenceStates[skill] = nextState;
+                    break;
+            }
+        }
+
+        private void ResetSequencesMarkedOnOtherCast(SkillDefinition castedSkill)
+        {
+            if (sequenceStates.Count == 0)
+            {
+                return;
+            }
+
+            var keys = SimpleListPool<SkillDefinition>.Get();
+            foreach (var pair in sequenceStates)
+            {
+                keys.Add(pair.Key);
+            }
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                var skill = keys[i];
+                if (skill == null || skill == castedSkill || !skill.SupportsSequence || skill.SequenceConfig == null)
+                {
+                    continue;
+                }
+
+                if (!skill.SequenceConfig.ResetOnOtherSkillCast)
+                {
+                    continue;
+                }
+
+                if (!sequenceStates.TryGetValue(skill, out var state) || !state.Active)
+                {
+                    continue;
+                }
+
+                sequenceStates[skill] = default;
+            }
+
+            SimpleListPool<SkillDefinition>.Release(keys);
+        }
+
+        private void UpdateSequenceExpiry(float now)
+        {
+            if (sequenceStates.Count == 0)
+            {
+                return;
+            }
+
+            var keys = SimpleListPool<SkillDefinition>.Get();
+            foreach (var pair in sequenceStates)
+            {
+                keys.Add(pair.Key);
+            }
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                var skill = keys[i];
+                if (skill == null || !sequenceStates.TryGetValue(skill, out var state) || !state.Active)
+                {
+                    continue;
+                }
+
+                if (state.ExpireTime > 0f && now > state.ExpireTime)
+                {
+                    sequenceStates[skill] = default;
+                }
+            }
+
+            SimpleListPool<SkillDefinition>.Release(keys);
+        }
+
         /// <summary>
         /// 检查当前资源是否足够释放技能。
         /// </summary>
@@ -1997,7 +2189,8 @@ namespace CombatSystem.Gameplay
             float chargeRatio = 0f,
             float chargeMultiplier = 1f,
             ulong castId = 0UL,
-            int stepIndex = -1)
+            int stepIndex = -1,
+            int sequencePhase = 1)
         {
             return new SkillRuntimeContext(
                 this,
@@ -2014,7 +2207,8 @@ namespace CombatSystem.Gameplay
                 chargeRatio,
                 chargeMultiplier,
                 castId,
-                stepIndex);
+                stepIndex,
+                sequencePhase);
         }
 
         /// <summary>
@@ -2114,6 +2308,7 @@ namespace CombatSystem.Gameplay
             currentChargeDuration = 0f;
             currentChargeRatio = 0f;
             currentChargeMultiplier = 1f;
+            currentSequencePhase = 1;
         }
 
         /// <summary>
@@ -2270,6 +2465,13 @@ namespace CombatSystem.Gameplay
                 AimPoint = aimPoint;
                 AimDirection = aimDirection;
             }
+        }
+
+        private struct SequenceRuntimeState
+        {
+            public bool Active;
+            public int CurrentPhase;
+            public float ExpireTime;
         }
 
         /// <summary>

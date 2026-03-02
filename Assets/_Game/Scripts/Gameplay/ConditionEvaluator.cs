@@ -10,8 +10,9 @@ namespace CombatSystem.Gameplay
     /// <remarks>
     /// 支持的条件类型包括：
     /// - 固定概率 (Chance)
-    /// - 标签检测 (HasTag)
-    /// - Buff 持有检测 (HasBuff)
+    /// - 标签检测 (HasTag / NotHasTag)
+    /// - Buff 持有/层数检测 (HasBuff / NotHasBuff / BuffStacksAtLeast / BuffStacksBelow)
+    /// - 技能连段阶段检测 (SequencePhaseIs / SequencePhaseAtLeast)
     /// - 生命百分比阈值 (HealthPercentBelow/Above)
     /// - 存活状态检测 (IsTargetAlive/Dead)
     /// 
@@ -76,6 +77,21 @@ namespace CombatSystem.Gameplay
         /// <returns>若条件满足则返回 true</returns>
         private static bool EvaluateEntry(ConditionEntry entry, SkillRuntimeContext context, CombatTarget target)
         {
+            // 技能连段阶段条件不依赖主体（Caster/Target）
+            switch (entry.type)
+            {
+                case ConditionType.SequencePhaseIs:
+                {
+                    var requiredPhase = Mathf.Max(1, entry.phaseThreshold);
+                    return context.SequencePhase == requiredPhase;
+                }
+                case ConditionType.SequencePhaseAtLeast:
+                {
+                    var minPhase = Mathf.Max(1, entry.phaseThreshold);
+                    return context.SequencePhase >= minPhase;
+                }
+            }
+
             // 获取条件主体（施法者或目标）
             if (!TryGetSubject(entry.subject, context, target, out var subject))
             {
@@ -96,9 +112,36 @@ namespace CombatSystem.Gameplay
                     // 标签检测：主体必须拥有指定标签
                     return subject.Tags != null && subject.Tags.HasTag(entry.tag);
 
+                case ConditionType.NotHasTag:
+                    // 反向标签检测：主体不能拥有指定标签
+                    return subject.Tags == null || !subject.Tags.HasTag(entry.tag);
+
                 case ConditionType.HasBuff:
                     // Buff 持有检测：检查主体是否持有指定的 Buff
                     return subject.Buffs != null && subject.Buffs.HasBuff(entry.buff);
+
+                case ConditionType.NotHasBuff:
+                    // 反向 Buff 检测：主体不能持有指定 Buff
+                    return subject.Buffs == null || !subject.Buffs.HasBuff(entry.buff);
+
+                case ConditionType.BuffStacksAtLeast:
+                {
+                    // Buff 层数检测：指定 Buff 层数 >= 阈值
+                    var requiredStacks = Mathf.Max(1, entry.stackThreshold);
+                    return subject.Buffs != null && subject.Buffs.GetStacks(entry.buff) >= requiredStacks;
+                }
+
+                case ConditionType.BuffStacksBelow:
+                {
+                    // Buff 层数检测：指定 Buff 层数 < 阈值
+                    var maxStacks = Mathf.Max(0, entry.stackThreshold);
+                    if (maxStacks <= 0)
+                    {
+                        return false;
+                    }
+
+                    return subject.Buffs == null || subject.Buffs.GetStacks(entry.buff) < maxStacks;
+                }
 
                 case ConditionType.HealthPercentBelow:
                     // 生命百分比低于阈值

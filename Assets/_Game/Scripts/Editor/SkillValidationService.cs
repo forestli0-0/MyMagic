@@ -53,6 +53,38 @@ namespace CombatSystem.Editor
             {
                 results.Add(new SkillValidationMessage(SkillValidationSeverity.Error, "Skill has no steps.", skill));
             }
+
+            ValidateSequenceConfig(skill, results);
+        }
+
+        private static void ValidateSequenceConfig(SkillDefinition skill, List<SkillValidationMessage> results)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
+            var sequence = skill.SequenceConfig;
+            if (sequence == null || !sequence.Enabled)
+            {
+                return;
+            }
+
+            if (sequence.MaxPhases <= 1)
+            {
+                results.Add(new SkillValidationMessage(
+                    SkillValidationSeverity.Warning,
+                    "Skill.SequenceConfig enabled but MaxPhases <= 1.",
+                    skill));
+            }
+
+            if (sequence.ResetWindow <= 0f)
+            {
+                results.Add(new SkillValidationMessage(
+                    SkillValidationSeverity.Warning,
+                    "Skill.SequenceConfig enabled but ResetWindow <= 0.",
+                    skill));
+            }
         }
 
         private static void ValidateSteps(SkillDefinition skill, List<SkillValidationMessage> results)
@@ -86,6 +118,7 @@ namespace CombatSystem.Editor
                         skill));
                 }
 
+                ValidateCondition(skill, $"Step[{i}].Condition", step.condition, results);
                 ValidateCues(skill, i, step, results);
                 ValidateEffects(skill, i, step.effects, results);
             }
@@ -213,6 +246,93 @@ namespace CombatSystem.Editor
                                 SkillValidationSeverity.Error,
                                 $"Step[{stepIndex}].Effect[{i}] summon has no prefab/unit reference.",
                                 effect));
+                        }
+
+                        break;
+                }
+
+                ValidateCondition(effect, $"Step[{stepIndex}].Effect[{i}].Condition", effect.Condition, results);
+            }
+        }
+
+        private static void ValidateCondition(
+            Object context,
+            string conditionPath,
+            ConditionDefinition condition,
+            List<SkillValidationMessage> results)
+        {
+            if (condition == null)
+            {
+                return;
+            }
+
+            var entries = condition.Entries;
+            if (entries == null || entries.Count == 0)
+            {
+                results.Add(new SkillValidationMessage(
+                    SkillValidationSeverity.Warning,
+                    $"{conditionPath} has no entries.",
+                    context));
+                return;
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                if (entry == null)
+                {
+                    results.Add(new SkillValidationMessage(
+                        SkillValidationSeverity.Warning,
+                        $"{conditionPath}.Entry[{i}] is null.",
+                        context));
+                    continue;
+                }
+
+                var entryPath = $"{conditionPath}.Entry[{i}]";
+                switch (entry.type)
+                {
+                    case ConditionType.HasTag:
+                    case ConditionType.NotHasTag:
+                        if (entry.tag == null)
+                        {
+                            results.Add(new SkillValidationMessage(
+                                SkillValidationSeverity.Warning,
+                                $"{entryPath} requires Tag reference.",
+                                context));
+                        }
+
+                        break;
+                    case ConditionType.HasBuff:
+                    case ConditionType.NotHasBuff:
+                    case ConditionType.BuffStacksAtLeast:
+                    case ConditionType.BuffStacksBelow:
+                        if (entry.buff == null)
+                        {
+                            results.Add(new SkillValidationMessage(
+                                SkillValidationSeverity.Warning,
+                                $"{entryPath} requires Buff reference.",
+                                context));
+                        }
+
+                        if ((entry.type == ConditionType.BuffStacksAtLeast
+                             || entry.type == ConditionType.BuffStacksBelow)
+                            && entry.stackThreshold <= 0)
+                        {
+                            results.Add(new SkillValidationMessage(
+                                SkillValidationSeverity.Warning,
+                                $"{entryPath} stackThreshold should be > 0.",
+                                context));
+                        }
+
+                        break;
+                    case ConditionType.SequencePhaseIs:
+                    case ConditionType.SequencePhaseAtLeast:
+                        if (entry.phaseThreshold <= 0)
+                        {
+                            results.Add(new SkillValidationMessage(
+                                SkillValidationSeverity.Warning,
+                                $"{entryPath} phaseThreshold should be > 0.",
+                                context));
                         }
 
                         break;

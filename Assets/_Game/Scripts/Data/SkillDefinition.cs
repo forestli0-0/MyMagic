@@ -56,6 +56,10 @@ namespace CombatSystem.Data
         [SerializeField] private SkillAmmoConfig ammoConfig = new SkillAmmoConfig();
         [Tooltip("重施配置（启用后技能可在窗口内再次释放）")]
         [SerializeField] private SkillRecastConfig recastConfig = new SkillRecastConfig();
+
+        [Header("连段序列")]
+        [Tooltip("连段配置（启用后可实现 Q1/Q2/Q3 类自动进阶与超时重置）")]
+        [SerializeField] private SkillSequenceConfig sequenceConfig = new SkillSequenceConfig();
         
         [Header("逻辑与筛选")]
         [Tooltip("该技能寻找目标的方式")]
@@ -88,8 +92,13 @@ namespace CombatSystem.Data
         public TargetSnapshotPolicy TargetSnapshotPolicy => targetSnapshotPolicy;
         public SkillAmmoConfig AmmoConfig => ammoConfig;
         public SkillRecastConfig RecastConfig => recastConfig;
+        public SkillSequenceConfig SequenceConfig => sequenceConfig;
         public bool SupportsAmmo => ammoConfig != null && ammoConfig.Enabled && ammoConfig.MaxCharges > 0;
         public bool SupportsRecast => recastConfig != null && recastConfig.Enabled && recastConfig.MaxRecasts > 0 && recastConfig.RecastWindow > 0f;
+        public bool SupportsSequence => sequenceConfig != null
+                                        && sequenceConfig.Enabled
+                                        && sequenceConfig.MaxPhases > 1
+                                        && sequenceConfig.ResetWindow > 0f;
         public TargetingDefinition Targeting => targeting;
         public IReadOnlyList<TagDefinition> Tags => tags;
         public IReadOnlyList<SkillStep> Steps => steps;
@@ -187,5 +196,24 @@ namespace CombatSystem.Data
         public bool ConsumesResourceOnRecast => consumesResourceOnRecast;
         public bool DelayCooldownUntilRecastEnds => delayCooldownUntilRecastEnds;
         public RecastTargetPolicy TargetPolicy => targetPolicy;
+    }
+
+    /// <summary>
+    /// 技能连段配置（如 Q1/Q2/Q3）。
+    /// </summary>
+    [Serializable]
+    public class SkillSequenceConfig
+    {
+        [SerializeField] private bool enabled;
+        [SerializeField] private int maxPhases = 3;
+        [SerializeField] private float resetWindow = 4f;
+        [SerializeField] private SkillSequenceOverflowPolicy overflowPolicy = SkillSequenceOverflowPolicy.LoopToStart;
+        [SerializeField] private bool resetOnOtherSkillCast;
+
+        public bool Enabled => enabled;
+        public int MaxPhases => Mathf.Max(1, maxPhases);
+        public float ResetWindow => Mathf.Max(0f, resetWindow);
+        public SkillSequenceOverflowPolicy OverflowPolicy => overflowPolicy;
+        public bool ResetOnOtherSkillCast => resetOnOtherSkillCast;
     }
 }

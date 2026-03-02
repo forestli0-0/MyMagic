@@ -66,14 +66,20 @@ namespace CombatSystem.Data
     /// </summary>
     public enum ConditionType
     {
-        Always,                 // 始终满足
-        Chance,                 // 概率触发
-        HasTag,                 // 拥有指定标签
-        HasBuff,                // 拥有指定 Buff
-        HealthPercentBelow,     // 血量百分比低于
-        HealthPercentAbove,     // 血量百分比高于
-        IsTargetAlive,          // 目标存活
-        IsTargetDead            // 目标死亡
+        Always = 0,             // 始终满足
+        Chance = 1,             // 概率触发
+        HasTag = 2,             // 拥有指定标签
+        HasBuff = 3,            // 拥有指定 Buff
+        HealthPercentBelow = 4, // 血量百分比低于
+        HealthPercentAbove = 5, // 血量百分比高于
+        IsTargetAlive = 6,      // 目标存活
+        IsTargetDead = 7,       // 目标死亡
+        NotHasTag = 8,          // 不拥有指定标签
+        NotHasBuff = 9,         // 不拥有指定 Buff
+        BuffStacksAtLeast = 10, // 指定 Buff 层数 >= 阈值
+        BuffStacksBelow = 11,   // 指定 Buff 层数 < 阈值
+        SequencePhaseIs = 12,   // 技能连段阶段 == 阈值
+        SequencePhaseAtLeast = 13 // 技能连段阶段 >= 阈值
     }
 
     /// <summary>
@@ -310,6 +316,16 @@ namespace CombatSystem.Data
         AnyValid,                // 任意有效目标
         KeepOriginalIfPossible,  // 优先原目标，原目标失效则允许切换
         RequireOriginal          // 必须原目标
+    }
+
+    /// <summary>
+    /// 技能连段达到最大阶段后的处理策略。
+    /// </summary>
+    public enum SkillSequenceOverflowPolicy
+    {
+        LoopToStart = 0, // 回到第 1 段并继续循环
+        HoldAtMax = 1,   // 停留在最大段位
+        ResetAfterMax = 2 // 当前最大段释放后，下一次回到第 1 段
     }
 
     /// <summary>

@@ -731,7 +731,8 @@ namespace CombatSystem.Core
                 context.ChargeRatio,
                 context.ChargeMultiplier,
                 context.CastId,
-                context.StepIndex);
+                context.StepIndex,
+                context.SequencePhase);
         }
 
         #endregion
