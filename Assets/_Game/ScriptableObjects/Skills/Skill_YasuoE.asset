@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423d4e9b41e544a48bd5f4c93619d8bf, type: 3}
+  m_Name: Skill_YasuoE
+  m_EditorClassIdentifier: 
+  id: Skill_YasuoE
+  displayName: Yasuo E - Sweeping Blade
+  icon: {fileID: 0}
+  resourceType: 0
+  resourceCost: 5
+  cooldown: 0
+  castTime: 0
+  channelTime: 0
+  canMoveWhileCasting: 1
+  canRotateWhileCasting: 1
+  enableCharge: 0
+  maxChargeTime: 1.2
+  minChargeMultiplier: 1
+  maxChargeMultiplier: 1.8
+  postCastTime: 0
+  gcdDuration: 0
+  channelTickInterval: 0
+  queueWindow: 0
+  queuePolicy: 0
+  targetSnapshotPolicy: 0
+  ammoConfig:
+    enabled: 0
+    maxCharges: 0
+    initialCharges: 0
+    rechargeTime: 0
+  recastConfig:
+    enabled: 0
+    maxRecasts: 0
+    recastWindow: 0
+    consumesResourceOnRecast: 1
+    delayCooldownUntilRecastEnds: 1
+    targetPolicy: 0
+  sequenceConfig:
+    enabled: 0
+    maxPhases: 3
+    resetWindow: 4
+    overflowPolicy: 0
+    resetOnOtherSkillCast: 0
+  targeting: {fileID: 11400000, guid: 90835ffcc68a18d48887502388d00731, type: 2}
+  tags:
+  - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}
+  steps:
+  - trigger: 0
+    delay: 0
+    condition: {fileID: 11400000, guid: d0b52109c3ed7e44f9645f807dd3455b, type: 2}
+    presentationCues: []
+    animationTrigger: 
+    vfxPrefab: {fileID: 8525990746615576120, guid: 2b987d41506d172419fa18578f6ac380,
+      type: 3}
+    sfx: {fileID: 0}
+    effects:
+    - {fileID: 11400000, guid: 4e697ebb304f37848ad979f054748a63, type: 2}
+    - {fileID: 11400000, guid: 44841a6a8e7a3c54584abe0814c17487, type: 2}
+    - {fileID: 11400000, guid: 956292e0dd585ce47990c978eb54d5b6, type: 2}

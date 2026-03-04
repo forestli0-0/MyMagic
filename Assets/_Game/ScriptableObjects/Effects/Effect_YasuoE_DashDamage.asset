@@ -10,22 +10,39 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
-  m_Name: Effect_TriggerArcaneFocus
+  m_Name: Effect_YasuoE_DashDamage
   m_EditorClassIdentifier: 
-  id: Effect_TriggerArcaneFocus
-  displayName: Trigger Arcane Focus
-  effectType: 8
+  id: Effect_YasuoE_DashDamage
+  displayName: Yasuo E Dash Damage
+  effectType: 0
   condition: {fileID: 0}
   overrideTargeting: {fileID: 0}
-  value: 0
+  value: 14
   resourceType: 0
-  damageType: 0
+  damageType: 1
+  scalingStat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+  scalingRatio: 0.55
+  canCrit: 0
+  critChance: 0
+  critMultiplier: 2
+  critChanceStat: {fileID: 0}
+  critMultiplierStat: {fileID: 0}
+  triggersOnHit: 1
+  cleanseAll: 0
+  cleanseDebuffs: 0
+  cleanseControls: 0
+  cleanseControlTypes: 
+  revealTarget: 0
+  revealDuration: 0
+  combatStateMode: 0
+  combatStateFlags: 0
+  spellShieldCharges: 1
   moveStyle: 0
   moveDistance: 0
   moveSpeed: 0
   buff: {fileID: 0}
   projectile: {fileID: 0}
-  triggeredSkill: {fileID: 11400000, guid: bf3e4c9abd774834d92b858fea3a9e68, type: 2}
+  triggeredSkill: {fileID: 0}
   duration: 0
   interval: 0
   summonPrefab: {fileID: 0}

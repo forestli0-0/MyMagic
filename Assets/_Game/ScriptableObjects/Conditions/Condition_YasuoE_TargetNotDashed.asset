@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfba16f1c3106cd40957233da6ed1223, type: 3}
-  m_Name: Condition_TargetLowHealth
+  m_Name: Condition_YasuoE_TargetNotDashed
   m_EditorClassIdentifier: 
-  id: Condition_TargetLowHealth
-  displayName: Target Low Health
+  id: Condition_YasuoE_TargetNotDashed
+  displayName: Yasuo E Target Not Dashed
   op: 0
   entries:
-  - type: 4
+  - type: 9
     subject: 1
     chance: 0
     tag: {fileID: 0}
-    buff: {fileID: 0}
+    buff: {fileID: 11400000, guid: 4a5805f229d948048876aadb731b2487, type: 2}
     stackThreshold: 0
     phaseThreshold: 0
-    threshold: 0.3
+    threshold: 0

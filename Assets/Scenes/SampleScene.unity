@@ -844,7 +844,7 @@ MonoBehaviour:
   startLevelId: Level_Town
   startSpawnId: Start
   playerTag: Player
-  playerDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
+  playerDefinition: {fileID: 11400000, guid: 73643fd4a37074f40ac52a8a146e32b4, type: 2}
   playerUnitId: Unit_Player
   persistAcrossScenes: 1
 --- !u!4 &50030979
@@ -1349,7 +1349,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 82108281}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -1394,7 +1394,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 82108281}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -1429,7 +1429,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -1577,7 +1577,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 82108288}
   unitRoot: {fileID: 82108294}
@@ -1595,7 +1595,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 82108293}
   health: {fileID: 82108292}
@@ -1664,7 +1664,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -1733,7 +1733,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 88503791}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -1778,7 +1778,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 88503791}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -1813,7 +1813,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -1961,7 +1961,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 88503798}
   unitRoot: {fileID: 88503804}
@@ -1979,7 +1979,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 88503803}
   health: {fileID: 88503802}
@@ -2048,7 +2048,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -2615,7 +2615,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 138083778}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -2660,7 +2660,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 138083778}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -2695,7 +2695,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -2843,7 +2843,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 138083785}
   unitRoot: {fileID: 138083791}
@@ -2861,7 +2861,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 138083790}
   health: {fileID: 138083789}
@@ -2930,7 +2930,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -6383,7 +6383,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483919129}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -6428,7 +6428,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 483919129}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -6463,7 +6463,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -6611,7 +6611,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 483919136}
   unitRoot: {fileID: 483919142}
@@ -6629,7 +6629,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 483919141}
   health: {fileID: 483919140}
@@ -6698,7 +6698,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -8899,7 +8899,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 713548971}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -8944,7 +8944,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 713548971}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -8979,7 +8979,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -9127,7 +9127,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 713548978}
   unitRoot: {fileID: 713548984}
@@ -9145,7 +9145,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 713548983}
   health: {fileID: 713548982}
@@ -9214,7 +9214,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -12092,7 +12092,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 884703685}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b77c81dadbf51ce4ea7a3a76b53ab752, type: 3}
   m_Name: 
@@ -12137,7 +12137,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 884703685}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3f8c96b7286a5048a3efd97cbffb84e, type: 3}
   m_Name: 
@@ -12172,7 +12172,7 @@ CharacterController:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 2
   m_Radius: 0.5
@@ -12320,7 +12320,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 884703692}
   unitRoot: {fileID: 884703698}
@@ -12338,7 +12338,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 2effb6fe951e256439f9ddb0477800d5, type: 2}
+  unitDefinition: {fileID: 11400000, guid: c8a13498525ff95448f4b4c51d17aeeb, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 884703697}
   health: {fileID: 884703696}
@@ -12407,7 +12407,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -23619,7 +23619,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71a37226840a4a48bb11fab14b50564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
+  unitDefinition: {fileID: 11400000, guid: 73643fd4a37074f40ac52a8a146e32b4, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   stats: {fileID: 1954876150}
   health: {fileID: 1954876149}
@@ -23757,7 +23757,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bd89efb15f81384dae53e1385b3d395, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitDefinition: {fileID: 11400000, guid: 004d1da68f4bb4e49a1782ac32f0d771, type: 2}
+  unitDefinition: {fileID: 11400000, guid: 73643fd4a37074f40ac52a8a146e32b4, type: 2}
   eventHub: {fileID: 11400000, guid: 156971fe67f64f341ba93f0416f41305, type: 2}
   buffController: {fileID: 1954876144}
   unitRoot: {fileID: 1954876143}

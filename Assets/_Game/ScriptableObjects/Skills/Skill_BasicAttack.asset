@@ -44,6 +44,13 @@ MonoBehaviour:
     consumesResourceOnRecast: 1
     delayCooldownUntilRecastEnds: 1
     targetPolicy: 0
+  sequenceConfig:
+    enabled: 0
+    maxPhases: 3
+    resetWindow: 4
+    overflowPolicy: 0
+    resetOnOtherSkillCast: 0
+    advanceOnHit: 0
   targeting: {fileID: 11400000, guid: d3c2a9b4f1e5d6c7b8a9f0e1d2c3b4a5, type: 2}
   tags: []
   steps:

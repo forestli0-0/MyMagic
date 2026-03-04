@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfba16f1c3106cd40957233da6ed1223, type: 3}
-  m_Name: Condition_TargetLowHealth
+  m_Name: Condition_YasuoQ_Phase3
   m_EditorClassIdentifier: 
-  id: Condition_TargetLowHealth
-  displayName: Target Low Health
+  id: Condition_YasuoQ_Phase3
+  displayName: Yasuo Q Phase 3
   op: 0
   entries:
-  - type: 4
-    subject: 1
+  - type: 12
+    subject: 0
     chance: 0
     tag: {fileID: 0}
     buff: {fileID: 0}
     stackThreshold: 0
-    phaseThreshold: 0
-    threshold: 0.3
+    phaseThreshold: 3
+    threshold: 0

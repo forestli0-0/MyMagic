@@ -10,21 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32002727274a4aa43aaf9fd94ff27340, type: 3}
-  m_Name: Targeting_SingleEnemy
+  m_Name: Targeting_YasuoSingleEnemy
   m_EditorClassIdentifier: 
-  id: Targeting_SingleEnemy
-  displayName: Single Enemy
+  id: Targeting_YasuoSingleEnemy
+  displayName: Yasuo Single Enemy
   mode: 1
   team: 3
   origin: 0
-  range: 12
+  range: 5.5
   radius: 0
-  angle: 45
+  angle: 0
   maxTargets: 1
   sort: 1
   includeSelf: 0
   allowEmpty: 0
-  requireExplicitTarget: 0
+  requireExplicitTarget: 1
   requiredTags: []
   blockedTags: []
   hitValidation: 1

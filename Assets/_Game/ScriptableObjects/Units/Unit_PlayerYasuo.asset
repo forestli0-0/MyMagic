@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb29d46f05520194baf776b09897e9b4, type: 3}
-  m_Name: Unit_Player
+  m_Name: Unit_PlayerYasuo
   m_EditorClassIdentifier: 
-  id: Unit_Player
-  displayName: Player
+  id: Unit_PlayerYasuo
+  displayName: Player Yasuo
   prefab: {fileID: 0}
   portrait: {fileID: 0}
   visualProfile: {fileID: 11400000, guid: 637e8451d0dbb1c45a30ffd499e81898, type: 2}
@@ -21,7 +21,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 424ff5cc9af4798419091345410a8259, type: 2}
   baseStats:
   - stat: {fileID: 11400000, guid: 6c7db899c0ad436419000803dbc3cd24, type: 2}
-    value: 100
+    value: 110
   - stat: {fileID: 11400000, guid: ab84145102b4ce34790eb1fd89e2e931, type: 2}
     value: 1
   - stat: {fileID: 11400000, guid: 9a916076c5d4eaa439c736310f883b88, type: 2}
@@ -29,7 +29,7 @@ MonoBehaviour:
   - stat: {fileID: 11400000, guid: 9513982558b6fb943b14b6b56874d4a9, type: 2}
     value: 5
   - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
-    value: 5
+    value: 5.4
   basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
   startingSkills:
   - {fileID: 11400000, guid: bf3e4c9abd774834d92b858fea3a9e68, type: 2}

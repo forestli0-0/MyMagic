@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfba16f1c3106cd40957233da6ed1223, type: 3}
-  m_Name: Condition_TargetLowHealth
+  m_Name: Condition_YasuoR_TargetAirborne
   m_EditorClassIdentifier: 
-  id: Condition_TargetLowHealth
-  displayName: Target Low Health
+  id: Condition_YasuoR_TargetAirborne
+  displayName: Yasuo R Target Airborne
   op: 0
   entries:
-  - type: 4
+  - type: 3
     subject: 1
     chance: 0
     tag: {fileID: 0}
-    buff: {fileID: 0}
+    buff: {fileID: 11400000, guid: 30b20cfa1c0172449874880b9bb84028, type: 2}
     stackThreshold: 0
     phaseThreshold: 0
-    threshold: 0.3
+    threshold: 0

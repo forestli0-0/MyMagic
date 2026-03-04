@@ -21,7 +21,7 @@ MonoBehaviour:
   allowAffixes: 0
   baseModifiers: []
   equipBuffs: []
-  linkedSkill: {fileID: 11400000, guid: b4334c8f64255634f894c947e4f459c0, type: 2}
+  linkedSkill: {fileID: 11400000, guid: 5357bcef8ac91d94ea9ac453bb19aa67, type: 2}
   stackable: 0
   maxStack: 1
   economyVersion: 1

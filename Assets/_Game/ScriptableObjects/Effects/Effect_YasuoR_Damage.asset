@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
+  m_Name: Effect_YasuoR_Damage
+  m_EditorClassIdentifier: 
+  id: Effect_YasuoR_Damage
+  displayName: Yasuo R Damage
+  effectType: 0
+  condition: {fileID: 0}
+  overrideTargeting: {fileID: 0}
+  value: 36
+  resourceType: 0
+  damageType: 0
+  scalingStat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+  scalingRatio: 1.35
+  canCrit: 1
+  critChance: 0
+  critMultiplier: 2
+  critChanceStat: {fileID: 11400000, guid: c6f63db7148d440d849c4cb4dcaddd98, type: 2}
+  critMultiplierStat: {fileID: 11400000, guid: e0dba4ba3c414e698aa15d17b81599b6, type: 2}
+  triggersOnHit: 1
+  cleanseAll: 0
+  cleanseDebuffs: 0
+  cleanseControls: 0
+  cleanseControlTypes: 
+  revealTarget: 0
+  revealDuration: 0
+  combatStateMode: 0
+  combatStateFlags: 0
+  spellShieldCharges: 1
+  moveStyle: 0
+  moveDistance: 0
+  moveSpeed: 0
+  buff: {fileID: 0}
+  projectile: {fileID: 0}
+  triggeredSkill: {fileID: 0}
+  duration: 0
+  interval: 0
+  summonPrefab: {fileID: 0}
+  summonUnit: {fileID: 0}
