@@ -47,6 +47,16 @@ namespace CombatSystem.UI
         [SerializeField] private Image chargeEdgeBottom;
         [SerializeField] private Image chargeEdgeLeft;
 
+        [Header("Runtime State FX")]
+        [SerializeField] private bool autoCreateRuntimeStateFrame = true;
+        [SerializeField] private float runtimeStateFrameThickness = 2f;
+        [SerializeField] private Color runtimeStateFrameColor = new Color(0.35f, 0.85f, 1f, 0.95f);
+        [SerializeField] private RectTransform runtimeStateFrameRoot;
+        [SerializeField] private Image runtimeStateEdgeTop;
+        [SerializeField] private Image runtimeStateEdgeRight;
+        [SerializeField] private Image runtimeStateEdgeBottom;
+        [SerializeField] private Image runtimeStateEdgeLeft;
+
         /// <summary>
         /// 当前绑定的技能定义
         /// </summary>
@@ -64,15 +74,19 @@ namespace CombatSystem.UI
         private float lastCooldownFillAmount = -1f;
         private bool cooldownVisualVisible;
         private bool chargeVisualVisible;
+        private bool runtimeStateVisualVisible;
         private RectTransform rectTransform;
         private Vector3 baseScale = Vector3.one;
         private Color baseIconColor = Color.white;
         private Color baseSlotColor = Color.white;
+        private Sprite baseSkillIcon;
         private Coroutine castPulseRoutine;
         private const float CooldownEndThreshold = 0.02f;
         private const float FillUpdateEpsilon = 0.001f;
         private const float ChargeUpdateEpsilon = 0.002f;
+        private const float RuntimeStateUpdateEpsilon = 0.002f;
         private float lastChargeRatio = -1f;
+        private float lastRuntimeStateRatio = -1f;
 
         /// <summary>
         /// 当前绑定的技能定义（只读）
@@ -110,6 +124,8 @@ namespace CombatSystem.UI
 
             EnsureChargeFrameVisual();
             SetChargeProgress(0f, false, true);
+            EnsureRuntimeStateFrameVisual();
+            SetRuntimeStateProgress(0f, false, true);
         }
 
         /// <summary>
@@ -125,11 +141,8 @@ namespace CombatSystem.UI
             ResetCastPulseVisual();
 
             // 设置技能图标
-            if (icon != null)
-            {
-                icon.sprite = skillDef != null ? skillDef.Icon : null;
-                icon.enabled = skillDef != null && icon.sprite != null;
-            }
+            baseSkillIcon = skillDef != null ? skillDef.Icon : null;
+            ApplyIconSprite(baseSkillIcon);
 
             // 设置快捷键文本
             if (keyText != null)
@@ -144,6 +157,7 @@ namespace CombatSystem.UI
                 cooldownDuration = 0f;
                 ResetCooldownVisuals(true);
                 SetChargeProgress(0f, false, true);
+                SetRuntimeStateProgress(0f, false, true);
             }
 
             if (slotBackground != null)
@@ -154,6 +168,7 @@ namespace CombatSystem.UI
             if (skillDef == null)
             {
                 SetChargeProgress(0f, false, true);
+                SetRuntimeStateProgress(0f, false, true);
             }
         }
 
@@ -170,6 +185,23 @@ namespace CombatSystem.UI
         public void SetChargeProgress(float normalizedRatio, bool charging)
         {
             SetChargeProgress(normalizedRatio, charging, false);
+        }
+
+        /// <summary>
+        /// 更新技能运行时状态表现（图标覆盖 + 连段窗口进度边）。
+        /// </summary>
+        public void NotifyRuntimeState(Sprite iconOverride, float normalizedRatio, bool active)
+        {
+            if (skill == null)
+            {
+                ApplyIconSprite(null);
+                SetRuntimeStateProgress(0f, false, false);
+                return;
+            }
+
+            var displayIcon = iconOverride != null ? iconOverride : baseSkillIcon;
+            ApplyIconSprite(displayIcon);
+            SetRuntimeStateProgress(normalizedRatio, active, false);
         }
 
         public void PlayCastPulse()
@@ -216,6 +248,36 @@ namespace CombatSystem.UI
             chargeFrameRoot.gameObject.SetActive(true);
             UpdateChargeEdges(ratio);
             lastChargeRatio = ratio;
+        }
+
+        private void SetRuntimeStateProgress(float normalizedRatio, bool active, bool force)
+        {
+            if (skill == null || !active)
+            {
+                HideRuntimeStateVisual(force);
+                return;
+            }
+
+            EnsureRuntimeStateFrameVisual();
+            if (runtimeStateFrameRoot == null
+                || runtimeStateEdgeTop == null
+                || runtimeStateEdgeRight == null
+                || runtimeStateEdgeBottom == null
+                || runtimeStateEdgeLeft == null)
+            {
+                return;
+            }
+
+            var ratio = Mathf.Clamp01(normalizedRatio);
+            if (!force && runtimeStateVisualVisible && Mathf.Abs(ratio - lastRuntimeStateRatio) <= RuntimeStateUpdateEpsilon)
+            {
+                return;
+            }
+
+            runtimeStateVisualVisible = true;
+            runtimeStateFrameRoot.gameObject.SetActive(true);
+            UpdateRuntimeStateEdges(ratio);
+            lastRuntimeStateRatio = ratio;
         }
 
         /// <summary>
@@ -393,6 +455,21 @@ namespace CombatSystem.UI
             cooldownFill.fillCenter = true;
         }
 
+        private void ApplyIconSprite(Sprite sprite)
+        {
+            if (icon == null)
+            {
+                return;
+            }
+
+            if (icon.sprite != sprite)
+            {
+                icon.sprite = sprite;
+            }
+
+            icon.enabled = skill != null && icon.sprite != null;
+        }
+
         private void EnsureChargeFrameVisual()
         {
             if (chargeFrameRoot == null && autoCreateChargeFrame)
@@ -532,6 +609,132 @@ namespace CombatSystem.UI
             if (chargeFrameRoot != null)
             {
                 chargeFrameRoot.gameObject.SetActive(false);
+            }
+        }
+
+        private void EnsureRuntimeStateFrameVisual()
+        {
+            if (runtimeStateFrameRoot == null && autoCreateRuntimeStateFrame)
+            {
+                runtimeStateFrameRoot = CreateRuntimeStateFrameRoot();
+            }
+
+            if (runtimeStateFrameRoot == null)
+            {
+                return;
+            }
+
+            if (runtimeStateEdgeTop == null)
+            {
+                runtimeStateEdgeTop = CreateRuntimeStateEdge("Top", new Vector2(0f, 1f), new Vector2(0f, 1f));
+            }
+
+            if (runtimeStateEdgeRight == null)
+            {
+                runtimeStateEdgeRight = CreateRuntimeStateEdge("Right", new Vector2(1f, 1f), new Vector2(1f, 1f));
+            }
+
+            if (runtimeStateEdgeBottom == null)
+            {
+                runtimeStateEdgeBottom = CreateRuntimeStateEdge("Bottom", new Vector2(1f, 0f), new Vector2(1f, 0f));
+            }
+
+            if (runtimeStateEdgeLeft == null)
+            {
+                runtimeStateEdgeLeft = CreateRuntimeStateEdge("Left", new Vector2(0f, 0f), new Vector2(0f, 0f));
+            }
+
+            ApplyRuntimeStateEdgeStyle(runtimeStateEdgeTop);
+            ApplyRuntimeStateEdgeStyle(runtimeStateEdgeRight);
+            ApplyRuntimeStateEdgeStyle(runtimeStateEdgeBottom);
+            ApplyRuntimeStateEdgeStyle(runtimeStateEdgeLeft);
+            runtimeStateFrameRoot.SetAsLastSibling();
+        }
+
+        private RectTransform CreateRuntimeStateFrameRoot()
+        {
+            var root = new GameObject("RuntimeStateFrame", typeof(RectTransform));
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.SetParent(transform, false);
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.localScale = Vector3.one;
+            rootRect.localRotation = Quaternion.identity;
+            rootRect.SetAsLastSibling();
+            return rootRect;
+        }
+
+        private Image CreateRuntimeStateEdge(string name, Vector2 anchor, Vector2 pivot)
+        {
+            if (runtimeStateFrameRoot == null)
+            {
+                return null;
+            }
+
+            var edgeObject = new GameObject($"RuntimeStateEdge_{name}", typeof(RectTransform), typeof(Image));
+            var edgeRect = edgeObject.GetComponent<RectTransform>();
+            edgeRect.SetParent(runtimeStateFrameRoot, false);
+            edgeRect.anchorMin = anchor;
+            edgeRect.anchorMax = anchor;
+            edgeRect.pivot = pivot;
+            edgeRect.anchoredPosition = Vector2.zero;
+            edgeRect.localScale = Vector3.one;
+            edgeRect.localRotation = Quaternion.identity;
+
+            var image = edgeObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private void ApplyRuntimeStateEdgeStyle(Image edge)
+        {
+            if (edge == null)
+            {
+                return;
+            }
+
+            edge.color = runtimeStateFrameColor;
+            edge.raycastTarget = false;
+        }
+
+        private void UpdateRuntimeStateEdges(float ratio)
+        {
+            if (runtimeStateFrameRoot == null)
+            {
+                return;
+            }
+
+            var width = Mathf.Max(1f, runtimeStateFrameRoot.rect.width);
+            var height = Mathf.Max(1f, runtimeStateFrameRoot.rect.height);
+            var thickness = Mathf.Max(1f, runtimeStateFrameThickness);
+            var perimeterProgress = Mathf.Clamp01(ratio) * 4f;
+
+            var topProgress = Mathf.Clamp01(perimeterProgress);
+            var rightProgress = Mathf.Clamp01(perimeterProgress - 1f);
+            var bottomProgress = Mathf.Clamp01(perimeterProgress - 2f);
+            var leftProgress = Mathf.Clamp01(perimeterProgress - 3f);
+
+            UpdateChargeEdgeRect(runtimeStateEdgeTop, width * topProgress, thickness, topProgress > 0f);
+            UpdateChargeEdgeRect(runtimeStateEdgeRight, thickness, height * rightProgress, rightProgress > 0f);
+            UpdateChargeEdgeRect(runtimeStateEdgeBottom, width * bottomProgress, thickness, bottomProgress > 0f);
+            UpdateChargeEdgeRect(runtimeStateEdgeLeft, thickness, height * leftProgress, leftProgress > 0f);
+        }
+
+        private void HideRuntimeStateVisual(bool force)
+        {
+            if (!force && !runtimeStateVisualVisible)
+            {
+                return;
+            }
+
+            runtimeStateVisualVisible = false;
+            lastRuntimeStateRatio = -1f;
+            if (runtimeStateFrameRoot != null)
+            {
+                runtimeStateFrameRoot.gameObject.SetActive(false);
             }
         }
 

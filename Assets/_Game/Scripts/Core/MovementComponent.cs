@@ -99,6 +99,10 @@ namespace CombatSystem.Core
 
         /// <summary>强制位移时是否旋转朝向</summary>
         private bool forcedRotate;
+        /// <summary>强制位移期间是否临时关闭了碰撞检测</summary>
+        private bool forcedIgnoreCollisions;
+        /// <summary>记录关闭前的碰撞检测状态</summary>
+        private bool forcedPrevDetectCollisions = true;
 
         #endregion
 
@@ -169,6 +173,7 @@ namespace CombatSystem.Core
             if (blockMovementWhenDead && health != null && !health.IsAlive)
             {
                 forcedActive = false;
+                RestoreForcedCollisionState();
                 ClearMoveInput();
                 return;
             }
@@ -190,6 +195,12 @@ namespace CombatSystem.Core
 
             // 处理常规移动输入
             ProcessNormalMove(deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            forcedActive = false;
+            RestoreForcedCollisionState();
         }
 
         #endregion
@@ -264,7 +275,7 @@ namespace CombatSystem.Core
         /// 强制位移会覆盖常规移动，直到位移完成。
         /// 位移过程中会持续进行碰撞检测。
         /// </remarks>
-        public void ApplyForcedMove(Vector3 direction, float distance, float speed, bool rotate)
+        public void ApplyForcedMove(Vector3 direction, float distance, float speed, bool rotate, bool ignoreCollisions = false)
         {
             if (distance <= 0f || direction.sqrMagnitude <= 0.0001f)
             {
@@ -276,6 +287,20 @@ namespace CombatSystem.Core
             forcedRemaining = distance;
             forcedSpeed = speed;
             forcedRotate = rotate;
+
+            if (controller != null)
+            {
+                if (ignoreCollisions)
+                {
+                    forcedPrevDetectCollisions = controller.detectCollisions;
+                    controller.detectCollisions = false;
+                    forcedIgnoreCollisions = true;
+                }
+                else
+                {
+                    RestoreForcedCollisionState();
+                }
+            }
         }
 
         /// <summary>
@@ -322,6 +347,7 @@ namespace CombatSystem.Core
             if (forcedRemaining <= 0f)
             {
                 forcedActive = false;
+                RestoreForcedCollisionState();
             }
         }
 
@@ -382,6 +408,21 @@ namespace CombatSystem.Core
 
             // 回退方案：直接修改 Transform（无碰撞检测）
             transform.position += displacement;
+        }
+
+        private void RestoreForcedCollisionState()
+        {
+            if (!forcedIgnoreCollisions)
+            {
+                return;
+            }
+
+            if (controller != null)
+            {
+                controller.detectCollisions = forcedPrevDetectCollisions;
+            }
+
+            forcedIgnoreCollisions = false;
         }
 
         /// <summary>

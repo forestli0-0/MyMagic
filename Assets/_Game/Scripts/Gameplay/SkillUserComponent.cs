@@ -443,6 +443,44 @@ namespace CombatSystem.Gameplay
         }
 
         /// <summary>
+        /// 获取技能连段窗口状态（用于 UI 展示强化窗口倒计时）。
+        /// </summary>
+        /// <returns>存在有效连段窗口时返回 true。</returns>
+        public bool TryGetSequenceWindowState(
+            SkillDefinition skill,
+            out int phase,
+            out float remainingTime,
+            out float totalWindow)
+        {
+            phase = 1;
+            remainingTime = 0f;
+            totalWindow = 0f;
+
+            if (skill == null || !skill.SupportsSequence || skill.SequenceConfig == null)
+            {
+                return false;
+            }
+
+            EnsureSequenceState(skill);
+            if (!sequenceStates.TryGetValue(skill, out var state) || !state.Active)
+            {
+                return false;
+            }
+
+            var now = Time.time;
+            if (state.ExpireTime <= 0f || now > state.ExpireTime)
+            {
+                sequenceStates[skill] = default;
+                return false;
+            }
+
+            phase = Mathf.Clamp(state.CurrentPhase, 1, skill.SequenceConfig.MaxPhases);
+            totalWindow = Mathf.Max(0f, skill.SequenceConfig.ResetWindow);
+            remainingTime = Mathf.Max(0f, state.ExpireTime - now);
+            return totalWindow > 0f && remainingTime > 0f;
+        }
+
+        /// <summary>
         /// 获取技能在运行时列表中的索引，不存在时返回 -1。
         /// </summary>
         public int IndexOfSkill(SkillDefinition skill)
@@ -694,6 +732,14 @@ namespace CombatSystem.Gameplay
                 castId,
                 -1,
                 sequencePhase);
+            if (skill.Targeting != null
+                && skill.Targeting.RequireExplicitTarget
+                && !HasExecutableConditionalCastStartStep(context, targets))
+            {
+                SimpleListPool<CombatTarget>.Release(targets);
+                return false;
+            }
+
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
             var resourceCost = ResolveModifiedResourceCost(skill, context, primaryTarget);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
@@ -1259,6 +1305,7 @@ namespace CombatSystem.Gameplay
         /// </summary>
         internal void NotifyHit(SkillRuntimeContext context, CombatTarget target)
         {
+            UpdateSequenceAfterSuccessfulHit(context, Time.time);
             ScheduleTriggeredSteps(context, SkillStepTrigger.OnHit, target);
         }
 
@@ -1358,6 +1405,100 @@ namespace CombatSystem.Gameplay
 
             var targetHealth = explicitTarget.GetComponentInParent<HealthComponent>();
             return targetHealth == null || targetHealth.IsAlive;
+        }
+
+        private bool HasExecutableConditionalCastStartStep(SkillRuntimeContext context, List<CombatTarget> targets)
+        {
+            if (context.Skill == null)
+            {
+                return true;
+            }
+
+            var steps = context.Skill.Steps;
+            if (steps == null || steps.Count == 0)
+            {
+                return true;
+            }
+
+            var hasConditionalCastStartStep = false;
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                if (step == null
+                    || step.trigger != SkillStepTrigger.OnCastStart
+                    || step.condition == null
+                    || step.effects == null
+                    || step.effects.Count == 0)
+                {
+                    continue;
+                }
+
+                hasConditionalCastStartStep = true;
+                break;
+            }
+
+            if (!hasConditionalCastStartStep)
+            {
+                return true;
+            }
+
+            if (targets == null || targets.Count == 0)
+            {
+                if (context.Skill.Targeting == null || !context.Skill.Targeting.AllowEmpty)
+                {
+                    return false;
+                }
+
+                var emptyTarget = default(CombatTarget);
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    var step = steps[i];
+                    if (step == null
+                        || step.trigger != SkillStepTrigger.OnCastStart
+                        || step.effects == null
+                        || step.effects.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    if (step.condition == null || ConditionEvaluator.Evaluate(step.condition, context, emptyTarget))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                if (step == null
+                    || step.trigger != SkillStepTrigger.OnCastStart
+                    || step.effects == null
+                    || step.effects.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < targets.Count; j++)
+                {
+                    var target = targets[j];
+                    if (!IsTargetValidForStep(context, SkillStepTrigger.OnCastStart, target))
+                    {
+                        continue;
+                    }
+
+                    if (step.condition != null && !ConditionEvaluator.Evaluate(step.condition, context, target))
+                    {
+                        continue;
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -2027,11 +2168,33 @@ namespace CombatSystem.Gameplay
             }
 
             var safeCastPhase = Mathf.Clamp(castPhase, 1, maxPhases);
+
+            // 命中推进模式：普通段不在施放成功时进阶，只在命中时进阶；终结段施放后再按溢出策略回退。
+            if (config.AdvanceOnHit)
+            {
+                if (safeCastPhase < maxPhases)
+                {
+                    if (sequenceStates.TryGetValue(skill, out var holdState) && holdState.Active)
+                    {
+                        holdState.ExpireTime = now + config.ResetWindow;
+                        holdState.LastAdvancedCastId = 0UL;
+                        sequenceStates[skill] = holdState;
+                    }
+                    else
+                    {
+                        sequenceStates[skill] = default;
+                    }
+
+                    return;
+                }
+            }
+
             var nextState = new SequenceRuntimeState
             {
                 Active = true,
                 CurrentPhase = safeCastPhase,
-                ExpireTime = now + config.ResetWindow
+                ExpireTime = now + config.ResetWindow,
+                LastAdvancedCastId = 0UL
             };
 
             if (safeCastPhase < maxPhases)
@@ -2058,6 +2221,68 @@ namespace CombatSystem.Gameplay
                     sequenceStates[skill] = nextState;
                     break;
             }
+        }
+
+        private void UpdateSequenceAfterSuccessfulHit(SkillRuntimeContext context, float now)
+        {
+            var skill = context.Skill;
+            if (skill == null || !skill.SupportsSequence || skill.SequenceConfig == null)
+            {
+                return;
+            }
+
+            var config = skill.SequenceConfig;
+            if (!config.AdvanceOnHit)
+            {
+                return;
+            }
+
+            var maxPhases = config.MaxPhases;
+            if (maxPhases <= 1 || config.ResetWindow <= 0f)
+            {
+                return;
+            }
+
+            // 终结段命中不再累计下一轮层数，避免 Q3 命中后立刻变 Q2。
+            var safeCastPhase = Mathf.Clamp(context.SequencePhase, 1, maxPhases);
+            if (safeCastPhase >= maxPhases)
+            {
+                return;
+            }
+
+            EnsureSequenceState(skill);
+            if (!sequenceStates.TryGetValue(skill, out var state) || !state.Active)
+            {
+                state = new SequenceRuntimeState
+                {
+                    Active = true,
+                    CurrentPhase = safeCastPhase,
+                    ExpireTime = now + config.ResetWindow,
+                    LastAdvancedCastId = 0UL
+                };
+            }
+
+            if (state.ExpireTime > 0f && now > state.ExpireTime)
+            {
+                state = new SequenceRuntimeState
+                {
+                    Active = true,
+                    CurrentPhase = safeCastPhase,
+                    ExpireTime = now + config.ResetWindow,
+                    LastAdvancedCastId = 0UL
+                };
+            }
+
+            if (context.CastId != 0UL && state.LastAdvancedCastId == context.CastId)
+            {
+                return;
+            }
+
+            state.CurrentPhase = Mathf.Clamp(state.CurrentPhase + 1, 1, maxPhases);
+            state.ExpireTime = now + config.ResetWindow;
+            state.LastAdvancedCastId = context.CastId;
+            state.Active = true;
+            sequenceStates[skill] = state;
         }
 
         private void ResetSequencesMarkedOnOtherCast(SkillDefinition castedSkill)
@@ -2472,6 +2697,7 @@ namespace CombatSystem.Gameplay
             public bool Active;
             public int CurrentPhase;
             public float ExpireTime;
+            public ulong LastAdvancedCastId;
         }
 
         /// <summary>

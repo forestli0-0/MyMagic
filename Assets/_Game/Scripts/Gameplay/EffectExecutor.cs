@@ -371,6 +371,8 @@ namespace CombatSystem.Gameplay
 
             // 根据位移类型计算方向
             var direction = Vector3.zero;
+            var resolvedDistance = moveDistance;
+            var ignoreCollisionsDuringForcedMove = false;
             if (effect.MoveStyle == MoveStyle.Knockback || effect.MoveStyle == MoveStyle.Pull)
             {
                 // 击退/拉拽：基于施法者到目标的方向
@@ -394,6 +396,29 @@ namespace CombatSystem.Gameplay
                 {
                     direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : target.Transform.forward;
                 }
+
+                // 显式目标冲刺（如亚索 E）：自动朝目标方向并越过目标落到身后。
+                var isSelfDash = context.CasterUnit != null
+                    && target.Unit == context.CasterUnit
+                    && context.ExplicitTarget != null
+                    && (effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap);
+                if (isSelfDash)
+                {
+                    var casterPos = context.CasterUnit.transform.position;
+                    var explicitTargetTransform = context.ExplicitTarget.transform;
+                    if (explicitTargetTransform != null)
+                    {
+                        var toTarget = explicitTargetTransform.position - casterPos;
+                        toTarget.y = 0f;
+                        if (toTarget.sqrMagnitude > 0.0001f)
+                        {
+                            direction = toTarget.normalized;
+                            var throughDistance = toTarget.magnitude + 0.8f;
+                            resolvedDistance = Mathf.Max(resolvedDistance, throughDistance);
+                            ignoreCollisionsDuringForcedMove = true;
+                        }
+                    }
+                }
             }
 
             if (direction.sqrMagnitude <= 0f)
@@ -407,18 +432,18 @@ namespace CombatSystem.Gameplay
                 var rotate = effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap;
                 if (moveSpeed > 0f)
                 {
-                    mover.ApplyForcedMove(direction, moveDistance, moveSpeed, rotate);
+                    mover.ApplyForcedMove(direction, resolvedDistance, moveSpeed, rotate, ignoreCollisionsDuringForcedMove);
                 }
                 else
                 {
-                    mover.ApplyInstantMove(direction * moveDistance);
+                    mover.ApplyInstantMove(direction * resolvedDistance);
                 }
 
                 return;
             }
 
             // 直接位移（兼容未接入 MovementComponent 的目标）
-            target.Transform.position += direction * moveDistance;
+            target.Transform.position += direction * resolvedDistance;
         }
 
         private static void RegisterAggression(

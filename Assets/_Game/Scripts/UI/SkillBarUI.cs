@@ -84,6 +84,7 @@ namespace CombatSystem.UI
                 EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
                 RebuildSlots(maxSlots);
                 RefreshCooldownSnapshot();
+                RefreshRuntimeSnapshot();
                 return;
             }
 
@@ -110,6 +111,7 @@ namespace CombatSystem.UI
             EnsureSlotCapacity(ResolveRequestedSlotCount(maxSlots));
             RebuildSlots(maxSlots);
             RefreshCooldownSnapshot();
+            RefreshRuntimeSnapshot();
             ClearSkillCharge();
         }
 
@@ -197,6 +199,7 @@ namespace CombatSystem.UI
 
             // 每帧做一次“快照对齐”，兜底处理事件丢失导致的冷却显示卡住。
             RefreshCooldownSnapshot();
+            RefreshRuntimeSnapshot();
         }
 
         private void OnDisable()
@@ -213,6 +216,7 @@ namespace CombatSystem.UI
         {
             RebuildSlots(lastMaxSlots);
             RefreshCooldownSnapshot();
+            RefreshRuntimeSnapshot();
         }
 
         private void RefreshCooldownSnapshot()
@@ -232,6 +236,31 @@ namespace CombatSystem.UI
                 }
 
                 slot.RefreshCooldown(cooldown);
+            }
+        }
+
+        private void RefreshRuntimeSnapshot()
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                var skill = slot.Skill;
+                if (skillUser == null || skill == null)
+                {
+                    slot.NotifyRuntimeState(null, 0f, false);
+                    continue;
+                }
+
+                var phase = skillUser.GetCurrentSequencePhase(skill);
+                var icon = skill.ResolveIconForPhase(phase);
+                var hasWindow = skillUser.TryGetSequenceWindowState(skill, out _, out var remaining, out var total);
+                var ratio = hasWindow && total > 0f ? Mathf.Clamp01(remaining / total) : 0f;
+                slot.NotifyRuntimeState(icon, ratio, hasWindow);
             }
         }
 

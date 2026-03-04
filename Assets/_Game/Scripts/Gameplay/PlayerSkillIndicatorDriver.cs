@@ -641,7 +641,7 @@ namespace CombatSystem.Gameplay
             }
 
             var ray = viewCamera.ScreenPointToRay(inputReader.AimPoint);
-            var hitCount = Physics.RaycastNonAlloc(ray, hoverHitBuffer, raycastDistance, ~0, QueryTriggerInteraction.Ignore);
+            var hitCount = Physics.RaycastNonAlloc(ray, hoverHitBuffer, raycastDistance, ~0, QueryTriggerInteraction.Collide);
             if (hitCount <= 0)
             {
                 return null;

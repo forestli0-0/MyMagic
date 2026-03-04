@@ -23,6 +23,7 @@ namespace CombatSystem.Core
         [SerializeField] private MovementComponent movement;
         [SerializeField] private SkillUserComponent skillUser;
         [SerializeField] private HealthComponent health;
+        [SerializeField] private BuffController buffController;
         [SerializeField] private HitFlashReceiver hitFlashReceiver;
         [SerializeField] private Transform visualRoot;
         [SerializeField] private Animator animator;
@@ -63,6 +64,13 @@ namespace CombatSystem.Core
         [Tooltip("受击状态最大保持时长（秒），超过后强制回到 Locomotion。")]
         [SerializeField, Min(0.02f)] private float hitMaxHoldSeconds = 0.08f;
 
+        [Header("Crowd Control FX")]
+        [Tooltip("当单位处于 Knockup 控制时抬升视觉模型（仅视觉，不改逻辑体）。")]
+        [SerializeField] private bool enableKnockupVisualLift = true;
+        [SerializeField, Min(0f)] private float knockupLiftHeight = 0.9f;
+        [SerializeField, Min(0f)] private float knockupLiftInSpeed = 10f;
+        [SerializeField, Min(0f)] private float knockupLiftOutSpeed = 14f;
+
         private readonly List<RendererState> cachedRootRenderers = new List<RendererState>(8);
         private readonly HashSet<Renderer> rootRendererSet = new HashSet<Renderer>();
 
@@ -76,6 +84,10 @@ namespace CombatSystem.Core
         private float forceExitHitAt = -1f;
         private string currentCastSkillName = string.Empty;
         private bool hasLoggedDriftForCurrentCast;
+        private Transform visualOffsetRoot;
+        private Vector3 visualRootBaselineLocalPosition;
+        private bool hasVisualRootBaseline;
+        private float currentKnockupVisualLift;
 
         // Animator parameter cache
         private int moveSpeedHash;
@@ -105,6 +117,7 @@ namespace CombatSystem.Core
             movement = GetComponent<MovementComponent>();
             skillUser = GetComponent<SkillUserComponent>();
             health = GetComponent<HealthComponent>();
+            buffController = GetComponent<BuffController>();
             hitFlashReceiver = GetComponent<HitFlashReceiver>();
             visualRoot = transform.Find(DefaultVisualRootName);
             animator = GetComponentInChildren<Animator>(true);
@@ -130,10 +143,12 @@ namespace CombatSystem.Core
         private void OnDisable()
         {
             UnsubscribeEvents();
+            RestoreVisualRootOffset();
         }
 
         private void OnDestroy()
         {
+            RestoreVisualRootOffset();
             RestoreRootRenderers();
             DestroySpawnedModel();
         }
@@ -147,6 +162,7 @@ namespace CombatSystem.Core
         private void LateUpdate()
         {
             EnforceModelAnchor();
+            UpdateCrowdControlVisuals();
         }
 
         /// <summary>
@@ -270,6 +286,11 @@ namespace CombatSystem.Core
                 health = GetComponent<HealthComponent>();
             }
 
+            if (buffController == null)
+            {
+                buffController = GetComponent<BuffController>();
+            }
+
             if (hitFlashReceiver == null)
             {
                 hitFlashReceiver = GetComponent<HitFlashReceiver>();
@@ -302,6 +323,24 @@ namespace CombatSystem.Core
             visualRoot.localRotation = Quaternion.identity;
             visualRoot.localScale = Vector3.one;
             return visualRoot;
+        }
+
+        private void EnsureVisualRootBaseline(Transform root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            if (visualOffsetRoot == root && hasVisualRootBaseline)
+            {
+                return;
+            }
+
+            visualOffsetRoot = root;
+            visualRootBaselineLocalPosition = root.localPosition;
+            hasVisualRootBaseline = true;
+            currentKnockupVisualLift = 0f;
         }
 
         private void ResolveAnimator()
@@ -690,6 +729,63 @@ namespace CombatSystem.Core
             {
                 animator.SetBool(movingHash, false);
             }
+        }
+
+        private void UpdateCrowdControlVisuals()
+        {
+            var root = EnsureVisualRoot();
+            if (root == null || root == transform)
+            {
+                return;
+            }
+
+            EnsureVisualRootBaseline(root);
+
+            if (!enableKnockupVisualLift)
+            {
+                if (currentKnockupVisualLift > 0f)
+                {
+                    currentKnockupVisualLift = 0f;
+                    root.localPosition = visualRootBaselineLocalPosition;
+                }
+
+                return;
+            }
+
+            var knockupActive = buffController != null && buffController.HasControl(ControlType.Knockup);
+            var targetLift = knockupActive ? Mathf.Max(0f, knockupLiftHeight) : 0f;
+            var speed = targetLift > currentKnockupVisualLift
+                ? Mathf.Max(0f, knockupLiftInSpeed)
+                : Mathf.Max(0f, knockupLiftOutSpeed);
+
+            if (speed <= 0f)
+            {
+                currentKnockupVisualLift = targetLift;
+            }
+            else
+            {
+                currentKnockupVisualLift = Mathf.MoveTowards(
+                    currentKnockupVisualLift,
+                    targetLift,
+                    speed * Time.deltaTime);
+            }
+
+            var targetLocalPosition = visualRootBaselineLocalPosition + Vector3.up * currentKnockupVisualLift;
+            if ((root.localPosition - targetLocalPosition).sqrMagnitude > 0.000001f)
+            {
+                root.localPosition = targetLocalPosition;
+            }
+        }
+
+        private void RestoreVisualRootOffset()
+        {
+            if (!hasVisualRootBaseline || visualOffsetRoot == null)
+            {
+                return;
+            }
+
+            visualOffsetRoot.localPosition = visualRootBaselineLocalPosition;
+            currentKnockupVisualLift = 0f;
         }
 
         private void CacheAnimatorParameters()
