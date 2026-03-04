@@ -529,6 +529,13 @@ namespace CombatSystem.Editor
 
         private static UIRoot ResolveRootForBuild()
         {
+            // 优先使用当前活动场景中的 UIRoot，避免工具误切到 MainMenu。
+            var activeRoot = Object.FindFirstObjectByType<UIRoot>();
+            if (activeRoot != null)
+            {
+                return activeRoot;
+            }
+
             var mainMenuScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(MainMenuScenePath);
             if (mainMenuScene == null)
             {

@@ -105,12 +105,9 @@ namespace CombatSystem.Editor
                 }
 
                 var hasCuePayload = HasCuePayload(step.presentationCues);
-                var hasLegacyPayload = !string.IsNullOrWhiteSpace(step.animationTrigger)
-                                       || step.vfxPrefab != null
-                                       || step.sfx != null;
                 var hasEffects = step.effects != null && step.effects.Count > 0;
 
-                if (!hasEffects && !hasCuePayload && !hasLegacyPayload)
+                if (!hasEffects && !hasCuePayload)
                 {
                     results.Add(new SkillValidationMessage(
                         SkillValidationSeverity.Warning,

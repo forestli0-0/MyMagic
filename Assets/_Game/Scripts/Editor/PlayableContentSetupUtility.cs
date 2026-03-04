@@ -30,10 +30,10 @@ namespace CombatSystem.EditorTools
         private const string ItemSkillDashPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_Dash.asset";
         private const string ItemSkillArcaneFocusPath = "Assets/_Game/ScriptableObjects/Items/Item_Skillbook_ArcaneFocus.asset";
 
-        private const string SkillFireballPath = "Assets/_Game/ScriptableObjects/Skills/Skill_Fireball.asset";
+        private const string SkillFireballPath = "Assets/_Game/ScriptableObjects/Skills/Skill_YasuoQ.asset";
         private const string SkillLockOnBoltPath = "Assets/_Game/ScriptableObjects/Skills/Skill_LockOnBolt.asset";
         private const string SkillDashPath = "Assets/_Game/ScriptableObjects/Skills/Skill_Dash.asset";
-        private const string SkillArcaneFocusPath = "Assets/_Game/ScriptableObjects/Skills/Skill_ArcaneFocus.asset";
+        private const string SkillArcaneFocusPath = "Assets/_Game/ScriptableObjects/Skills/Skill_YasuoW.asset";
 
         [MenuItem("Combat/Content/Setup Playable Item Experience")]
         public static void SetupPlayableItemExperience()

@@ -192,11 +192,7 @@ namespace CombatSystem.Gameplay
                 {
                     ExecuteCue(cues[i], evt);
                 }
-
-                return;
             }
-
-            PlayLegacyStep(evt);
         }
 
         private void HandleSkillEffectExecuted(SkillEffectExecutedEvent evt)
@@ -335,37 +331,6 @@ namespace CombatSystem.Gameplay
             {
                 Debug.Log($"[SkillPresentation] Played cue '{cue.cueId}'", this);
             }
-        }
-
-        private void PlayLegacyStep(SkillStepExecutedEvent evt)
-        {
-            if (evt.Step == null)
-            {
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(evt.Step.animationTrigger)
-                && evt.Step.vfxPrefab == null
-                && evt.Step.sfx == null)
-            {
-                return;
-            }
-
-            var anchorType = evt.PrimaryTarget.IsValid
-                ? PresentationAnchorType.PrimaryTarget
-                : evt.HasAimPoint ? PresentationAnchorType.AimPoint : PresentationAnchorType.Caster;
-            var legacyCue = new SkillPresentationCue
-            {
-                cueId = "LegacyStepFallback",
-                eventType = PresentationEventType.StepExecuted,
-                anchorType = anchorType,
-                animationTrigger = evt.Step.animationTrigger,
-                vfxPrefab = evt.Step.vfxPrefab,
-                sfx = evt.Step.sfx,
-                maxLifetime = 2f
-            };
-
-            ExecuteCue(legacyCue, evt);
         }
 
         private List<SkillPresentationCue> ResolveCues(

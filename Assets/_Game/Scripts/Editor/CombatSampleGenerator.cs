@@ -96,6 +96,7 @@ namespace CombatSystem.Editor
             public TargetingDefinition TargetingBoxEnemy;
             public TargetingDefinition TargetingAllySingle;
             public TargetingDefinition TargetingPointAny;
+            public TargetingDefinition TargetingYasuoSingleEnemy;
 
             public ModifierDefinition ModifierSkillCost;
             public ModifierDefinition ModifierSkillCooldown;
@@ -118,6 +119,8 @@ namespace CombatSystem.Editor
             public BuffDefinition BuffTimeWarp;
             public BuffDefinition BuffGhostStep;
             public BuffDefinition BuffIronShell;
+            public BuffDefinition BuffYasuoDashMark;
+            public BuffDefinition BuffYasuoAirborneTag;
 
             public EffectDefinition EffectBasicAttack;
             public EffectDefinition EffectFireball;
@@ -161,6 +164,15 @@ namespace CombatSystem.Editor
             public EffectDefinition EffectShardVolleyProjectile;
             public EffectDefinition EffectRevealBoltDamage;
             public EffectDefinition EffectWindWallSummon;
+            public EffectDefinition EffectYasuoQThrustDamage;
+            public EffectDefinition EffectYasuoQTornadoDamage;
+            public EffectDefinition EffectYasuoQTornadoApplyAirborneTag;
+            public EffectDefinition EffectYasuoQTornadoProjectile;
+            public EffectDefinition EffectYasuoEDashMove;
+            public EffectDefinition EffectYasuoEDashDamage;
+            public EffectDefinition EffectYasuoEApplyDashMark;
+            public EffectDefinition EffectYasuoRDamage;
+            public EffectDefinition EffectYasuoRRemoveAirborneTag;
 
             public SkillDefinition SkillBasicAttack;
             public SkillDefinition SkillFireball;
@@ -193,10 +205,16 @@ namespace CombatSystem.Editor
             public SkillDefinition SkillShardVolley;
             public SkillDefinition SkillRevealBolt;
             public SkillDefinition SkillWindWall;
+            public SkillDefinition SkillYasuoQ;
+            public SkillDefinition SkillYasuoW;
+            public SkillDefinition SkillYasuoE;
+            public SkillDefinition SkillYasuoR;
 
             public UnitDefinition UnitPlayer;
             public UnitDefinition UnitEnemy;
+            public UnitDefinition UnitEnemyHighHp;
             public UnitDefinition UnitSummonTotem;
+            public UnitDefinition UnitPlayerYasuo;
 
             public AIProfile AIBasic;
             public HUDConfig HUDDefault;
@@ -205,7 +223,13 @@ namespace CombatSystem.Editor
             public ProjectileDefinition ProjectileArcaneBolt;
             public ProjectileDefinition ProjectileReturnBlade;
             public ProjectileDefinition ProjectileShardVolley;
+            public ProjectileDefinition ProjectileYasuoQTornado;
             public ConditionDefinition ConditionTargetLowHealth;
+            public ConditionDefinition ConditionYasuoQPhase1;
+            public ConditionDefinition ConditionYasuoQPhase2;
+            public ConditionDefinition ConditionYasuoQPhase3;
+            public ConditionDefinition ConditionYasuoETargetNotDashed;
+            public ConditionDefinition ConditionYasuoRTargetAirborne;
 
             public GameObject PrefabArcaneBolt;
             public GameObject PrefabSummonTotem;
@@ -527,6 +551,28 @@ namespace CombatSystem.Editor
                     true,
                     HitValidationPolicy.None);
 
+                assets.TargetingYasuoSingleEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_YasuoSingleEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingYasuoSingleEnemy,
+                    "Targeting_YasuoSingleEnemy",
+                    "Yasuo Single Enemy",
+                    TargetingMode.Single,
+                    TargetTeam.Enemy,
+                    5.5f,
+                    0f,
+                    0f,
+                    1,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.Caster,
+                    false,
+                    HitValidationPolicy.AliveOnly,
+                    -1,
+                    1.5f,
+                    true);
+
                 assets.ModifierSkillCost = LoadOrCreate<ModifierDefinition>($"{folders.Modifiers}/Modifier_ArcaneFocus_Cost.asset");
                 ConfigureModifier(
                     assets.ModifierSkillCost,
@@ -683,12 +729,21 @@ namespace CombatSystem.Editor
                 assets.BuffTimeWarp = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_TimeWarp.asset");
                 assets.BuffGhostStep = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_GhostStep.asset");
                 assets.BuffIronShell = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_IronShell.asset");
+                assets.BuffYasuoDashMark = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoDashMark.asset");
+                assets.BuffYasuoAirborneTag = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoAirborneTag.asset");
 
                 assets.ProjectileArcaneBolt = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ArcaneBolt.asset");
                 assets.ProjectileReturnBlade = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ReturnBlade.asset");
                 assets.ProjectileShardVolley = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ShardVolley.asset");
+                assets.ProjectileYasuoQTornado = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_YasuoQTornado.asset");
                 assets.UnitSummonTotem = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_SummonTotem.asset");
+                assets.UnitPlayerYasuo = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_PlayerYasuo.asset");
                 assets.ConditionTargetLowHealth = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_TargetLowHealth.asset");
+                assets.ConditionYasuoQPhase1 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase1.asset");
+                assets.ConditionYasuoQPhase2 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase2.asset");
+                assets.ConditionYasuoQPhase3 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase3.asset");
+                assets.ConditionYasuoETargetNotDashed = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoE_TargetNotDashed.asset");
+                assets.ConditionYasuoRTargetAirborne = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoR_TargetAirborne.asset");
 
                 assets.EffectBurnTick = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_BurnTickDamage.asset");
                 ConfigureEffectDamage(
@@ -972,6 +1027,15 @@ namespace CombatSystem.Editor
                 assets.EffectShardVolleyProjectile = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_ShardVolleyProjectile.asset");
                 assets.EffectRevealBoltDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_RevealBoltDamage.asset");
                 assets.EffectWindWallSummon = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_WindWallSummon.asset");
+                assets.EffectYasuoQThrustDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_ThrustDamage.asset");
+                assets.EffectYasuoQTornadoDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_TornadoDamage.asset");
+                assets.EffectYasuoQTornadoApplyAirborneTag = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_TornadoApplyAirborneTag.asset");
+                assets.EffectYasuoQTornadoProjectile = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_TornadoProjectile.asset");
+                assets.EffectYasuoEDashMove = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_DashMove.asset");
+                assets.EffectYasuoEDashDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_DashDamage.asset");
+                assets.EffectYasuoEApplyDashMark = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_ApplyDashMark.asset");
+                assets.EffectYasuoRDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_Damage.asset");
+                assets.EffectYasuoRRemoveAirborneTag = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_RemoveAirborneTag.asset");
 
                 ConfigureProjectile(
                     assets.ProjectileArcaneBolt,
@@ -1121,6 +1185,113 @@ namespace CombatSystem.Editor
                     null,
                     assets.PrefabWindWall);
 
+                ConfigureEffectDamage(
+                    assets.EffectYasuoQThrustDamage,
+                    "Effect_YasuoQ_ThrustDamage",
+                    "Yasuo Q Thrust Damage",
+                    22f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier,
+                    true);
+
+                ConfigureEffectDamage(
+                    assets.EffectYasuoQTornadoDamage,
+                    "Effect_YasuoQ_TornadoDamage",
+                    "Yasuo Q Tornado Damage",
+                    26f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1.1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier,
+                    true);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoQTornadoApplyAirborneTag,
+                    "Effect_YasuoQ_TornadoApplyAirborneTag",
+                    "Yasuo Q Tornado Apply Airborne",
+                    assets.BuffYasuoAirborneTag);
+
+                ConfigureEffectProjectile(
+                    assets.EffectYasuoQTornadoProjectile,
+                    "Effect_YasuoQ_TornadoProjectile",
+                    "Yasuo Q Tornado Projectile",
+                    assets.ProjectileYasuoQTornado);
+
+                ConfigureEffectMove(
+                    assets.EffectYasuoEDashMove,
+                    "Effect_YasuoE_DashMove",
+                    "Yasuo E Dash Move",
+                    MoveStyle.Dash,
+                    3f,
+                    18f,
+                    assets.TargetingSelf);
+
+                ConfigureEffectDamage(
+                    assets.EffectYasuoEDashDamage,
+                    "Effect_YasuoE_DashDamage",
+                    "Yasuo E Dash Damage",
+                    14f,
+                    DamageType.Magical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    0.55f,
+                    false,
+                    null,
+                    null,
+                    true);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoEApplyDashMark,
+                    "Effect_YasuoE_ApplyDashMark",
+                    "Yasuo E Apply Dash Mark",
+                    assets.BuffYasuoDashMark);
+
+                ConfigureEffectDamage(
+                    assets.EffectYasuoRDamage,
+                    "Effect_YasuoR_Damage",
+                    "Yasuo R Damage",
+                    36f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1.35f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier,
+                    true);
+
+                ConfigureEffectRemoveBuff(
+                    assets.EffectYasuoRRemoveAirborneTag,
+                    "Effect_YasuoR_RemoveAirborneTag",
+                    "Yasuo R Remove Airborne",
+                    assets.BuffYasuoAirborneTag);
+
+                ConfigureProjectile(
+                    assets.ProjectileYasuoQTornado,
+                    "Projectile_YasuoQTornado",
+                    "Yasuo Q Tornado",
+                    assets.PrefabArcaneBolt,
+                    18f,
+                    3f,
+                    0.25f,
+                    false,
+                    0f,
+                    false,
+                    1,
+                    new Object[] { assets.EffectYasuoQTornadoDamage, assets.EffectYasuoQTornadoApplyAirborneTag });
+
                 ConfigureProjectile(
                     assets.ProjectileReturnBlade,
                     "Projectile_ReturnBlade",
@@ -1172,6 +1343,66 @@ namespace CombatSystem.Editor
                         Type = ConditionType.HealthPercentBelow,
                         Subject = ConditionSubject.Target,
                         Threshold = 0.3f
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQPhase1,
+                    "Condition_YasuoQ_Phase1",
+                    "Yasuo Q Phase 1",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 1
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQPhase2,
+                    "Condition_YasuoQ_Phase2",
+                    "Yasuo Q Phase 2",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 2
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQPhase3,
+                    "Condition_YasuoQ_Phase3",
+                    "Yasuo Q Phase 3",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 3
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoETargetNotDashed,
+                    "Condition_YasuoE_TargetNotDashed",
+                    "Yasuo E Target Not Dashed",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.NotHasBuff,
+                        Subject = ConditionSubject.Target,
+                        Buff = assets.BuffYasuoDashMark
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoRTargetAirborne,
+                    "Condition_YasuoR_TargetAirborne",
+                    "Yasuo R Target Airborne",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.HasBuff,
+                        Subject = ConditionSubject.Target,
+                        Buff = assets.BuffYasuoAirborneTag
                     });
 
                 ConfigureBuff(
@@ -1327,6 +1558,34 @@ namespace CombatSystem.Editor
                             Effects = new Object[] { assets.EffectCombatStateRemoveInvulnerable }
                         }
                     });
+
+                ConfigureBuff(
+                    assets.BuffYasuoDashMark,
+                    "Buff_YasuoDashMark",
+                    "Yasuo Dash Mark",
+                    true,
+                    7f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagPhysical },
+                    null,
+                    null);
+
+                ConfigureBuff(
+                    assets.BuffYasuoAirborneTag,
+                    "Buff_YasuoAirborneTag",
+                    "Yasuo Airborne Tag",
+                    true,
+                    1.25f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagPhysical },
+                    null,
+                    null,
+                    new[] { ControlType.Knockup },
+                    null);
 
                 ConfigureUnit(
                     assets.UnitSummonTotem,
@@ -2029,6 +2288,124 @@ namespace CombatSystem.Editor
                         Effects = new Object[] { assets.EffectWindWallSummon }
                     });
 
+                assets.SkillYasuoQ = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoQ.asset");
+                ConfigureSkill(
+                    assets.SkillYasuoQ,
+                    "Skill_YasuoQ",
+                    "Yasuo Q - Steel Tempest",
+                    ResourceType.Mana,
+                    4f,
+                    0f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingLineEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQPhase1,
+                        Effects = new Object[] { assets.EffectYasuoQThrustDamage }
+                    });
+                ConfigureSkillSequence(
+                    assets.SkillYasuoQ,
+                    true,
+                    3,
+                    6f,
+                    SkillSequenceOverflowPolicy.LoopToStart,
+                    false,
+                    true);
+                ConfigureSkillSteps(
+                    assets.SkillYasuoQ,
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQPhase1,
+                        Effects = new Object[] { assets.EffectYasuoQThrustDamage }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQPhase2,
+                        Effects = new Object[] { assets.EffectYasuoQThrustDamage }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQPhase3,
+                        Effects = new Object[] { assets.EffectYasuoQTornadoProjectile }
+                    });
+
+                assets.SkillYasuoW = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoW.asset");
+                ConfigureSkill(
+                    assets.SkillYasuoW,
+                    "Skill_YasuoW",
+                    "Yasuo W - Wind Wall",
+                    ResourceType.Mana,
+                    12f,
+                    0f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingPointAny,
+                    new Object[] { assets.TagMagic },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectWindWallSummon }
+                    });
+
+                assets.SkillYasuoE = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoE.asset");
+                ConfigureSkill(
+                    assets.SkillYasuoE,
+                    "Skill_YasuoE",
+                    "Yasuo E - Sweeping Blade",
+                    ResourceType.Mana,
+                    5f,
+                    0f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingYasuoSingleEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoETargetNotDashed,
+                        Effects = new Object[] { assets.EffectYasuoEDashMove, assets.EffectYasuoEDashDamage, assets.EffectYasuoEApplyDashMark }
+                    });
+
+                assets.SkillYasuoR = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoR.asset");
+                ConfigureSkill(
+                    assets.SkillYasuoR,
+                    "Skill_YasuoR",
+                    "Yasuo R - Last Breath",
+                    ResourceType.Mana,
+                    50f,
+                    0f,
+                    0f,
+                    0f,
+                    true,
+                    true,
+                    assets.TargetingYasuoSingleEnemy,
+                    new Object[] { assets.TagPhysical },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoRTargetAirborne,
+                        Effects = new Object[] { assets.EffectYasuoRDamage, assets.EffectYasuoRRemoveAirborneTag }
+                    });
+
                 assets.AIBasic = LoadOrCreate<AIProfile>($"{folders.AI}/AI_Basic.asset");
                 ConfigureAIProfile(assets.AIBasic, "AI_Basic", "Basic AI", 12f, 2f, 0.5f);
 
@@ -2049,19 +2426,36 @@ namespace CombatSystem.Editor
                     assets.SkillBasicAttack,
                     new Object[]
                     {
-                        assets.SkillFireball,
-                        assets.SkillArcaneFocus,
-                        assets.SkillGhostStep,
-                        assets.SkillIronShell,
-                        assets.SkillSpellAegis,
-                        assets.SkillAmmoBurst,
-                        assets.SkillRecastLunge,
-                        assets.SkillReturnBlade,
-                        assets.SkillShardVolley,
-                        assets.SkillRevealBolt,
-                        assets.SkillWindWall
+                        assets.SkillYasuoQ,
+                        assets.SkillYasuoW,
+                        assets.SkillYasuoE,
+                        assets.SkillYasuoR
                     },
                     null);
+
+                ConfigureUnit(
+                    assets.UnitPlayerYasuo,
+                    "Unit_PlayerYasuo",
+                    "Player Yasuo",
+                    new Object[] { assets.TagPlayer },
+                    new StatValueData[]
+                    {
+                        new StatValueData(assets.MaxHealth, 110f),
+                        new StatValueData(assets.HealthRegen, 1f),
+                        new StatValueData(assets.MaxMana, 100f),
+                        new StatValueData(assets.ManaRegen, 5f),
+                        new StatValueData(assets.MoveSpeed, 5.4f)
+                    },
+                    assets.SkillBasicAttack,
+                    new Object[]
+                    {
+                        assets.SkillYasuoQ,
+                        assets.SkillYasuoW,
+                        assets.SkillYasuoE,
+                        assets.SkillYasuoR
+                    },
+                    null);
+                ConfigureUnitVisualProfile(assets.UnitPlayerYasuo, assets.UnitPlayer != null ? assets.UnitPlayer.VisualProfile : null);
 
                 assets.UnitEnemy = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Enemy.asset");
                 ConfigureUnit(
@@ -2076,6 +2470,24 @@ namespace CombatSystem.Editor
                         new StatValueData(assets.MaxMana, 30f),
                         new StatValueData(assets.ManaRegen, 1f),
                         new StatValueData(assets.MoveSpeed, 3.5f)
+                    },
+                    assets.SkillBasicAttack,
+                    null,
+                    assets.AIBasic);
+
+                assets.UnitEnemyHighHp = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Enemy_high_hp.asset");
+                ConfigureUnit(
+                    assets.UnitEnemyHighHp,
+                    "Unit_Enemy_high_hp",
+                    "Enemy Training Dummy",
+                    new Object[] { assets.TagEnemy },
+                    new StatValueData[]
+                    {
+                        new StatValueData(assets.MaxHealth, 10000f),
+                        new StatValueData(assets.HealthRegen, 2f),
+                        new StatValueData(assets.MaxMana, 30f),
+                        new StatValueData(assets.ManaRegen, 1f),
+                        new StatValueData(assets.MoveSpeed, 2.6f)
                     },
                     assets.SkillBasicAttack,
                     null,
@@ -2097,8 +2509,44 @@ namespace CombatSystem.Editor
                 AssetDatabase.StopAssetEditing();
             }
 
+            PurgeLegacySampleSkills(folders.Skills);
             return assets;
         }
+
+        private static void PurgeLegacySampleSkills(string skillsFolder)
+        {
+            if (string.IsNullOrWhiteSpace(skillsFolder))
+            {
+                return;
+            }
+
+            var legacySkillNames = new[]
+            {
+                "Skill_Fireball.asset",
+                "Skill_ArcaneFocus.asset",
+                "Skill_GhostStep.asset",
+                "Skill_IronShell.asset",
+                "Skill_SpellAegis.asset",
+                "Skill_AmmoBurst.asset",
+                "Skill_RecastLunge.asset",
+                "Skill_ReturnBlade.asset",
+                "Skill_ShardVolley.asset",
+                "Skill_RevealBolt.asset",
+                "Skill_WindWall.asset"
+            };
+
+            for (int i = 0; i < legacySkillNames.Length; i++)
+            {
+                var path = $"{skillsFolder}/{legacySkillNames[i]}";
+                if (AssetDatabase.LoadAssetAtPath<SkillDefinition>(path) == null)
+                {
+                    continue;
+                }
+
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
         private static void CreateSampleScene(SampleAssets assets)
         {
             EnsureFolder("Assets", "Scenes");
@@ -2129,7 +2577,8 @@ namespace CombatSystem.Editor
 
             var player = CreateUnitPrimitive("Sample_Player", new Vector3(0f, 0f, 0f));
             player.tag = "Player";
-            ConfigureUnitObject(player, assets.UnitPlayer, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
+            var samplePlayerDefinition = assets.UnitPlayerYasuo != null ? assets.UnitPlayerYasuo : assets.UnitPlayer;
+            ConfigureUnitObject(player, samplePlayerDefinition, assets.EventHub, targetingSystem, effectExecutor, 1, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
 
             var progression = player.AddComponent<PlayerProgression>();
             SetComponentReference(progression, "progression", assets.ProgressionDefault);
@@ -2142,23 +2591,15 @@ namespace CombatSystem.Editor
             SetComponentValue(xpGrant, "grantAmount", 50);
             SetComponentValue(xpGrant, "requireShift", false);
 
-            var enemyGroup = new GameObject("Sample_Enemies");
-            var enemyPositions = BuildEnemyPositions(6, 4.5f);
+            var enemyGroup = new GameObject("Sample_TrainingDummies");
+            var enemyPositions = BuildTrainingDummyPositions(6, new Vector3(0f, 0f, 11f), 2.2f);
+            var sampleDummyDefinition = assets.UnitEnemyHighHp != null ? assets.UnitEnemyHighHp : assets.UnitEnemy;
             for (int i = 0; i < enemyPositions.Length; i++)
             {
-                var enemy = CreateUnitPrimitive($"Sample_Enemy_{i + 1}", enemyPositions[i]);
+                var enemy = CreateUnitPrimitive($"Sample_Dummy_{i + 1}", enemyPositions[i]);
                 enemy.transform.SetParent(enemyGroup.transform, true);
-                ConfigureUnitObject(enemy, assets.UnitEnemy, assets.EventHub, targetingSystem, effectExecutor, 2, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
-
-                var enemyAI = enemy.AddComponent<CombatAIController>();
-                SetComponentReference(enemyAI, "unitRoot", enemy.GetComponent<UnitRoot>());
-                SetComponentReference(enemyAI, "skillUser", enemy.GetComponent<SkillUserComponent>());
-                SetComponentReference(enemyAI, "health", enemy.GetComponent<HealthComponent>());
-                SetComponentReference(enemyAI, "movement", enemy.GetComponent<MovementComponent>());
-                SetComponentReference(enemyAI, "team", enemy.GetComponent<TeamComponent>());
-                SetComponentReference(enemyAI, "targetingSystem", targetingSystem);
-                SetComponentReference(enemyAI, "aiProfile", assets.AIBasic);
-                SetComponentValue(enemyAI, "useNavMesh", false);
+                ConfigureUnitObject(enemy, sampleDummyDefinition, assets.EventHub, targetingSystem, effectExecutor, 2, assets.MaxHealth, assets.HealthRegen, assets.MaxMana, assets.ManaRegen);
+                ConfigureTrainingDummyObject(enemy);
             }
 
             var playerMove = player.AddComponent<PlayerMovementDriver>();
@@ -2261,17 +2702,44 @@ namespace CombatSystem.Editor
             return go;
         }
 
-        private static Vector3[] BuildEnemyPositions(int count, float radius)
+        private static Vector3[] BuildTrainingDummyPositions(int count, Vector3 startPosition, float spacing)
         {
             var result = new Vector3[Mathf.Max(1, count)];
-            var step = Mathf.PI * 2f / result.Length;
             for (int i = 0; i < result.Length; i++)
             {
-                var angle = step * i;
-                result[i] = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+                result[i] = startPosition + new Vector3((i - (result.Length - 1) * 0.5f) * spacing, 0f, 0f);
             }
 
             return result;
+        }
+
+        private static void ConfigureTrainingDummyObject(GameObject unitObject)
+        {
+            if (unitObject == null)
+            {
+                return;
+            }
+
+            // 训练木桩不参与物理阻挡，避免冲刺技能撞停。
+            var capsule = unitObject.GetComponent<CapsuleCollider>();
+            if (capsule != null)
+            {
+                capsule.isTrigger = true;
+            }
+
+            var controller = unitObject.GetComponent<CharacterController>();
+            if (controller != null)
+            {
+                controller.detectCollisions = false;
+                controller.enableOverlapRecovery = false;
+                controller.enabled = false;
+            }
+
+            var movement = unitObject.GetComponent<MovementComponent>();
+            if (movement != null)
+            {
+                movement.enabled = false;
+            }
         }
 
         private static void CreateValidationLane(
@@ -2280,6 +2748,7 @@ namespace CombatSystem.Editor
             EffectExecutor effectExecutor)
         {
             var laneRoot = new GameObject("Validation_Lane");
+            var laneDummyDefinition = assets.UnitEnemyHighHp != null ? assets.UnitEnemyHighHp : assets.UnitEnemy;
 
             var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
             strip.name = "Lane_Strip";
@@ -2287,11 +2756,11 @@ namespace CombatSystem.Editor
             strip.transform.position = new Vector3(0f, -0.45f, 14f);
             strip.transform.localScale = new Vector3(4f, 0.1f, 18f);
 
-            var enemyDummy = CreateUnitPrimitive("Lane_EnemyDummy", new Vector3(1.2f, 0f, 20f));
+            var enemyDummy = CreateUnitPrimitive("Lane_EnemyDummy", new Vector3(1.2f, 0f, 5f));
             enemyDummy.transform.SetParent(laneRoot.transform, true);
             ConfigureUnitObject(
                 enemyDummy,
-                assets.UnitEnemy,
+                laneDummyDefinition,
                 assets.EventHub,
                 targetingSystem,
                 effectExecutor,
@@ -2300,20 +2769,22 @@ namespace CombatSystem.Editor
                 assets.HealthRegen,
                 assets.MaxMana,
                 assets.ManaRegen);
+            ConfigureTrainingDummyObject(enemyDummy);
 
-            var allyDummy = CreateUnitPrimitive("Lane_AllyDummy", new Vector3(-1.2f, 0f, 20f));
+            var allyDummy = CreateUnitPrimitive("Lane_AllyDummy", new Vector3(-1.2f, 0f, 5f));
             allyDummy.transform.SetParent(laneRoot.transform, true);
             ConfigureUnitObject(
                 allyDummy,
-                assets.UnitPlayer,
+                laneDummyDefinition,
                 assets.EventHub,
                 targetingSystem,
                 effectExecutor,
-                1,
+                2,
                 assets.MaxHealth,
                 assets.HealthRegen,
                 assets.MaxMana,
                 assets.ManaRegen);
+            ConfigureTrainingDummyObject(allyDummy);
 
             var wallPoint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             wallPoint.name = "Lane_WindWallPoint";
@@ -3169,7 +3640,8 @@ namespace CombatSystem.Editor
             bool allowEmpty = false,
             HitValidationPolicy hitValidation = HitValidationPolicy.AliveOnly,
             int lineOfSightMask = -1,
-            float lineOfSightHeight = 1.5f)
+            float lineOfSightHeight = 1.5f,
+            bool requireExplicitTarget = false)
         {
             var so = new SerializedObject(targeting);
             SetDefinitionBase(so, id, displayName);
@@ -3183,6 +3655,7 @@ namespace CombatSystem.Editor
             so.FindProperty("sort").enumValueIndex = (int)sort;
             so.FindProperty("includeSelf").boolValue = includeSelf;
             so.FindProperty("allowEmpty").boolValue = allowEmpty;
+            so.FindProperty("requireExplicitTarget").boolValue = requireExplicitTarget;
             so.FindProperty("hitValidation").enumValueIndex = (int)hitValidation;
             so.FindProperty("lineOfSightMask").intValue = lineOfSightMask;
             so.FindProperty("lineOfSightHeight").floatValue = lineOfSightHeight;
@@ -3267,6 +3740,19 @@ namespace CombatSystem.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        private static void ConfigureEffectRemoveBuff(
+            EffectDefinition effect,
+            string id,
+            string displayName,
+            BuffDefinition buff)
+        {
+            var so = new SerializedObject(effect);
+            SetDefinitionBase(so, id, displayName);
+            so.FindProperty("effectType").enumValueIndex = (int)EffectType.RemoveBuff;
+            so.FindProperty("buff").objectReferenceValue = buff;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void ConfigureEffectCombatState(
             EffectDefinition effect,
             string id,
@@ -3309,7 +3795,8 @@ namespace CombatSystem.Editor
             string displayName,
             MoveStyle moveStyle,
             float distance,
-            float speed)
+            float speed,
+            TargetingDefinition overrideTargeting = null)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
@@ -3317,6 +3804,7 @@ namespace CombatSystem.Editor
             so.FindProperty("moveStyle").enumValueIndex = (int)moveStyle;
             so.FindProperty("moveDistance").floatValue = distance;
             so.FindProperty("moveSpeed").floatValue = speed;
+            so.FindProperty("overrideTargeting").objectReferenceValue = overrideTargeting;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -3412,6 +3900,8 @@ namespace CombatSystem.Editor
             public float Chance;
             public TagDefinition Tag;
             public BuffDefinition Buff;
+            public int StackThreshold;
+            public int PhaseThreshold;
             public float Threshold;
         }
 
@@ -3442,6 +3932,8 @@ namespace CombatSystem.Editor
                     entry.FindPropertyRelative("chance").floatValue = entries[i].Chance;
                     entry.FindPropertyRelative("tag").objectReferenceValue = entries[i].Tag;
                     entry.FindPropertyRelative("buff").objectReferenceValue = entries[i].Buff;
+                    entry.FindPropertyRelative("stackThreshold").intValue = entries[i].StackThreshold;
+                    entry.FindPropertyRelative("phaseThreshold").intValue = entries[i].PhaseThreshold;
                     entry.FindPropertyRelative("threshold").floatValue = entries[i].Threshold;
                 }
             }
@@ -3468,7 +3960,9 @@ namespace CombatSystem.Editor
             int maxStacks,
             Object[] tags,
             Object[] modifiers,
-            BuffTriggerData[] triggers)
+            BuffTriggerData[] triggers,
+            ControlType[] controlEffects = null,
+            ControlType[] controlImmunities = null)
         {
             var so = new SerializedObject(buff);
             SetDefinitionBase(so, id, displayName);
@@ -3497,6 +3991,9 @@ namespace CombatSystem.Editor
                     SetObjectList(trigger.FindPropertyRelative("effects"), triggers[i].Effects);
                 }
             }
+
+            SetEnumList(so.FindProperty("controlEffects"), controlEffects);
+            SetEnumList(so.FindProperty("controlImmunities"), controlImmunities);
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -3544,9 +4041,6 @@ namespace CombatSystem.Editor
             public SkillStepTrigger Trigger;
             public float Delay;
             public ConditionDefinition Condition;
-            public string AnimationTrigger;
-            public Object VfxPrefab;
-            public Object Sfx;
             public Object[] Effects;
         }
 
@@ -3626,11 +4120,77 @@ namespace CombatSystem.Editor
             stepProp.FindPropertyRelative("trigger").enumValueIndex = (int)step.Trigger;
             stepProp.FindPropertyRelative("delay").floatValue = step.Delay;
             stepProp.FindPropertyRelative("condition").objectReferenceValue = step.Condition;
-            stepProp.FindPropertyRelative("animationTrigger").stringValue = step.AnimationTrigger ?? string.Empty;
-            stepProp.FindPropertyRelative("vfxPrefab").objectReferenceValue = step.VfxPrefab;
-            stepProp.FindPropertyRelative("sfx").objectReferenceValue = step.Sfx;
             SetObjectList(stepProp.FindPropertyRelative("effects"), step.Effects);
 
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureSkillSteps(SkillDefinition skill, params SkillStepData[] steps)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(skill);
+            var list = so.FindProperty("steps");
+            if (list == null)
+            {
+                return;
+            }
+
+            if (steps == null || steps.Length == 0)
+            {
+                list.arraySize = 0;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            list.arraySize = steps.Length;
+            for (int i = 0; i < steps.Length; i++)
+            {
+                var stepProp = list.GetArrayElementAtIndex(i);
+                stepProp.FindPropertyRelative("trigger").enumValueIndex = (int)steps[i].Trigger;
+                stepProp.FindPropertyRelative("delay").floatValue = steps[i].Delay;
+                stepProp.FindPropertyRelative("condition").objectReferenceValue = steps[i].Condition;
+                SetObjectList(stepProp.FindPropertyRelative("effects"), steps[i].Effects);
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureSkillSequence(
+            SkillDefinition skill,
+            bool enabled,
+            int maxPhases,
+            float resetWindow,
+            SkillSequenceOverflowPolicy overflowPolicy,
+            bool resetOnOtherSkillCast,
+            bool advanceOnHit = false)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(skill);
+            var sequence = so.FindProperty("sequenceConfig");
+            if (sequence == null)
+            {
+                return;
+            }
+
+            var clampedMax = Mathf.Max(1, maxPhases);
+            sequence.FindPropertyRelative("enabled").boolValue = enabled && clampedMax > 1;
+            sequence.FindPropertyRelative("maxPhases").intValue = clampedMax;
+            sequence.FindPropertyRelative("resetWindow").floatValue = Mathf.Max(0f, resetWindow);
+            sequence.FindPropertyRelative("overflowPolicy").enumValueIndex = (int)overflowPolicy;
+            sequence.FindPropertyRelative("resetOnOtherSkillCast").boolValue = resetOnOtherSkillCast;
+            var advanceOnHitProperty = sequence.FindPropertyRelative("advanceOnHit");
+            if (advanceOnHitProperty != null)
+            {
+                advanceOnHitProperty.boolValue = advanceOnHit;
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -3659,7 +4219,11 @@ namespace CombatSystem.Editor
         {
             var so = new SerializedObject(unit);
             SetDefinitionBase(so, id, displayName);
-            so.FindProperty("prefab").objectReferenceValue = prefab;
+            var prefabProp = so.FindProperty("prefab");
+            if (prefabProp != null && prefab != null)
+            {
+                prefabProp.objectReferenceValue = prefab;
+            }
             SetObjectList(so.FindProperty("tags"), tags);
 
             var statsProp = so.FindProperty("baseStats");
@@ -3674,6 +4238,18 @@ namespace CombatSystem.Editor
             so.FindProperty("basicAttack").objectReferenceValue = basicAttack;
             SetObjectList(so.FindProperty("startingSkills"), startingSkills);
             so.FindProperty("aiProfile").objectReferenceValue = aiProfile;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureUnitVisualProfile(UnitDefinition unit, UnitVisualProfile visualProfile)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(unit);
+            so.FindProperty("visualProfile").objectReferenceValue = visualProfile;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -3776,13 +4352,11 @@ namespace CombatSystem.Editor
                 assets.Tenacity
             });
             SetObjectList(so.FindProperty("tags"), new Object[] { assets.TagPlayer, assets.TagEnemy, assets.TagMagic, assets.TagFire, assets.TagPhysical, assets.TagNature });
-            SetObjectList(so.FindProperty("units"), new Object[] { assets.UnitPlayer, assets.UnitEnemy, assets.UnitSummonTotem });
+            SetObjectList(so.FindProperty("units"), new Object[] { assets.UnitPlayer, assets.UnitEnemy, assets.UnitEnemyHighHp, assets.UnitSummonTotem, assets.UnitPlayerYasuo });
             SetObjectList(so.FindProperty("progressions"), new Object[] { assets.ProgressionDefault });
             SetObjectList(so.FindProperty("skills"), new Object[]
             {
                 assets.SkillBasicAttack,
-                assets.SkillFireball,
-                assets.SkillArcaneFocus,
                 assets.SkillCleave,
                 assets.SkillChainLightning,
                 assets.SkillRandomShot,
@@ -3802,15 +4376,10 @@ namespace CombatSystem.Editor
                 assets.SkillManaSurge,
                 assets.SkillSummonTotem,
                 assets.SkillTriggerFocus,
-                assets.SkillGhostStep,
-                assets.SkillIronShell,
-                assets.SkillSpellAegis,
-                assets.SkillAmmoBurst,
-                assets.SkillRecastLunge,
-                assets.SkillReturnBlade,
-                assets.SkillShardVolley,
-                assets.SkillRevealBolt,
-                assets.SkillWindWall
+                assets.SkillYasuoQ,
+                assets.SkillYasuoW,
+                assets.SkillYasuoE,
+                assets.SkillYasuoR
             });
             SetObjectList(so.FindProperty("buffs"), new Object[]
             {
@@ -3823,7 +4392,9 @@ namespace CombatSystem.Editor
                 assets.BuffQuickCast,
                 assets.BuffTimeWarp,
                 assets.BuffGhostStep,
-                assets.BuffIronShell
+                assets.BuffIronShell,
+                assets.BuffYasuoDashMark,
+                assets.BuffYasuoAirborneTag
             });
             SetObjectList(so.FindProperty("effects"), new Object[]
             {
@@ -3868,9 +4439,26 @@ namespace CombatSystem.Editor
                 assets.EffectShardVolleyDamage,
                 assets.EffectShardVolleyProjectile,
                 assets.EffectRevealBoltDamage,
-                assets.EffectWindWallSummon
+                assets.EffectWindWallSummon,
+                assets.EffectYasuoQThrustDamage,
+                assets.EffectYasuoQTornadoDamage,
+                assets.EffectYasuoQTornadoApplyAirborneTag,
+                assets.EffectYasuoQTornadoProjectile,
+                assets.EffectYasuoEDashMove,
+                assets.EffectYasuoEDashDamage,
+                assets.EffectYasuoEApplyDashMark,
+                assets.EffectYasuoRDamage,
+                assets.EffectYasuoRRemoveAirborneTag
             });
-            SetObjectList(so.FindProperty("conditions"), new Object[] { assets.ConditionTargetLowHealth });
+            SetObjectList(so.FindProperty("conditions"), new Object[]
+            {
+                assets.ConditionTargetLowHealth,
+                assets.ConditionYasuoQPhase1,
+                assets.ConditionYasuoQPhase2,
+                assets.ConditionYasuoQPhase3,
+                assets.ConditionYasuoETargetNotDashed,
+                assets.ConditionYasuoRTargetAirborne
+            });
             SetObjectList(so.FindProperty("modifiers"), new Object[]
             {
                 assets.ModifierSkillCost,
@@ -3884,7 +4472,7 @@ namespace CombatSystem.Editor
                 assets.ModifierEffectDuration,
                 assets.ModifierEffectInterval
             });
-            SetObjectList(so.FindProperty("projectiles"), new Object[] { assets.ProjectileArcaneBolt, assets.ProjectileReturnBlade, assets.ProjectileShardVolley });
+            SetObjectList(so.FindProperty("projectiles"), new Object[] { assets.ProjectileArcaneBolt, assets.ProjectileReturnBlade, assets.ProjectileShardVolley, assets.ProjectileYasuoQTornado });
             SetObjectList(so.FindProperty("targetings"), new Object[]
             {
                 assets.TargetingSingleEnemy,
@@ -3897,7 +4485,8 @@ namespace CombatSystem.Editor
                 assets.TargetingLineEnemy,
                 assets.TargetingBoxEnemy,
                 assets.TargetingAllySingle,
-                assets.TargetingPointAny
+                assets.TargetingPointAny,
+                assets.TargetingYasuoSingleEnemy
             });
             SetObjectList(so.FindProperty("aiProfiles"), new Object[] { assets.AIBasic });
             SetObjectList(so.FindProperty("hudConfigs"), new Object[] { assets.HUDDefault });
@@ -3921,6 +4510,26 @@ namespace CombatSystem.Editor
             for (int i = 0; i < items.Length; i++)
             {
                 property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
+            }
+        }
+
+        private static void SetEnumList<TEnum>(SerializedProperty property, TEnum[] items) where TEnum : struct, System.Enum
+        {
+            if (property == null)
+            {
+                return;
+            }
+
+            if (items == null || items.Length == 0)
+            {
+                property.arraySize = 0;
+                return;
+            }
+
+            property.arraySize = items.Length;
+            for (int i = 0; i < items.Length; i++)
+            {
+                property.GetArrayElementAtIndex(i).enumValueIndex = System.Convert.ToInt32(items[i]);
             }
         }
 

@@ -240,6 +240,12 @@ namespace CombatSystem.Editor
             VfxPalette vfx,
             AudioPalette audio)
         {
+            var isFireball = skillName.Contains("fireball");
+            var isAmmoBurst = skillName.Contains("ammoburst");
+            var isRevealBolt = skillName.Contains("revealbolt");
+            var isReturnBlade = skillName.Contains("returnblade");
+            var isShardVolley = skillName.Contains("shardvolley");
+
             var effects = step.effects;
             var hasProjectile = false;
             var hasDamage = false;
@@ -296,6 +302,11 @@ namespace CombatSystem.Editor
             var castAnchor = PresentationAnchorType.Caster;
             var castFollow = false;
             var castLifetime = 0.5f;
+            var projectileSpawnPrefab = vfx.ProjectileTrail;
+            var projectileHitPrefab = vfx.ProjectileImpact;
+            var projectileReturnPrefab = vfx.ReturnFlash;
+            var projectileSplitPrefab = vfx.SplitFlash;
+            var revealMarkPrefab = vfx.RevealMark;
 
             if (hasMove || skillName.Contains("lunge"))
             {
@@ -318,6 +329,54 @@ namespace CombatSystem.Editor
             {
                 castPrefab = vfx.MeleeSwing;
                 castLifetime = 0.35f;
+            }
+
+            if (isFireball)
+            {
+                castPrefab = PreferPrefab(castPrefab, "Fire/CFXR2 Firewall A.prefab");
+            }
+
+            if (isAmmoBurst)
+            {
+                projectileHitPrefab = PreferPrefab(
+                    projectileHitPrefab,
+                    "Impacts/CFXR Hit D 3D (Yellow).prefab");
+            }
+
+            if (isRevealBolt)
+            {
+                castPrefab = PreferPrefab(
+                    vfx.BuffAura,
+                    "Magic Misc/CFXR3 Magic Aura A (Runic).prefab");
+                projectileHitPrefab = PreferPrefab(
+                    projectileHitPrefab,
+                    "Impacts/CFXR Hit D 3D (Yellow).prefab");
+                revealMarkPrefab = PreferPrefab(
+                    revealMarkPrefab,
+                    "Magic Misc/CFXR3 Magic Aura A (Runic).prefab");
+            }
+
+            if (isReturnBlade)
+            {
+                var swordTrail = PreferPrefab(
+                    vfx.MeleeSwing,
+                    "Sword Trails/Plain/CFXR4 Sword Trail PLAIN (360 Thin Spiral).prefab");
+                castPrefab = swordTrail;
+                projectileSpawnPrefab = swordTrail;
+                projectileHitPrefab = PreferPrefab(
+                    projectileHitPrefab,
+                    "Sword Trails/Plain/CFXR4 Sword Hit PLAIN (Cross).prefab",
+                    "Sword Trails/Plain/CFXR4 Sword Hit PLAIN (360).prefab");
+            }
+
+            if (isShardVolley)
+            {
+                var electricHit = PreferPrefab(
+                    vfx.SplitFlash,
+                    "Electric/CFXR3 Hit Electric C (Air).prefab");
+                castPrefab = electricHit;
+                projectileHitPrefab = electricHit;
+                projectileSplitPrefab = electricHit;
             }
 
             AddCue(
@@ -348,7 +407,7 @@ namespace CombatSystem.Editor
                         eventType = PresentationEventType.ProjectileSpawn,
                         anchorType = PresentationAnchorType.Projectile,
                         spawnSpace = PresentationSpawnSpace.LocalToAnchor,
-                        vfxPrefab = vfx.ProjectileTrail,
+                        vfxPrefab = projectileSpawnPrefab,
                         followAnchor = true,
                         maxLifetime = 1f,
                         sfx = audio.Cast,
@@ -366,7 +425,7 @@ namespace CombatSystem.Editor
                         eventType = PresentationEventType.ProjectileHit,
                         anchorType = PresentationAnchorType.PrimaryTarget,
                         spawnSpace = PresentationSpawnSpace.World,
-                        vfxPrefab = vfx.ProjectileImpact,
+                        vfxPrefab = projectileHitPrefab,
                         maxLifetime = 0.55f,
                         sfx = audio.Hit,
                         audioBus = AudioBusType.Sfx,
@@ -385,7 +444,7 @@ namespace CombatSystem.Editor
                             eventType = PresentationEventType.ProjectileReturn,
                             anchorType = PresentationAnchorType.Projectile,
                             spawnSpace = PresentationSpawnSpace.LocalToAnchor,
-                            vfxPrefab = vfx.ReturnFlash,
+                            vfxPrefab = projectileReturnPrefab,
                             followAnchor = true,
                             maxLifetime = 0.5f,
                             sfx = audio.Cast,
@@ -406,7 +465,7 @@ namespace CombatSystem.Editor
                             eventType = PresentationEventType.ProjectileSplit,
                             anchorType = PresentationAnchorType.Projectile,
                             spawnSpace = PresentationSpawnSpace.World,
-                            vfxPrefab = vfx.SplitFlash,
+                            vfxPrefab = projectileSplitPrefab,
                             maxLifetime = 0.5f,
                             sfx = audio.Hit,
                             audioBus = AudioBusType.Sfx,
@@ -513,7 +572,7 @@ namespace CombatSystem.Editor
                         spawnSpace = PresentationSpawnSpace.World,
                         filterByEffectType = true,
                         effectTypeFilter = EffectType.Damage,
-                        vfxPrefab = vfx.RevealMark,
+                        vfxPrefab = revealMarkPrefab,
                         maxLifetime = 0.75f,
                         sfx = audio.Buff,
                         audioBus = AudioBusType.Sfx,
@@ -562,6 +621,12 @@ namespace CombatSystem.Editor
             }
 
             cues.Add(cue);
+        }
+
+        private static GameObject PreferPrefab(GameObject fallback, params string[] relativePrefabPaths)
+        {
+            var loaded = LoadFirstPrefab(relativePrefabPaths);
+            return loaded != null ? loaded : fallback;
         }
 
         private static VfxPalette EnsureRuntimeVariantPrefabs()
