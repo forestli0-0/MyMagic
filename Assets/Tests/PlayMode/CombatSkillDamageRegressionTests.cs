@@ -156,6 +156,65 @@ namespace CombatSystem.Tests
         }
 
         [Test]
+        public void TryCast_CastConstraintBlocksCastAndSetsFailReason()
+        {
+            var caster = CreateUnit("Caster_CastConstraint");
+            CallMethod(caster.Resource, "SetCurrent", 50f);
+
+            var skill = CreateSkill(0f, 0f, null);
+            var markerModifier = CreateSkillCostModifier(0f);
+            var markerBuff = CreateBuffWithModifier(markerModifier);
+            CallMethod(caster.Buffs, "ApplyBuff", markerBuff, caster.Unit);
+
+            var notHasBuff = CreateCondition("NotHasBuff", "Caster", markerBuff);
+            var castConstraint = CreateCastConstraint(notHasBuff, "CastConstraintFailed");
+            SetPrivateField(
+                skill,
+                "castConstraints",
+                CreateTypedList(RequireType("CombatSystem.Data.SkillCastConstraint"), castConstraint));
+
+            Assert.IsFalse(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(
+                ParseEnum("CombatSystem.Data.SkillCastFailReason", "CastConstraintFailed"),
+                GetPropertyValue(caster.SkillUser, "LastCastFailReason"));
+            Assert.AreEqual(50f, GetFloatProperty(caster.Resource, "Current"), 0.01f);
+
+            CallMethod(caster.Buffs, "RemoveBuff", markerBuff);
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            Assert.AreEqual(
+                ParseEnum("CombatSystem.Data.SkillCastFailReason", "None"),
+                GetPropertyValue(caster.SkillUser, "LastCastFailReason"));
+        }
+
+        [Test]
+        public void MoveEffect_ThroughExplicitTarget_MovesPastTarget()
+        {
+            CreateSystems();
+            var caster = CreateUnit("MovePolicyCaster");
+            var target = CreateUnit("MovePolicyTarget");
+            caster.GameObject.transform.position = Vector3.zero;
+            target.GameObject.transform.position = new Vector3(2f, 0f, 0f);
+
+            var move = CreateMoveEffect(0.5f, 0f, "Dash", "ThroughExplicitTarget", "Default", 1f);
+            var trigger = ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart");
+            var casterTarget = CreateCombatTarget(caster.GameObject);
+            var context = CreateRuntimeContext(
+                caster,
+                null,
+                0UL,
+                -1,
+                null,
+                target.GameObject,
+                false,
+                Vector3.zero,
+                Vector3.right,
+                1);
+
+            CallMethod(effectExecutorSystem, "ExecuteEffect", move, context, casterTarget, trigger);
+            Assert.Greater(caster.GameObject.transform.position.x, 2.5f);
+        }
+
+        [Test]
         public void TryCast_FailsOnDeadExplicitTarget_NoCostNoCooldown()
         {
             var caster = CreateUnit("Caster_DeadTarget");
@@ -809,6 +868,28 @@ namespace CombatSystem.Tests
             return targeting;
         }
 
+        private object CreateCondition(string conditionTypeName, string subjectName, object buff = null)
+        {
+            var condition = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ConditionDefinition")));
+            var entryType = RequireType("CombatSystem.Data.ConditionEntry");
+            var entry = Activator.CreateInstance(entryType);
+            SetField(entry, "type", ParseEnum("CombatSystem.Data.ConditionType", conditionTypeName));
+            SetField(entry, "subject", ParseEnum("CombatSystem.Data.ConditionSubject", subjectName));
+            SetField(entry, "buff", buff);
+            SetPrivateField(condition, "op", ParseEnum("CombatSystem.Data.ConditionOperator", "All"));
+            SetPrivateField(condition, "entries", CreateTypedList(entryType, entry));
+            return condition;
+        }
+
+        private object CreateCastConstraint(object condition, string failReasonName)
+        {
+            var type = RequireType("CombatSystem.Data.SkillCastConstraint");
+            var constraint = Activator.CreateInstance(type);
+            SetField(constraint, "condition", condition);
+            SetField(constraint, "failReason", ParseEnum("CombatSystem.Data.SkillCastFailReason", failReasonName));
+            return constraint;
+        }
+
         private object CreateDamageEffect(float value, string damageTypeName, object scalingStat = null, float scalingRatio = 0f)
         {
             var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
@@ -831,6 +912,25 @@ namespace CombatSystem.Tests
             SetPrivateField(effect, "combatStateMode", ParseEnum("CombatSystem.Data.CombatStateEffectMode", modeName));
             SetPrivateField(effect, "combatStateFlags", ParseEnum("CombatSystem.Data.CombatStateFlags", flagsName));
             SetPrivateField(effect, "spellShieldCharges", spellShieldCharges);
+            return effect;
+        }
+
+        private object CreateMoveEffect(
+            float distance,
+            float speed,
+            string moveStyleName,
+            string destinationPolicyName,
+            string collisionPolicyName,
+            float targetOffset = 0.8f)
+        {
+            var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetPrivateField(effect, "effectType", ParseEnum("CombatSystem.Data.EffectType", "Move"));
+            SetPrivateField(effect, "moveStyle", ParseEnum("CombatSystem.Data.MoveStyle", moveStyleName));
+            SetPrivateField(effect, "moveDistance", distance);
+            SetPrivateField(effect, "moveSpeed", speed);
+            SetPrivateField(effect, "moveDestinationPolicy", ParseEnum("CombatSystem.Data.MoveDestinationPolicy", destinationPolicyName));
+            SetPrivateField(effect, "moveCollisionPolicy", ParseEnum("CombatSystem.Data.MoveCollisionPolicy", collisionPolicyName));
+            SetPrivateField(effect, "moveTargetOffset", targetOffset);
             return effect;
         }
 
@@ -934,26 +1034,37 @@ namespace CombatSystem.Tests
             return Activator.CreateInstance(RequireType(typeName));
         }
 
-        private object CreateRuntimeContext(UnitRig caster, object eventHub = null, ulong castId = 0UL, int stepIndex = -1)
+        private object CreateRuntimeContext(
+            UnitRig caster,
+            object eventHub = null,
+            ulong castId = 0UL,
+            int stepIndex = -1,
+            object skill = null,
+            GameObject explicitTarget = null,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default,
+            int sequencePhase = 1)
         {
             var contextType = RequireType("CombatSystem.Gameplay.SkillRuntimeContext");
             var args = new object[]
             {
                 caster != null ? caster.SkillUser : null,
                 caster != null ? caster.Unit : null,
-                null,
+                skill,
                 eventHub,
                 targetingSystem,
                 effectExecutorSystem,
-                false,
-                Vector3.zero,
-                Vector3.forward,
-                null,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                explicitTarget,
                 0f,
                 0f,
                 1f,
                 castId,
-                stepIndex
+                stepIndex,
+                sequencePhase
             };
 
             return Activator.CreateInstance(contextType, args);

@@ -21,8 +21,9 @@ MonoBehaviour:
   behaviorType: 0
   homing: 0
   homingTurnSpeed: 0
-  pierce: 0
-  maxPierce: 1
+  pierce: 1
+  maxPierce: 99
+  forceStopOnFirstHit: 0
   returnSpeedMultiplier: 1
   splitCount: 0
   splitAngle: 35

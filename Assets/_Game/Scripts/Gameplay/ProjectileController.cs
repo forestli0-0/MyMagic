@@ -272,6 +272,12 @@ namespace CombatSystem.Gameplay
             hitIds.Add(id);
             RaiseLifecycleEvent(ProjectileLifecycleType.Hit, hitTarget);
             ApplyHitEffects(hitTarget);
+            if (definition.ForceStopOnFirstHit && definition.BehaviorType != ProjectileBehaviorType.Return)
+            {
+                Despawn();
+                return;
+            }
+
             if (HandlePostHitBehavior(hitTarget))
             {
                 return;

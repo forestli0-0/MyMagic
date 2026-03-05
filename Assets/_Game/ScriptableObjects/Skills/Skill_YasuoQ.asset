@@ -61,25 +61,102 @@ MonoBehaviour:
   targeting: {fileID: 11400000, guid: b9e9266ee3fe2a442b516374dd5b0339, type: 2}
   tags:
   - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}
+  castConstraints: []
   steps:
   - trigger: 0
     delay: 0
     condition: {fileID: 11400000, guid: 7cf824ffa5c5f8d4e8a3876162b73e63, type: 2}
-    presentationCues: []
-    animationTrigger: 
-    vfxPrefab: {fileID: 6703250321131892297, guid: 2b987d41506d172419fa18578f6ac380,
-      type: 3}
-    sfx: {fileID: 0}
+    presentationCues:
+    - cueId: Auto_StepCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.5
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.85
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_DamageHit
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
     effects:
     - {fileID: 11400000, guid: 245526c453170a24eab317d82085247b, type: 2}
   - trigger: 0
     delay: 0
     condition: {fileID: 11400000, guid: d34dbc9621d016840965da8bd454288e, type: 2}
-    presentationCues: []
-    animationTrigger: 
-    vfxPrefab: {fileID: 8525990746615576120, guid: b85d21f3b8fed714bacf0c4fd50fa512,
-      type: 3}
-    sfx: {fileID: 0}
+    presentationCues:
+    - cueId: Auto_StepCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.5
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.85
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_DamageHit
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
     effects:
     - {fileID: 11400000, guid: 245526c453170a24eab317d82085247b, type: 2}
   - trigger: 0
@@ -128,9 +205,68 @@ MonoBehaviour:
       audioPitch: 1
       audioSpatialBlend: 1
       worldPosition: {x: 0, y: 0, z: 0}
-    animationTrigger: 
-    vfxPrefab: {fileID: 6710139492206580332, guid: 95b8d3d65b5d7f1409c4ed1723887826,
-      type: 3}
-    sfx: {fileID: 0}
+    - cueId: Auto_StepCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.5
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.85
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_ProjectileSpawn
+      eventType: 3
+      anchorType: 4
+      spawnSpace: 1
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 1590415177872986601, guid: acdb90624a404aa438447006f1026065,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 1
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_ProjectileHit
+      eventType: 4
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath: 
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger: 
+      vfxPrefab: {fileID: 2504214343621411470, guid: 3ed0d324122d7b24eaec75c55c74aafc,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.55
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
     effects:
     - {fileID: 11400000, guid: 5691b5bdee9fa444db2f5a1c1d429609, type: 2}

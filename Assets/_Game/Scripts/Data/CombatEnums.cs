@@ -206,6 +206,28 @@ namespace CombatSystem.Data
     }
 
     /// <summary>
+    /// 位移目的地策略。
+    /// </summary>
+    public enum MoveDestinationPolicy
+    {
+        Legacy = 0,             // 兼容旧逻辑：按瞄准方向/朝向位移
+        AimDirection = 1,       // 始终按瞄准方向位移
+        ToAimPoint = 2,         // 朝瞄准点位移
+        ToExplicitTarget = 3,   // 朝显式目标位移
+        ThroughExplicitTarget = 4, // 穿过显式目标（落到目标后方）
+        BehindExplicitTarget = 5   // 落到显式目标身后（由 Offset 控制）
+    }
+
+    /// <summary>
+    /// 位移碰撞策略。
+    /// </summary>
+    public enum MoveCollisionPolicy
+    {
+        Default = 0,                            // 保持 CharacterController 碰撞
+        IgnoreCharacterControllerCollisions = 1 // 强制位移期间忽略 CharacterController 碰撞
+    }
+
+    /// <summary>
     /// 控制效果类型。
     /// </summary>
     public enum ControlType
@@ -285,6 +307,31 @@ namespace CombatSystem.Data
     {
         Replace,    // 替换已有队列
         Ignore      // 忽略新的请求
+    }
+
+    /// <summary>
+    /// 技能施放失败原因。
+    /// </summary>
+    public enum SkillCastFailReason
+    {
+        None = 0,
+        InvalidSkill = 1,
+        TauntRestricted = 2,
+        LockedOut = 3,
+        CastingBlocked = 4,
+        BasicAttackBlocked = 5,
+        CasterDead = 6,
+        RecastTargetInvalid = 7,
+        Cooldown = 8,
+        TargetDead = 9,
+        AmmoDepleted = 10,
+        InsufficientResource = 11,
+        CastConstraintFailed = 12,
+        OutOfRange = 13,
+        NoValidTargets = 14,
+        NoExecutableStep = 15,
+        ResourceSpendFailed = 16,
+        Queued = 17
     }
 
     /// <summary>

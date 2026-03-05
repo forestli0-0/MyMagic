@@ -364,7 +364,7 @@ namespace CombatSystem.Gameplay
         /// </summary>
         private static void ApplyMove(float moveDistance, float moveSpeed, EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
-            if (target.Transform == null || moveDistance == 0f)
+            if (target.Transform == null)
             {
                 return;
             }
@@ -372,7 +372,7 @@ namespace CombatSystem.Gameplay
             // 根据位移类型计算方向
             var direction = Vector3.zero;
             var resolvedDistance = moveDistance;
-            var ignoreCollisionsDuringForcedMove = false;
+            var ignoreCollisionsDuringForcedMove = effect.MoveCollisionPolicy == MoveCollisionPolicy.IgnoreCharacterControllerCollisions;
             if (effect.MoveStyle == MoveStyle.Knockback || effect.MoveStyle == MoveStyle.Pull)
             {
                 // 击退/拉拽：基于施法者到目标的方向
@@ -387,41 +387,49 @@ namespace CombatSystem.Gameplay
             }
             else
             {
-                // 冲刺等：优先使用瞄准方向
-                if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
+                // 冲刺等：优先走配置化目的地策略，未命中时回退旧逻辑。
+                if (!TryResolveMoveByPolicy(effect, context, target, ref direction, ref resolvedDistance, ref ignoreCollisionsDuringForcedMove))
                 {
-                    direction = context.AimDirection;
-                }
-                else
-                {
-                    direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : target.Transform.forward;
-                }
-
-                // 显式目标冲刺（如亚索 E）：自动朝目标方向并越过目标落到身后。
-                var isSelfDash = context.CasterUnit != null
-                    && target.Unit == context.CasterUnit
-                    && context.ExplicitTarget != null
-                    && (effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap);
-                if (isSelfDash)
-                {
-                    var casterPos = context.CasterUnit.transform.position;
-                    var explicitTargetTransform = context.ExplicitTarget.transform;
-                    if (explicitTargetTransform != null)
+                    if (context.HasAimPoint && context.AimDirection.sqrMagnitude > 0.0001f)
                     {
-                        var toTarget = explicitTargetTransform.position - casterPos;
-                        toTarget.y = 0f;
-                        if (toTarget.sqrMagnitude > 0.0001f)
+                        direction = context.AimDirection;
+                    }
+                    else
+                    {
+                        direction = context.CasterUnit != null ? context.CasterUnit.transform.forward : target.Transform.forward;
+                    }
+
+                    // 兼容旧资产：显式目标冲刺默认穿过目标落点。
+                    var isSelfDash = context.CasterUnit != null
+                        && target.Unit == context.CasterUnit
+                        && context.ExplicitTarget != null
+                        && (effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap);
+                    if (isSelfDash)
+                    {
+                        var casterPos = context.CasterUnit.transform.position;
+                        var explicitTargetTransform = context.ExplicitTarget.transform;
+                        if (explicitTargetTransform != null)
                         {
-                            direction = toTarget.normalized;
-                            var throughDistance = toTarget.magnitude + 0.8f;
-                            resolvedDistance = Mathf.Max(resolvedDistance, throughDistance);
-                            ignoreCollisionsDuringForcedMove = true;
+                            var toTarget = explicitTargetTransform.position - casterPos;
+                            toTarget.y = 0f;
+                            if (toTarget.sqrMagnitude > 0.0001f)
+                            {
+                                direction = toTarget.normalized;
+                                var throughDistance = toTarget.magnitude + 0.8f;
+                                resolvedDistance = Mathf.Max(resolvedDistance, throughDistance);
+                                ignoreCollisionsDuringForcedMove = true;
+                            }
                         }
                     }
                 }
             }
 
             if (direction.sqrMagnitude <= 0f)
+            {
+                return;
+            }
+
+            if (Mathf.Approximately(resolvedDistance, 0f))
             {
                 return;
             }
@@ -444,6 +452,96 @@ namespace CombatSystem.Gameplay
 
             // 直接位移（兼容未接入 MovementComponent 的目标）
             target.Transform.position += direction * resolvedDistance;
+        }
+
+        private static bool TryResolveMoveByPolicy(
+            EffectDefinition effect,
+            SkillRuntimeContext context,
+            CombatTarget target,
+            ref Vector3 direction,
+            ref float resolvedDistance,
+            ref bool ignoreCollisionsDuringForcedMove)
+        {
+            if (effect == null || effect.MoveDestinationPolicy == MoveDestinationPolicy.Legacy)
+            {
+                return false;
+            }
+
+            var origin = target.Transform != null ? target.Transform.position : Vector3.zero;
+            Vector3 toDestination;
+            switch (effect.MoveDestinationPolicy)
+            {
+                case MoveDestinationPolicy.AimDirection:
+                    if (context.AimDirection.sqrMagnitude <= 0.0001f)
+                    {
+                        return false;
+                    }
+
+                    direction = context.AimDirection.normalized;
+                    return true;
+                case MoveDestinationPolicy.ToAimPoint:
+                    if (!context.HasAimPoint)
+                    {
+                        return false;
+                    }
+
+                    toDestination = context.AimPoint - origin;
+                    toDestination.y = 0f;
+                    if (toDestination.sqrMagnitude <= 0.0001f)
+                    {
+                        return false;
+                    }
+
+                    direction = toDestination.normalized;
+                    if (resolvedDistance <= 0f)
+                    {
+                        resolvedDistance = toDestination.magnitude;
+                    }
+
+                    return true;
+                case MoveDestinationPolicy.ToExplicitTarget:
+                    if (context.ExplicitTarget == null || context.ExplicitTarget.transform == null)
+                    {
+                        return false;
+                    }
+
+                    toDestination = context.ExplicitTarget.transform.position - origin;
+                    toDestination.y = 0f;
+                    if (toDestination.sqrMagnitude <= 0.0001f)
+                    {
+                        return false;
+                    }
+
+                    direction = toDestination.normalized;
+                    if (resolvedDistance <= 0f)
+                    {
+                        resolvedDistance = toDestination.magnitude;
+                    }
+
+                    return true;
+                case MoveDestinationPolicy.ThroughExplicitTarget:
+                case MoveDestinationPolicy.BehindExplicitTarget:
+                    if (context.ExplicitTarget == null || context.ExplicitTarget.transform == null)
+                    {
+                        return false;
+                    }
+
+                    toDestination = context.ExplicitTarget.transform.position - origin;
+                    toDestination.y = 0f;
+                    if (toDestination.sqrMagnitude <= 0.0001f)
+                    {
+                        return false;
+                    }
+
+                    direction = toDestination.normalized;
+                    var extraOffset = Mathf.Max(0f, effect.MoveTargetOffset);
+                    var targetDistance = toDestination.magnitude + extraOffset;
+                    resolvedDistance = Mathf.Max(resolvedDistance, targetDistance);
+                    ignoreCollisionsDuringForcedMove = true;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static void RegisterAggression(

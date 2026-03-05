@@ -70,6 +70,8 @@ namespace CombatSystem.Data
         [SerializeField] private TargetingDefinition targeting;
         [Tooltip("技能所属标签")]
         [SerializeField] private List<TagDefinition> tags = new List<TagDefinition>();
+        [Tooltip("施法前置约束（未满足时直接阻止施法，不进入步骤执行）")]
+        [SerializeField] private List<SkillCastConstraint> castConstraints = new List<SkillCastConstraint>();
         
         [Header("执行流程")]
         [Tooltip("技能触发后的具体执行步骤列表")]
@@ -106,6 +108,7 @@ namespace CombatSystem.Data
                                         && sequenceConfig.ResetWindow > 0f;
         public TargetingDefinition Targeting => targeting;
         public IReadOnlyList<TagDefinition> Tags => tags;
+        public IReadOnlyList<SkillCastConstraint> CastConstraints => castConstraints;
         public IReadOnlyList<SkillStep> Steps => steps;
 
         /// <summary>
@@ -187,6 +190,18 @@ namespace CombatSystem.Data
         
         [Header("战斗效果")]
         public List<EffectDefinition> effects = new List<EffectDefinition>(); // 该步骤产生的所有直接效果
+    }
+
+    /// <summary>
+    /// 技能施法前置约束。用于在 CanCast 阶段提前阻断不满足条件的施法请求。
+    /// </summary>
+    [Serializable]
+    public class SkillCastConstraint
+    {
+        [Tooltip("约束条件，返回 false 时阻止施法")]
+        public ConditionDefinition condition;
+        [Tooltip("约束失败时返回的错误码（供 UI/日志使用）")]
+        public SkillCastFailReason failReason = SkillCastFailReason.CastConstraintFailed;
     }
 
     /// <summary>

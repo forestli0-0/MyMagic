@@ -1288,8 +1288,8 @@ namespace CombatSystem.Editor
                     0.25f,
                     false,
                     0f,
-                    false,
-                    1,
+                    true,
+                    99,
                     new Object[] { assets.EffectYasuoQTornadoDamage, assets.EffectYasuoQTornadoApplyAirborneTag });
 
                 ConfigureProjectile(
@@ -3869,7 +3869,8 @@ namespace CombatSystem.Editor
             int maxSplitDepth = 1,
             float orbitRadius = 2.5f,
             float orbitAngularSpeed = 240f,
-            float beamLength = 6f)
+            float beamLength = 6f,
+            bool forceStopOnFirstHit = false)
         {
             var so = new SerializedObject(projectile);
             SetDefinitionBase(so, id, displayName);
@@ -3889,6 +3890,7 @@ namespace CombatSystem.Editor
             so.FindProperty("orbitRadius").floatValue = orbitRadius;
             so.FindProperty("orbitAngularSpeed").floatValue = orbitAngularSpeed;
             so.FindProperty("beamLength").floatValue = beamLength;
+            so.FindProperty("forceStopOnFirstHit").boolValue = forceStopOnFirstHit;
             SetObjectList(so.FindProperty("onHitEffects"), onHitEffects);
             so.ApplyModifiedPropertiesWithoutUndo();
         }

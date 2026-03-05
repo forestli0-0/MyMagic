@@ -88,6 +88,8 @@ namespace CombatSystem.Gameplay
         private bool hasQueuedCast;
         // 单槽技能请求队列（用于输入缓冲）
         private QueuedCast queuedCast;
+        // 最近一次施放失败原因（用于 UI/调试）
+        private SkillCastFailReason lastCastFailReason = SkillCastFailReason.None;
 
         /// <summary>当技能开始施法时触发</summary>
         public event Action<SkillCastEvent> SkillCastStarted;
@@ -112,6 +114,8 @@ namespace CombatSystem.Gameplay
         public bool CanRotateWhileCasting => !isCasting || (currentSkill != null && currentSkill.CanRotateWhileCasting);
         /// <summary>是否处于引导阶段</summary>
         public bool IsChanneling => isCasting && currentChannelTime > 0f && Time.time >= castStartTime + currentCastTime;
+        /// <summary>最近一次施放失败原因</summary>
+        public SkillCastFailReason LastCastFailReason => lastCastFailReason;
 
         private void Reset()
         {
@@ -593,7 +597,7 @@ namespace CombatSystem.Gameplay
         {
             if (skill == null)
             {
-                return false;
+                return FailCast(SkillCastFailReason.InvalidSkill);
             }
 
             // Ensure presentation listeners exist before any cast events are dispatched.
@@ -605,12 +609,12 @@ namespace CombatSystem.Gameplay
             {
                 if (skill != BasicAttack)
                 {
-                    return false;
+                    return FailCast(SkillCastFailReason.TauntRestricted);
                 }
 
                 if (taunter == null)
                 {
-                    return false;
+                    return FailCast(SkillCastFailReason.TauntRestricted);
                 }
 
                 explicitTarget = taunter.gameObject;
@@ -623,7 +627,7 @@ namespace CombatSystem.Gameplay
             if (isRecastCast
                 && !ResolveRecastTarget(skill, activeRecast, explicitTarget, out resolvedRecastTarget))
             {
-                return false;
+                return FailCast(SkillCastFailReason.RecastTargetInvalid);
             }
 
             if (isRecastCast)
@@ -633,19 +637,20 @@ namespace CombatSystem.Gameplay
 
             if (!IsExplicitTargetAlive(explicitTarget))
             {
-                return false;
+                return FailCast(SkillCastFailReason.TargetDead);
             }
 
             var sequencePhase = GetSequencePhaseForCast(skill, Time.time);
-            if (!CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection, sequencePhase))
+            if (!CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection, sequencePhase, out var canCastFailReason))
             {
                 // 施法/后摇/GCD期间允许进入输入缓冲
                 if (IsLockedOut() && TryQueueCast(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, chargeDurationSeconds))
                 {
+                    lastCastFailReason = SkillCastFailReason.Queued;
                     return false;
                 }
 
-                return false;
+                return FailCast(canCastFailReason);
             }
 
             if (skill != null && skill.Targeting != null && skill.Targeting.Origin == TargetingOrigin.TargetPoint && !hasAimPoint)
@@ -697,7 +702,7 @@ namespace CombatSystem.Gameplay
             // 显式目标统一按“当前帧”的形状/距离进行校验，避免旧快照导致超范围命中。
             if (explicitTarget != null && !IsTargetInRange(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
             {
-                return false;
+                return FailCast(SkillCastFailReason.OutOfRange);
             }
 
             // 收集目标
@@ -705,13 +710,13 @@ namespace CombatSystem.Gameplay
             if (!CollectTargets(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, targets))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
-                return false;
+                return FailCast(SkillCastFailReason.NoValidTargets);
             }
 
             if (!FilterCastTargetsByAlivePolicy(skill, targets))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
-                return false;
+                return FailCast(SkillCastFailReason.NoValidTargets);
             }
 
             var chargeDuration = Mathf.Max(0f, chargeDurationSeconds);
@@ -737,7 +742,7 @@ namespace CombatSystem.Gameplay
                 && !HasExecutableConditionalCastStartStep(context, targets))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
-                return false;
+                return FailCast(SkillCastFailReason.NoExecutableStep);
             }
 
             var primaryTarget = targets.Count > 0 ? targets[0] : default;
@@ -770,7 +775,7 @@ namespace CombatSystem.Gameplay
             if (!SpendResource(skill, resourceCost))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
-                return false;
+                return FailCast(SkillCastFailReason.ResourceSpendFailed);
             }
 
             if (!ConsumeAmmo(skill))
@@ -782,7 +787,7 @@ namespace CombatSystem.Gameplay
                 }
 
                 SimpleListPool<CombatTarget>.Release(targets);
-                return false;
+                return FailCast(SkillCastFailReason.AmmoDepleted);
             }
 
             var delayCooldownForRecast = skill.SupportsRecast
@@ -869,6 +874,7 @@ namespace CombatSystem.Gameplay
                 RaiseSkillCastCompleted(context, castTime, channelTime, isChannel);
             }
 
+            lastCastFailReason = SkillCastFailReason.None;
             return true;
         }
 
@@ -977,7 +983,21 @@ namespace CombatSystem.Gameplay
         /// <returns>若满足所有释放条件则返回 true</returns>
         public bool CanCast(SkillDefinition skill)
         {
-            return CanCastInternal(skill, false, null, false, default, default);
+            return CanCastInternal(skill, false, null, false, default, default, -1, out _);
+        }
+
+        /// <summary>
+        /// 检查指定技能是否可以释放，并返回失败原因。
+        /// </summary>
+        public bool CanCast(SkillDefinition skill, out SkillCastFailReason failReason)
+        {
+            return CanCastInternal(skill, false, null, false, default, default, -1, out failReason);
+        }
+
+        private bool FailCast(SkillCastFailReason failReason)
+        {
+            lastCastFailReason = failReason;
+            return false;
         }
 
         private bool TryHandleTaunt()
@@ -1137,7 +1157,7 @@ namespace CombatSystem.Gameplay
             Vector3 aimPoint = default,
             Vector3 aimDirection = default)
         {
-            return CanCastInternal(skill, true, explicitTarget, hasAimPoint, aimPoint, aimDirection);
+            return CanCastInternal(skill, true, explicitTarget, hasAimPoint, aimPoint, aimDirection, -1, out _);
         }
 
         private bool CanCastInternal(
@@ -1149,34 +1169,62 @@ namespace CombatSystem.Gameplay
             Vector3 aimDirection,
             int sequencePhase = -1)
         {
+            return CanCastInternal(
+                skill,
+                ignoreLockouts,
+                explicitTarget,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                sequencePhase,
+                out _);
+        }
+
+        private bool CanCastInternal(
+            SkillDefinition skill,
+            bool ignoreLockouts,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            int sequencePhase,
+            out SkillCastFailReason failReason)
+        {
+            failReason = SkillCastFailReason.None;
             if (skill == null)
             {
+                failReason = SkillCastFailReason.InvalidSkill;
                 return false;
             }
 
             var isTauntBasic = IsTauntBasicAttack(skill);
             if (TryGetTauntSource(out _) && !isTauntBasic)
             {
+                failReason = SkillCastFailReason.TauntRestricted;
                 return false;
             }
 
             if (!ignoreLockouts && IsLockedOut())
             {
+                failReason = SkillCastFailReason.LockedOut;
                 return false;
             }
 
             if (buffController != null && buffController.HasControlFlag(ControlFlag.BlocksCasting) && !isTauntBasic)
             {
+                failReason = SkillCastFailReason.CastingBlocked;
                 return false;
             }
 
             if (skill == BasicAttack && buffController != null && buffController.HasControlFlag(ControlFlag.BlocksBasicAttack) && !isTauntBasic)
             {
+                failReason = SkillCastFailReason.BasicAttackBlocked;
                 return false;
             }
 
             if (health != null && !health.IsAlive)
             {
+                failReason = SkillCastFailReason.CasterDead;
                 return false;
             }
 
@@ -1184,34 +1232,106 @@ namespace CombatSystem.Gameplay
             if (isRecastCast
                 && !ResolveRecastTarget(skill, recastState, explicitTarget, out _))
             {
+                failReason = SkillCastFailReason.RecastTargetInvalid;
                 return false;
             }
 
             if (!isRecastCast && cooldown != null && !cooldown.IsReady(skill))
             {
+                failReason = SkillCastFailReason.Cooldown;
                 return false;
             }
 
             if (!IsExplicitTargetAlive(explicitTarget))
             {
+                failReason = SkillCastFailReason.TargetDead;
                 return false;
             }
 
             if (!HasAmmo(skill))
             {
+                failReason = SkillCastFailReason.AmmoDepleted;
                 return false;
             }
 
             var resolvedSequencePhase = sequencePhase > 0
                 ? sequencePhase
                 : GetSequencePhaseForCast(skill, Time.time);
+            if (!EvaluateCastConstraints(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase, out failReason))
+            {
+                return false;
+            }
+
             var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
             {
                 cost = 0f;
             }
 
-            return HasResource(skill, cost);
+            if (!HasResource(skill, cost))
+            {
+                failReason = SkillCastFailReason.InsufficientResource;
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool EvaluateCastConstraints(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            int sequencePhase,
+            out SkillCastFailReason failReason)
+        {
+            failReason = SkillCastFailReason.None;
+            var constraints = skill != null ? skill.CastConstraints : null;
+            if (constraints == null || constraints.Count == 0)
+            {
+                return true;
+            }
+
+            CombatTarget target = default;
+            if (explicitTarget != null && !CombatTarget.TryCreate(explicitTarget, out target))
+            {
+                failReason = SkillCastFailReason.NoValidTargets;
+                return false;
+            }
+
+            var context = CreateContext(
+                skill,
+                hasAimPoint,
+                aimPoint,
+                aimDirection,
+                explicitTarget,
+                0f,
+                0f,
+                1f,
+                0UL,
+                -1,
+                sequencePhase);
+            for (int i = 0; i < constraints.Count; i++)
+            {
+                var constraint = constraints[i];
+                if (constraint == null || constraint.condition == null)
+                {
+                    continue;
+                }
+
+                if (ConditionEvaluator.Evaluate(constraint.condition, context, target))
+                {
+                    continue;
+                }
+
+                failReason = constraint.failReason != SkillCastFailReason.None
+                    ? constraint.failReason
+                    : SkillCastFailReason.CastConstraintFailed;
+                return false;
+            }
+
+            return true;
         }
 
         private bool TryQueueCast(

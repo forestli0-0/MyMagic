@@ -30,6 +30,8 @@ namespace CombatSystem.Data
         [SerializeField] private bool pierce;
         [Tooltip("最大穿透目标数")]
         [SerializeField] private int maxPierce = 1;
+        [Tooltip("命中第一个有效目标后是否立即结束投射物")]
+        [SerializeField] private bool forceStopOnFirstHit;
         [Tooltip("回返时速度倍率")]
         [SerializeField] private float returnSpeedMultiplier = 1f;
         [Tooltip("命中后分裂数量（0=不分裂）")]
@@ -57,6 +59,7 @@ namespace CombatSystem.Data
         public float HomingTurnSpeed => homingTurnSpeed;
         public bool Pierce => pierce;
         public int MaxPierce => maxPierce;
+        public bool ForceStopOnFirstHit => forceStopOnFirstHit;
         public float ReturnSpeedMultiplier => Mathf.Max(0f, returnSpeedMultiplier);
         public int SplitCount => Mathf.Max(0, splitCount);
         public float SplitAngle => Mathf.Max(0f, splitAngle);

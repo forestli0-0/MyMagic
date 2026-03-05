@@ -71,6 +71,10 @@ namespace CombatSystem.Data
 
         [Header("位移相关")]
         [SerializeField] private MoveStyle moveStyle;
+        [SerializeField] private MoveDestinationPolicy moveDestinationPolicy = MoveDestinationPolicy.Legacy;
+        [SerializeField] private MoveCollisionPolicy moveCollisionPolicy = MoveCollisionPolicy.Default;
+        [Tooltip("目标位移策略附加偏移（例如穿过目标后再向前推进的距离）")]
+        [SerializeField] private float moveTargetOffset = 0.8f;
         [SerializeField] private float moveDistance;
         [SerializeField] private float moveSpeed;
 
@@ -99,6 +103,9 @@ namespace CombatSystem.Data
         public float Duration => duration;
         public float Interval => interval;
         public MoveStyle MoveStyle => moveStyle;
+        public MoveDestinationPolicy MoveDestinationPolicy => moveDestinationPolicy;
+        public MoveCollisionPolicy MoveCollisionPolicy => moveCollisionPolicy;
+        public float MoveTargetOffset => moveTargetOffset;
         public float MoveDistance => moveDistance;
         public float MoveSpeed => moveSpeed;
         public StatDefinition ScalingStat => scalingStat;
