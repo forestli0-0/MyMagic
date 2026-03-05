@@ -202,6 +202,14 @@ namespace CombatSystem.Gameplay
             {
                 health.Died -= HandleUnitDied;
             }
+
+            ClearAllPendingSteps();
+            hasQueuedCast = false;
+            queuedCast = default;
+            currentQueueWindow = 0f;
+            recoveryEndTime = 0f;
+            gcdEndTime = 0f;
+            ClearCastState();
         }
 
         /// <summary>
@@ -992,6 +1000,33 @@ namespace CombatSystem.Gameplay
         public bool CanCast(SkillDefinition skill, out SkillCastFailReason failReason)
         {
             return CanCastInternal(skill, false, null, false, default, default, -1, out failReason);
+        }
+
+        /// <summary>
+        /// 检查指定技能在当前目标/瞄准上下文下是否可释放。
+        /// </summary>
+        public bool CanCast(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
+        {
+            return CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection, -1, out _);
+        }
+
+        /// <summary>
+        /// 检查指定技能在当前目标/瞄准上下文下是否可释放，并返回失败原因。
+        /// </summary>
+        public bool CanCast(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            out SkillCastFailReason failReason,
+            bool hasAimPoint = false,
+            Vector3 aimPoint = default,
+            Vector3 aimDirection = default)
+        {
+            return CanCastInternal(skill, false, explicitTarget, hasAimPoint, aimPoint, aimDirection, -1, out failReason);
         }
 
         private bool FailCast(SkillCastFailReason failReason)
@@ -1921,9 +1956,15 @@ namespace CombatSystem.Gameplay
                 }
 
                 // 对该目标执行所有效果
+                var spellShieldChargesBefore = GetSpellShieldCharges(target);
                 for (int j = 0; j < effects.Count; j++)
                 {
                     effectExecutor.ExecuteEffect(effects[j], context, target, pending.Trigger);
+                    if (HasSpellShieldConsumed(target, spellShieldChargesBefore))
+                    {
+                        // 护盾命中后终止该目标本次步骤的剩余效果，避免“先挡伤害后吃 Debuff”。
+                        break;
+                    }
                 }
             }
 
@@ -2753,6 +2794,41 @@ namespace CombatSystem.Gameplay
             }
 
             ReleaseHandleInternal(handle);
+        }
+
+        private static int GetSpellShieldCharges(CombatTarget target)
+        {
+            if (target.State == null || !target.State.HasFlag(CombatStateFlags.SpellShielded))
+            {
+                return 0;
+            }
+
+            return target.State.SpellShieldCharges;
+        }
+
+        private static bool HasSpellShieldConsumed(CombatTarget target, int chargesBefore)
+        {
+            if (chargesBefore <= 0 || target.State == null)
+            {
+                return false;
+            }
+
+            return target.State.SpellShieldCharges < chargesBefore;
+        }
+
+        private void ClearAllPendingSteps()
+        {
+            if (pendingSteps.Count <= 0)
+            {
+                return;
+            }
+
+            for (var i = pendingSteps.Count - 1; i >= 0; i--)
+            {
+                ReleaseHandle(pendingSteps[i].Targets);
+            }
+
+            pendingSteps.Clear();
         }
 
         /// <summary>

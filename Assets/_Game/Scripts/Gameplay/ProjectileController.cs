@@ -351,14 +351,6 @@ namespace CombatSystem.Gameplay
 
         private void ApplyHitEffects(CombatTarget hitTarget)
         {
-            if (hitTarget.State != null
-                && hitTarget.State.HasFlag(CombatStateFlags.SpellShielded)
-                && IsHostileTarget(hitTarget)
-                && hitTarget.State.ConsumeSpellShield())
-            {
-                return;
-            }
-
             if (definition.BehaviorType == ProjectileBehaviorType.Split && definition.SplitCount > 0)
             {
                 SpawnSplitProjectiles();
@@ -369,22 +361,44 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            var spellShieldChargesBefore = GetSpellShieldCharges(hitTarget);
+            var blockedBySpellShield = false;
             for (int i = 0; i < definition.OnHitEffects.Count; i++)
             {
                 context.Executor?.ExecuteEffect(definition.OnHitEffects[i], context, hitTarget, SkillStepTrigger.OnProjectileHit);
+                if (HasSpellShieldConsumed(hitTarget, spellShieldChargesBefore))
+                {
+                    blockedBySpellShield = true;
+                    break;
+                }
+            }
+
+            if (blockedBySpellShield)
+            {
+                return;
             }
 
             context.Caster?.NotifyProjectileHit(context, hitTarget);
         }
 
-        private bool IsHostileTarget(CombatTarget hitTarget)
+        private static int GetSpellShieldCharges(CombatTarget target)
         {
-            if (context.CasterUnit == null || context.CasterUnit.Team == null || hitTarget.Team == null)
+            if (target.State == null || !target.State.HasFlag(CombatStateFlags.SpellShielded))
             {
-                return true;
+                return 0;
             }
 
-            return !context.CasterUnit.Team.IsSameTeam(hitTarget.Team);
+            return target.State.SpellShieldCharges;
+        }
+
+        private static bool HasSpellShieldConsumed(CombatTarget target, int chargesBefore)
+        {
+            if (chargesBefore <= 0 || target.State == null)
+            {
+                return false;
+            }
+
+            return target.State.SpellShieldCharges < chargesBefore;
         }
 
         private bool HandlePostHitBehavior(CombatTarget hitTarget)

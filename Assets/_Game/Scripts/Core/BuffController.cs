@@ -687,9 +687,15 @@ namespace CombatSystem.Core
                 }
 
                 var mappedTrigger = MapTrigger(triggerType);
+                var spellShieldChargesBefore = GetSpellShieldCharges(target);
                 for (int j = 0; j < trigger.effects.Count; j++)
                 {
                     effectExecutor.ExecuteEffect(trigger.effects[j], execContext, target, mappedTrigger);
+                    if (HasSpellShieldConsumed(target, spellShieldChargesBefore))
+                    {
+                        // 护盾命中后中断同一触发器的剩余效果，避免后续 Debuff 透过护盾。
+                        break;
+                    }
                 }
             }
         }
@@ -733,6 +739,26 @@ namespace CombatSystem.Core
                 context.CastId,
                 context.StepIndex,
                 context.SequencePhase);
+        }
+
+        private static int GetSpellShieldCharges(CombatTarget target)
+        {
+            if (target.State == null || !target.State.HasFlag(CombatStateFlags.SpellShielded))
+            {
+                return 0;
+            }
+
+            return target.State.SpellShieldCharges;
+        }
+
+        private static bool HasSpellShieldConsumed(CombatTarget target, int chargesBefore)
+        {
+            if (chargesBefore <= 0 || target.State == null)
+            {
+                return false;
+            }
+
+            return target.State.SpellShieldCharges < chargesBefore;
         }
 
         #endregion

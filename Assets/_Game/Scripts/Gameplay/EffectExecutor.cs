@@ -76,6 +76,11 @@ namespace CombatSystem.Gameplay
             }
         }
 
+        private void OnDisable()
+        {
+            pendingEffects.Clear();
+        }
+
         /// <summary>
         /// 执行单个效果。
         /// </summary>

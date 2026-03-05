@@ -1102,7 +1102,13 @@ namespace CombatSystem.AI
             }
 
             // 冷却/资源检查
-            if (!skillUser.CanCast(rule.skill))
+            var explicitTarget = currentTarget.IsValid ? currentTarget.GameObject : null;
+            if (!skillUser.CanCast(rule.skill, explicitTarget))
+            {
+                return false;
+            }
+
+            if (explicitTarget != null && !skillUser.IsTargetInRangePreview(rule.skill, explicitTarget))
             {
                 return false;
             }
