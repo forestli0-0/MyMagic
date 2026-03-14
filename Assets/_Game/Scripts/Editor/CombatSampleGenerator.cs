@@ -3574,9 +3574,7 @@ namespace CombatSystem.Editor
             var fill = fillRect.gameObject.AddComponent<Image>();
             fill.sprite = GetDefaultUISprite();
             fill.color = fillColor;
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillOrigin = 0;
+            fill.type = fill.sprite != null && fill.sprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
             fill.fillAmount = 1f;
             fill.raycastTarget = false;
 
@@ -3611,9 +3609,7 @@ namespace CombatSystem.Editor
             var fill = fillRect.gameObject.AddComponent<Image>();
             fill.sprite = GetDefaultUISprite();
             fill.color = new Color(0.9f, 0.7f, 0.2f, 1f);
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillOrigin = 0;
+            fill.type = fill.sprite != null && fill.sprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
             fill.fillAmount = 0f;
             fill.raycastTarget = false;
 

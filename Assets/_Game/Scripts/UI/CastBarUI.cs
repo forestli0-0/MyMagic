@@ -11,7 +11,7 @@ namespace CombatSystem.UI
     public class CastBarUI : MonoBehaviour
     {
         [Header("UI 元素")]
-        [Tooltip("进度填充 Image（需设置为 Filled 类型）")]
+        [Tooltip("进度填充 Image（会在运行时按条形宽度更新）")]
         [SerializeField] private Image fill;
         
         [Tooltip("显示技能名称的文本组件")]
@@ -56,10 +56,7 @@ namespace CombatSystem.UI
 
             // 计算施法进度（0~1）
             var progress = Mathf.Clamp01((Time.time - phaseStartTime) / phaseDuration);
-            if (fill != null)
-            {
-                fill.fillAmount = progress;
-            }
+            ApplyFillProgress(progress);
 
             // 进度完成后自动隐藏
             if (progress >= 1f)
@@ -121,7 +118,7 @@ namespace CombatSystem.UI
 
             if (fill != null)
             {
-                fill.fillAmount = 0f;
+                ApplyFillProgress(0f);
             }
 
             SetVisible(false);
@@ -138,10 +135,7 @@ namespace CombatSystem.UI
                 label.text = currentSkill.DisplayName;
             }
 
-            if (fill != null)
-            {
-                fill.fillAmount = 0f;
-            }
+            ApplyFillProgress(0f);
         }
 
         /// <summary>
@@ -176,6 +170,39 @@ namespace CombatSystem.UI
             {
                 canvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
+        }
+
+        private void ApplyFillProgress(float normalized)
+        {
+            if (fill == null)
+            {
+                return;
+            }
+
+            normalized = Mathf.Clamp01(normalized);
+
+            var fillRect = fill.rectTransform;
+            if (fillRect == null)
+            {
+                fill.type = Image.Type.Filled;
+                fill.fillMethod = Image.FillMethod.Horizontal;
+                fill.fillOrigin = 0;
+                fill.fillAmount = normalized;
+                fill.enabled = normalized > 0f;
+                return;
+            }
+
+            fill.type = fill.sprite != null && fill.sprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+            fill.fillAmount = 1f;
+            fill.enabled = normalized > 0f;
+
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = new Vector2(normalized, 1f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = Vector2.zero;
+            fillRect.pivot = new Vector2(0f, 0.5f);
         }
     }
 }

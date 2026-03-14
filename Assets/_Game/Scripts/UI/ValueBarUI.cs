@@ -10,7 +10,7 @@ namespace CombatSystem.UI
     public class ValueBarUI : MonoBehaviour
     {
         [Header("UI 元素")]
-        [Tooltip("填充 Image（需设置为 Filled 类型）")]
+        [Tooltip("填充 Image（会在运行时按条形宽度更新）")]
         [SerializeField] private Image fill;
         
         [Tooltip("显示数值的文本组件")]
@@ -78,11 +78,7 @@ namespace CombatSystem.UI
         /// </summary>
         private void Refresh()
         {
-            // 更新填充进度
-            if (fill != null)
-            {
-                fill.fillAmount = maxValue > 0f ? Mathf.Clamp01(currentValue / maxValue) : 0f;
-            }
+            ApplyFillAmount(maxValue > 0f ? Mathf.Clamp01(currentValue / maxValue) : 0f);
 
             // 更新文本显示
             if (valueText != null)
@@ -116,6 +112,39 @@ namespace CombatSystem.UI
         {
             fill = fillImage;
             valueText = text;
+        }
+
+        private void ApplyFillAmount(float normalized)
+        {
+            if (fill == null)
+            {
+                return;
+            }
+
+            normalized = Mathf.Clamp01(normalized);
+
+            var fillRect = fill.rectTransform;
+            if (fillRect == null)
+            {
+                fill.type = Image.Type.Filled;
+                fill.fillMethod = Image.FillMethod.Horizontal;
+                fill.fillOrigin = 0;
+                fill.fillAmount = normalized;
+                fill.enabled = normalized > 0f;
+                return;
+            }
+
+            fill.type = fill.sprite != null && fill.sprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+            fill.fillAmount = 1f;
+            fill.enabled = normalized > 0f;
+
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = new Vector2(normalized, 1f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = Vector2.zero;
+            fillRect.pivot = new Vector2(0f, 0.5f);
         }
     }
 }
