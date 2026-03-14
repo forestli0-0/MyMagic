@@ -22,7 +22,7 @@ namespace CombatSystem.Persistence
         public bool vSync = false;
         public int qualityLevel = 0;
         public int targetFps = 60;
-        public MovementControlMode movementControlMode = MovementControlMode.KeyboardWASD;
+        public MovementControlMode movementControlMode = MovementControlMode.RightClickMove;
         public CameraControlMode cameraControlMode = CameraControlMode.LockedFollow;
         public bool edgePanEnabled = true;
         public float cameraZoomDistance = 28.1f;

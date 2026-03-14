@@ -19,11 +19,13 @@ namespace CombatSystem.Persistence
                 return current;
             }
 
+            var hasMovementControlMode = false;
             if (PlayerPrefs.HasKey(PrefKey))
             {
                 var json = PlayerPrefs.GetString(PrefKey, string.Empty);
                 if (!string.IsNullOrEmpty(json))
                 {
+                    hasMovementControlMode = json.Contains("\"movementControlMode\"");
                     current = JsonUtility.FromJson<SettingsData>(json);
                 }
             }
@@ -31,6 +33,10 @@ namespace CombatSystem.Persistence
             if (current == null)
             {
                 current = new SettingsData();
+            }
+            else if (!hasMovementControlMode)
+            {
+                current.movementControlMode = MovementControlMode.RightClickMove;
             }
 
             Apply(current, false);

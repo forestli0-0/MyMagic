@@ -80,7 +80,7 @@ namespace CombatSystem.Gameplay
 
         #region 运行时状态
 
-        private MovementControlMode movementControlMode = MovementControlMode.KeyboardWASD;
+        private MovementControlMode movementControlMode = MovementControlMode.RightClickMove;
         private bool hasClickDestination;
         private Vector3 clickDestination;
         private bool hasAttackTarget;
@@ -445,7 +445,7 @@ namespace CombatSystem.Gameplay
 
         private void ApplyMovementMode(SettingsData data)
         {
-            movementControlMode = data != null ? data.movementControlMode : MovementControlMode.KeyboardWASD;
+            movementControlMode = data != null ? data.movementControlMode : MovementControlMode.RightClickMove;
             if (movementControlMode == MovementControlMode.KeyboardWASD)
             {
                 hasClickDestination = false;

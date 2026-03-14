@@ -500,6 +500,21 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (targeting.IgnoreOptionalExplicitTarget)
+            {
+                if (skillUser != null
+                    && skillUser.TryResolveAutoCastTarget(activeSkill, hasAimPoint, lastAimPoint, lastAimDirection, out var autoTarget))
+                {
+                    SetHighlightIfChanged(autoTarget != null ? autoTarget.transform : null);
+                }
+                else
+                {
+                    ClearTargetHighlight();
+                }
+
+                return;
+            }
+
             // 如果只有一个目标，直接使用
             if (cachedTargets.Count == 1)
             {
@@ -836,8 +851,16 @@ namespace CombatSystem.Gameplay
             {
                 chargeDuration = 0f;
             }
-            // 保存当前选中的目标，用于传递给技能系统
-            var selectedTarget = currentTarget != null ? currentTarget.gameObject : null;
+            // 保存当前预览到的目标；自动锁定类技能只拿它做预览/朝向，不把它当作输入硬选中。
+            var previewTarget = currentTarget != null ? currentTarget.gameObject : null;
+            var selectedTarget = previewTarget;
+            if (skill != null
+                && skill.Targeting != null
+                && skill.Targeting.IgnoreOptionalExplicitTarget
+                && !skill.Targeting.RequireExplicitTarget)
+            {
+                selectedTarget = null;
+            }
 
             // 先取消瞄准状态
             CancelAim();
@@ -851,12 +874,22 @@ namespace CombatSystem.Gameplay
             if (rotateCasterToAim)
             {
                 var facingDirection = direction;
-                if (skill != null &&
-                    skill.Targeting != null &&
-                    skill.Targeting.RequireExplicitTarget &&
-                    selectedTarget != null)
+                GameObject facingTarget = null;
+                if (skill != null && skill.Targeting != null)
                 {
-                    facingDirection = selectedTarget.transform.position - transform.position;
+                    if (skill.Targeting.RequireExplicitTarget)
+                    {
+                        facingTarget = selectedTarget;
+                    }
+                    else if (skill.Targeting.IgnoreOptionalExplicitTarget)
+                    {
+                        facingTarget = previewTarget;
+                    }
+                }
+
+                if (facingTarget != null)
+                {
+                    facingDirection = facingTarget.transform.position - transform.position;
                     facingDirection.y = 0f;
                 }
 
