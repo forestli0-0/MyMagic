@@ -2797,6 +2797,8 @@ namespace CombatSystem.Editor
                 assets.AIBasic = LoadOrCreate<AIProfile>($"{folders.AI}/AI_Basic.asset");
                 ConfigureAIProfile(assets.AIBasic, "AI_Basic", "Basic AI", 12f, 2f, 0.5f);
 
+                var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Player.prefab");
+
                 assets.UnitPlayer = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Player.asset");
                 ConfigureUnit(
                     assets.UnitPlayer,
@@ -2819,7 +2821,8 @@ namespace CombatSystem.Editor
                         assets.SkillYasuoE,
                         assets.SkillYasuoR
                     },
-                    null);
+                    null,
+                    playerPrefab);
 
                 ConfigureUnit(
                     assets.UnitPlayerYasuo,
@@ -2842,7 +2845,8 @@ namespace CombatSystem.Editor
                         assets.SkillYasuoE,
                         assets.SkillYasuoR
                     },
-                    null);
+                    null,
+                    playerPrefab);
                 ConfigureUnitVisualProfile(assets.UnitPlayerYasuo, assets.UnitPlayer != null ? assets.UnitPlayer.VisualProfile : null);
 
                 assets.UnitEnemy = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Enemy.asset");

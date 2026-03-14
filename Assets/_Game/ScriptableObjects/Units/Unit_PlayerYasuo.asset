@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Unit_PlayerYasuo
   displayName: Player Yasuo
-  prefab: {fileID: 0}
+  prefab: {fileID: 1962191944521275768, guid: a3f1e526b28879c47886947446b80359, type: 3}
   portrait: {fileID: 0}
   visualProfile: {fileID: 11400000, guid: 637e8451d0dbb1c45a30ffd499e81898, type: 2}
   tags:
