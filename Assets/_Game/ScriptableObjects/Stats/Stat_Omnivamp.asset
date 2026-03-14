@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,10 +13,9 @@ MonoBehaviour:
   m_Name: Stat_Omnivamp
   m_EditorClassIdentifier: 
   id: Stat_Omnivamp
-  displayName: 全能吸血
+  displayName: "\u5168\u80FD\u5438\u8840"
   defaultValue: 0
   minValue: 0
   maxValue: 1
   isInteger: 0
   isPercentage: 1
-

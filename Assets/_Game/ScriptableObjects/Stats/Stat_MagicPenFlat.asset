@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,10 +13,9 @@ MonoBehaviour:
   m_Name: Stat_MagicPenFlat
   m_EditorClassIdentifier: 
   id: Stat_MagicPenFlat
-  displayName: 法术穿透(固定)
+  displayName: "\u6CD5\u672F\u7A7F\u900F(\u56FA\u5B9A)"
   defaultValue: 0
   minValue: 0
   maxValue: 9999
   isInteger: 1
   isPercentage: 0
-

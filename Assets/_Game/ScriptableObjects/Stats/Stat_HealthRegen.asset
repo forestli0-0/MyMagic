@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
@@ -13,10 +13,9 @@ MonoBehaviour:
   m_Name: Stat_HealthRegen
   m_EditorClassIdentifier: 
   id: Stat_HealthRegen
-  displayName: 生命回复
+  displayName: "\u751F\u547D\u56DE\u590D"
   defaultValue: 1
   minValue: 0
   maxValue: 9999
   isInteger: 0
   isPercentage: 0
-
