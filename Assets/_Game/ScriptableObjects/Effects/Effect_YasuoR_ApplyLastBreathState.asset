@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
-  m_Name: Effect_YasuoR_RemoveAirborneTag
-  m_EditorClassIdentifier: 
-  id: Effect_YasuoR_RemoveAirborneTag
-  displayName: Yasuo R Remove Airborne
-  effectType: 3
-  condition: {fileID: 11400000, guid: 5aa226ff8e8b92f4f919ca668d181d92, type: 2}
-  overrideTargeting: {fileID: 11400000, guid: 96d5aa2000134fcda223827b792dbc80, type: 2}
+  m_Name: Effect_YasuoR_ApplyLastBreathState
+  m_EditorClassIdentifier:
+  id: Effect_YasuoR_ApplyLastBreathState
+  displayName: Yasuo R Apply Last Breath State
+  effectType: 2
+  condition: {fileID: 0}
+  overrideTargeting: {fileID: 11400000, guid: b09f3e999e6bfa34ea7ef9d4b4efc0f8, type: 2}
   value: 0
   resourceType: 0
   damageType: 0
@@ -31,16 +31,19 @@ MonoBehaviour:
   cleanseAll: 0
   cleanseDebuffs: 0
   cleanseControls: 0
-  cleanseControlTypes: 
+  cleanseControlTypes:
   revealTarget: 0
   revealDuration: 0
   combatStateMode: 0
   combatStateFlags: 0
   spellShieldCharges: 1
   moveStyle: 0
+  moveDestinationPolicy: 0
+  moveCollisionPolicy: 0
+  moveTargetOffset: 0.8
   moveDistance: 0
   moveSpeed: 0
-  buff: {fileID: 11400000, guid: 30b20cfa1c0172449874880b9bb84028, type: 2}
+  buff: {fileID: 11400000, guid: 9e74361dbcfa48bf9cfd3aee157ed78a, type: 2}
   projectile: {fileID: 0}
   triggeredSkill: {fileID: 0}
   duration: 0

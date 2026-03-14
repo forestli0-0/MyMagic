@@ -16,17 +16,17 @@ MonoBehaviour:
   displayName: Yasuo R - Last Breath
   icon: {fileID: 0}
   resourceType: 0
-  resourceCost: 50
+  resourceCost: 0
   cooldown: 0
-  castTime: 0
+  castTime: 0.26
   channelTime: 0
-  canMoveWhileCasting: 1
-  canRotateWhileCasting: 1
+  canMoveWhileCasting: 0
+  canRotateWhileCasting: 0
   enableCharge: 0
   maxChargeTime: 1.2
   minChargeMultiplier: 1
   maxChargeMultiplier: 1.8
-  postCastTime: 0
+  postCastTime: 0.16
   gcdDuration: 0
   channelTickInterval: 0
   queueWindow: 0
@@ -52,14 +52,16 @@ MonoBehaviour:
     resetOnOtherSkillCast: 0
     advanceOnHit: 0
   sequencePhaseVisuals: []
-  targeting: {fileID: 11400000, guid: 90835ffcc68a18d48887502388d00731, type: 2}
+  targeting: {fileID: 11400000, guid: 32f03db7e0814c4a9ffbed66c74ad7ed, type: 2}
   tags:
   - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}
-  castConstraints: []
+  castConstraints:
+  - condition: {fileID: 11400000, guid: 5aa226ff8e8b92f4f919ca668d181d92, type: 2}
+    failReason: 12
   steps:
   - trigger: 0
     delay: 0
-    condition: {fileID: 11400000, guid: 5aa226ff8e8b92f4f919ca668d181d92, type: 2}
+    condition: {fileID: 0}
     presentationCues:
     - cueId: Auto_StepCast
       eventType: 0
@@ -82,6 +84,35 @@ MonoBehaviour:
       audioPitch: 1
       audioSpatialBlend: 1
       worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: Auto_MoveTrail
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 1
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.8
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    effects:
+    - {fileID: 11400000, guid: 85ea819d59c14e5aa35df35ee7dbaed9, type: 2}
+    - {fileID: 11400000, guid: 083bc580af6c4275b002d54a1d09a53b, type: 2}
+    - {fileID: 11400000, guid: 1cb8ef6d3a2847cf8f1d9b2a5e6c4f70, type: 2}
+  - trigger: 1
+    delay: 0
+    condition: {fileID: 0}
+    presentationCues:
     - cueId: Auto_DamageHit
       eventType: 2
       anchorType: 1
@@ -92,7 +123,7 @@ MonoBehaviour:
       filterByEffectType: 1
       effectTypeFilter: 0
       effectFilter: {fileID: 0}
-      animationTrigger: 
+      animationTrigger: Attack
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
       followAnchor: 0

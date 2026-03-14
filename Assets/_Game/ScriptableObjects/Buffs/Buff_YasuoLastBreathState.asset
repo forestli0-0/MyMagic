@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2311ba78f5e90484893a3c49b89e27a3, type: 3}
+  m_Name: Buff_YasuoLastBreathState
+  m_EditorClassIdentifier:
+  id: Buff_YasuoLastBreathState
+  displayName: Yasuo Last Breath State
+  icon: {fileID: 0}
+  isDebuff: 0
+  dispellable: 0
+  duration: 0.58
+  tickInterval: 0
+  stackingRule: 0
+  maxStacks: 1
+  tags:
+  - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}
+  modifiers: []
+  triggers:
+  - triggerType: 0
+    chance: 1
+    condition: {fileID: 0}
+    effects:
+    - {fileID: 11400000, guid: f0f3389748a195944867db4e2ecd413c, type: 2}
+    - {fileID: 11400000, guid: 6e78538b756bfdf47850a711f97fd3be, type: 2}
+  - triggerType: 1
+    chance: 1
+    condition: {fileID: 0}
+    effects:
+    - {fileID: 11400000, guid: 05aa4f767312a72458c0c441ff736650, type: 2}
+    - {fileID: 11400000, guid: 213438887a44818419540a894e684031, type: 2}
+  controlEffects:
+  controlImmunities:

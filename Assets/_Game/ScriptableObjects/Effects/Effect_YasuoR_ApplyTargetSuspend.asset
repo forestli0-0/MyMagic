@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
-  m_Name: Effect_YasuoR_RemoveAirborneTag
-  m_EditorClassIdentifier: 
-  id: Effect_YasuoR_RemoveAirborneTag
-  displayName: Yasuo R Remove Airborne
-  effectType: 3
+  m_Name: Effect_YasuoR_ApplyTargetSuspend
+  m_EditorClassIdentifier:
+  id: Effect_YasuoR_ApplyTargetSuspend
+  displayName: Yasuo R Apply Target Suspend
+  effectType: 2
   condition: {fileID: 11400000, guid: 5aa226ff8e8b92f4f919ca668d181d92, type: 2}
   overrideTargeting: {fileID: 11400000, guid: 96d5aa2000134fcda223827b792dbc80, type: 2}
   value: 0
@@ -31,16 +31,19 @@ MonoBehaviour:
   cleanseAll: 0
   cleanseDebuffs: 0
   cleanseControls: 0
-  cleanseControlTypes: 
+  cleanseControlTypes:
   revealTarget: 0
   revealDuration: 0
   combatStateMode: 0
   combatStateFlags: 0
   spellShieldCharges: 1
   moveStyle: 0
+  moveDestinationPolicy: 0
+  moveCollisionPolicy: 0
+  moveTargetOffset: 0.8
   moveDistance: 0
   moveSpeed: 0
-  buff: {fileID: 11400000, guid: 30b20cfa1c0172449874880b9bb84028, type: 2}
+  buff: {fileID: 11400000, guid: 6f7a0f4e9c2d4a4db3f2c1a8e57b91cd, type: 2}
   projectile: {fileID: 0}
   triggeredSkill: {fileID: 0}
   duration: 0

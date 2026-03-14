@@ -16,11 +16,12 @@ MonoBehaviour:
   displayName: Yasuo R Target Airborne
   op: 0
   entries:
-  - type: 3
+  - type: 14
     subject: 1
     chance: 0
     tag: {fileID: 0}
-    buff: {fileID: 11400000, guid: 30b20cfa1c0172449874880b9bb84028, type: 2}
+    buff: {fileID: 0}
+    controlType: 6
     stackThreshold: 0
     phaseThreshold: 0
     threshold: 0
