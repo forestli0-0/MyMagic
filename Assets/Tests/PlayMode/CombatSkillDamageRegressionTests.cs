@@ -186,6 +186,147 @@ namespace CombatSystem.Tests
                 GetPropertyValue(caster.SkillUser, "LastCastFailReason"));
         }
 
+        [UnityTest]
+        public IEnumerator TryCast_SpellShieldStopsRemainingStepEffects()
+        {
+            CreateSystems();
+            var caster = CreateUnit("Caster_SpellShieldStep");
+            var target = CreateUnit("Target_SpellShieldStep");
+            CallMethod(caster.Team, "SetTeamId", 1);
+            CallMethod(target.Team, "SetTeamId", 2);
+            caster.GameObject.transform.position = Vector3.zero;
+            target.GameObject.transform.position = new Vector3(2f, 0f, 0f);
+            CallMethod(target.Health, "SetCurrent", 100f);
+            CallMethod(target.State, "GrantSpellShield", 1);
+
+            var markerModifier = CreateSkillCostModifier(0f);
+            var markerBuff = CreateBuffWithModifier(markerModifier);
+
+            var damage = CreateDamageEffect(20f, "True");
+            var applyBuff = CreateApplyBuffEffect(markerBuff);
+
+            var stepType = RequireType("CombatSystem.Data.SkillStep");
+            var step = Activator.CreateInstance(stepType);
+            SetField(step, "trigger", ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+            SetField(step, "delay", 0f);
+            SetField(step, "condition", null);
+            SetField(step, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition"), damage, applyBuff));
+            SetField(step, "presentationCues", CreateTypedList(RequireType("CombatSystem.Data.SkillPresentationCue")));
+
+            var targeting = CreateTargeting(true, false, "AliveOnly");
+            var skill = CreateSkill(0f, 0f, targeting);
+            SetPrivateField(skill, "steps", CreateTypedList(stepType, step));
+
+            var firstCast = CallBoolMethod(caster.SkillUser, "TryCast", skill, target.GameObject);
+            Assert.IsTrue(firstCast, $"First cast failed: {GetPropertyValue(caster.SkillUser, "LastCastFailReason")}");
+            yield return null;
+            Assert.AreEqual(100f, GetFloatProperty(target.Health, "Current"), 0.01f);
+            Assert.IsFalse(CallBoolMethod(target.Buffs, "HasBuff", markerBuff));
+            Assert.AreEqual(0, Convert.ToInt32(GetPropertyValue(target.State, "SpellShieldCharges")));
+
+            var secondCast = CallBoolMethod(caster.SkillUser, "TryCast", skill, target.GameObject);
+            Assert.IsTrue(secondCast, $"Second cast failed: {GetPropertyValue(caster.SkillUser, "LastCastFailReason")}");
+            yield return null;
+            Assert.AreEqual(80f, GetFloatProperty(target.Health, "Current"), 0.01f);
+            Assert.IsTrue(CallBoolMethod(target.Buffs, "HasBuff", markerBuff));
+        }
+
+        [Test]
+        public void CombatAI_IsRuleValid_UsesExplicitTargetForCanCast()
+        {
+            CreateSystems();
+            var caster = CreateUnit("AI_CastRule_Caster");
+            var target = CreateUnit("AI_CastRule_Target");
+
+            var markerModifier = CreateSkillCostModifier(0f);
+            var markerBuff = CreateBuffWithModifier(markerModifier);
+            CallMethod(target.Buffs, "ApplyBuff", markerBuff, caster.Unit);
+
+            var condition = CreateCondition("HasBuff", "Target", markerBuff);
+            var castConstraint = CreateCastConstraint(condition, "CastConstraintFailed");
+
+            var targeting = CreateTargeting(true, false, "AliveOnly");
+            var skill = CreateSkill(0f, 0f, targeting);
+            SetPrivateField(
+                skill,
+                "castConstraints",
+                CreateTypedList(RequireType("CombatSystem.Data.SkillCastConstraint"), castConstraint));
+
+            var ruleType = RequireType("CombatSystem.Data.AISkillRule");
+            var rule = Activator.CreateInstance(ruleType);
+            SetField(rule, "skill", skill);
+            SetField(rule, "minRange", 0f);
+            SetField(rule, "maxRange", 10f);
+            SetField(rule, "weight", 1f);
+            SetField(rule, "allowWhileMoving", true);
+            SetField(rule, "condition", null);
+
+            var aiController = caster.GameObject.AddComponent(RequireType("CombatSystem.AI.CombatAIController"));
+            SetPrivateField(aiController, "unitRoot", caster.Unit);
+            SetPrivateField(aiController, "skillUser", caster.SkillUser);
+            SetPrivateField(aiController, "health", caster.Health);
+            SetPrivateField(aiController, "team", caster.Team);
+            SetPrivateField(aiController, "targetingSystem", targetingSystem);
+            SetPrivateField(aiController, "currentTarget", CreateCombatTarget(target.GameObject));
+            SetPrivateField(aiController, "hasTarget", true);
+
+            Assert.IsTrue(InvokePrivateBoolMethod(aiController, "IsRuleValid", rule, 2f));
+
+            CallMethod(target.Buffs, "RemoveBuff", markerBuff);
+            Assert.IsFalse(InvokePrivateBoolMethod(aiController, "IsRuleValid", rule, 2f));
+        }
+
+        [UnityTest]
+        public IEnumerator SkillUser_OnDisable_ClearsPendingStepsAndPreventsDelayedExecution()
+        {
+            CreateSystems();
+            var caster = CreateUnit("DisablePending_Caster");
+            CallMethod(caster.Health, "SetCurrent", 100f);
+
+            var targeting = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.TargetingDefinition")));
+            SetPrivateField(targeting, "mode", ParseEnum("CombatSystem.Data.TargetingMode", "Self"));
+            SetPrivateField(targeting, "team", ParseEnum("CombatSystem.Data.TargetTeam", "Self"));
+            SetPrivateField(targeting, "origin", ParseEnum("CombatSystem.Data.TargetingOrigin", "Caster"));
+            SetPrivateField(targeting, "range", 0f);
+            SetPrivateField(targeting, "radius", 0f);
+            SetPrivateField(targeting, "maxTargets", 1);
+            SetPrivateField(targeting, "includeSelf", true);
+            SetPrivateField(targeting, "allowEmpty", true);
+            SetPrivateField(targeting, "requireExplicitTarget", false);
+            SetPrivateField(targeting, "hitValidation", ParseEnum("CombatSystem.Data.HitValidationPolicy", "None"));
+
+            var damage = CreateDamageEffect(10f, "True");
+            var stepType = RequireType("CombatSystem.Data.SkillStep");
+            var step = Activator.CreateInstance(stepType);
+            SetField(step, "trigger", ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+            SetField(step, "delay", 0.05f);
+            SetField(step, "condition", null);
+            SetField(step, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition"), damage));
+            SetField(step, "presentationCues", CreateTypedList(RequireType("CombatSystem.Data.SkillPresentationCue")));
+
+            var skill = CreateSkill(0f, 0f, targeting);
+            SetPrivateField(skill, "steps", CreateTypedList(stepType, step));
+
+            Assert.IsTrue(CallBoolMethod(caster.SkillUser, "TryCast", skill, null));
+            var pending = GetPrivateFieldValue(caster.SkillUser, "pendingSteps") as IList;
+            Assert.NotNull(pending);
+            Assert.Greater(pending.Count, 0);
+
+            var behaviour = caster.SkillUser as Behaviour;
+            Assert.NotNull(behaviour);
+            behaviour.enabled = false;
+
+            pending = GetPrivateFieldValue(caster.SkillUser, "pendingSteps") as IList;
+            Assert.NotNull(pending);
+            Assert.AreEqual(0, pending.Count);
+
+            yield return new WaitForSeconds(0.08f);
+            behaviour.enabled = true;
+            yield return null;
+
+            Assert.AreEqual(100f, GetFloatProperty(caster.Health, "Current"), 0.01f);
+        }
+
         [Test]
         public void MoveEffect_ThroughExplicitTarget_MovesPastTarget()
         {
