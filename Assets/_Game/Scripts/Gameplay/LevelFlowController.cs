@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CombatSystem.Core;
 using CombatSystem.Data;
@@ -803,6 +804,8 @@ namespace CombatSystem.Gameplay
     [DisallowMultipleComponent]
     public class PlayerDeathFlowController : MonoBehaviour
     {
+        private static string pendingMainMenuSceneName;
+
         [Header("References")]
         [SerializeField] private UnitRoot unitRoot;
         [SerializeField] private HealthComponent health;
@@ -923,8 +926,52 @@ namespace CombatSystem.Gameplay
                     Time.timeScale = 1f;
                 }
 
+                pendingMainMenuSceneName = mainMenuSceneName;
+                SceneManager.sceneLoaded -= HandlePendingMainMenuLoaded;
+                SceneManager.sceneLoaded += HandlePendingMainMenuLoaded;
                 SceneManager.LoadScene(mainMenuSceneName);
             }
+        }
+
+        private static void HandlePendingMainMenuLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (string.IsNullOrWhiteSpace(pendingMainMenuSceneName)
+                || !string.Equals(scene.name, pendingMainMenuSceneName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            SceneManager.sceneLoaded -= HandlePendingMainMenuLoaded;
+            pendingMainMenuSceneName = null;
+
+            var uiManager = FindFirstObjectByType<UIManager>();
+            if (uiManager == null && UIRoot.Instance != null)
+            {
+                uiManager = UIRoot.Instance.Manager;
+            }
+
+            var mainMenu = FindFirstObjectByType<MainMenuScreen>(FindObjectsInactive.Include);
+            if (mainMenu == null)
+            {
+                var screens = Resources.FindObjectsOfTypeAll<MainMenuScreen>();
+                if (screens != null && screens.Length > 0)
+                {
+                    mainMenu = screens[0];
+                }
+            }
+
+            if (uiManager == null)
+            {
+                return;
+            }
+
+            uiManager.CloseAllModals();
+            if (mainMenu != null)
+            {
+                uiManager.ShowScreen(mainMenu, true);
+            }
+
+            uiManager.SetHudVisible(false);
         }
 
         private void HandleDied(HealthComponent source)
