@@ -97,6 +97,10 @@ namespace CombatSystem.Editor
             public TargetingDefinition TargetingAllySingle;
             public TargetingDefinition TargetingPointAny;
             public TargetingDefinition TargetingYasuoSingleEnemy;
+            public TargetingDefinition TargetingYasuoQLineEnemy;
+            public TargetingDefinition TargetingYasuoQEqSlashEnemy;
+            public TargetingDefinition TargetingYasuoRSingleEnemy;
+            public TargetingDefinition TargetingYasuoRAirborneCluster;
 
             public ModifierDefinition ModifierSkillCost;
             public ModifierDefinition ModifierSkillCooldown;
@@ -120,7 +124,10 @@ namespace CombatSystem.Editor
             public BuffDefinition BuffGhostStep;
             public BuffDefinition BuffIronShell;
             public BuffDefinition BuffYasuoDashMark;
+            public BuffDefinition BuffYasuoEDashState;
             public BuffDefinition BuffYasuoAirborneTag;
+            public BuffDefinition BuffYasuoLastBreathState;
+            public BuffDefinition BuffYasuoLastBreathSuspend;
 
             public EffectDefinition EffectBasicAttack;
             public EffectDefinition EffectFireball;
@@ -171,6 +178,13 @@ namespace CombatSystem.Editor
             public EffectDefinition EffectYasuoEDashMove;
             public EffectDefinition EffectYasuoEDashDamage;
             public EffectDefinition EffectYasuoEApplyDashMark;
+            public EffectDefinition EffectYasuoEApplyDashState;
+            public EffectDefinition EffectYasuoQEqSlashDamage;
+            public EffectDefinition EffectYasuoQEqSlashEmpoweredDamage;
+            public EffectDefinition EffectYasuoQEqSlashApplyAirborneTag;
+            public EffectDefinition EffectYasuoRDashMove;
+            public EffectDefinition EffectYasuoRApplyLastBreathState;
+            public EffectDefinition EffectYasuoRApplyTargetSuspend;
             public EffectDefinition EffectYasuoRDamage;
             public EffectDefinition EffectYasuoRRemoveAirborneTag;
 
@@ -228,6 +242,9 @@ namespace CombatSystem.Editor
             public ConditionDefinition ConditionYasuoQPhase1;
             public ConditionDefinition ConditionYasuoQPhase2;
             public ConditionDefinition ConditionYasuoQPhase3;
+            public ConditionDefinition ConditionYasuoQEqPhase1;
+            public ConditionDefinition ConditionYasuoQEqPhase2;
+            public ConditionDefinition ConditionYasuoQEqPhase3;
             public ConditionDefinition ConditionYasuoETargetNotDashed;
             public ConditionDefinition ConditionYasuoRTargetAirborne;
 
@@ -573,6 +590,86 @@ namespace CombatSystem.Editor
                     1.5f,
                     true);
 
+                assets.TargetingYasuoQLineEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_YasuoQ_LineEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingYasuoQLineEnemy,
+                    "Targeting_YasuoQ_LineEnemy",
+                    "Yasuo Q Line Enemy",
+                    TargetingMode.Line,
+                    TargetTeam.Enemy,
+                    6.5f,
+                    0.8f,
+                    0f,
+                    6,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.Caster,
+                    true,
+                    HitValidationPolicy.AliveOnly);
+
+                assets.TargetingYasuoQEqSlashEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_YasuoQ_EQSlashEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingYasuoQEqSlashEnemy,
+                    "Targeting_YasuoQ_EQSlashEnemy",
+                    "Yasuo EQ Slash Enemy",
+                    TargetingMode.Sphere,
+                    TargetTeam.Enemy,
+                    0f,
+                    2.4f,
+                    0f,
+                    6,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.Caster,
+                    false,
+                    HitValidationPolicy.AliveOnly);
+
+                assets.TargetingYasuoRSingleEnemy = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_YasuoR_SingleEnemy.asset");
+                ConfigureTargeting(
+                    assets.TargetingYasuoRSingleEnemy,
+                    "Targeting_YasuoR_SingleEnemy",
+                    "Yasuo R Single Enemy",
+                    TargetingMode.Single,
+                    TargetTeam.Enemy,
+                    12f,
+                    0f,
+                    0f,
+                    1,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.Caster,
+                    false,
+                    HitValidationPolicy.AliveOnly,
+                    -1,
+                    1.5f,
+                    false,
+                    true);
+
+                assets.TargetingYasuoRAirborneCluster = LoadOrCreate<TargetingDefinition>($"{folders.Targeting}/Targeting_YasuoR_AirborneCluster.asset");
+                ConfigureTargeting(
+                    assets.TargetingYasuoRAirborneCluster,
+                    "Targeting_YasuoR_AirborneCluster",
+                    "Yasuo R Airborne Cluster",
+                    TargetingMode.Sphere,
+                    TargetTeam.Enemy,
+                    0f,
+                    2.75f,
+                    0f,
+                    3,
+                    TargetSort.Closest,
+                    false,
+                    null,
+                    null,
+                    TargetingOrigin.TargetPoint,
+                    false,
+                    HitValidationPolicy.AliveOnly);
+
                 assets.ModifierSkillCost = LoadOrCreate<ModifierDefinition>($"{folders.Modifiers}/Modifier_ArcaneFocus_Cost.asset");
                 ConfigureModifier(
                     assets.ModifierSkillCost,
@@ -730,7 +827,10 @@ namespace CombatSystem.Editor
                 assets.BuffGhostStep = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_GhostStep.asset");
                 assets.BuffIronShell = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_IronShell.asset");
                 assets.BuffYasuoDashMark = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoDashMark.asset");
+                assets.BuffYasuoEDashState = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoEDashState.asset");
                 assets.BuffYasuoAirborneTag = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoAirborneTag.asset");
+                assets.BuffYasuoLastBreathState = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoLastBreathState.asset");
+                assets.BuffYasuoLastBreathSuspend = LoadOrCreate<BuffDefinition>($"{folders.Buffs}/Buff_YasuoLastBreathSuspend.asset");
 
                 assets.ProjectileArcaneBolt = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ArcaneBolt.asset");
                 assets.ProjectileReturnBlade = LoadOrCreate<ProjectileDefinition>($"{folders.Projectiles}/Projectile_ReturnBlade.asset");
@@ -742,6 +842,9 @@ namespace CombatSystem.Editor
                 assets.ConditionYasuoQPhase1 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase1.asset");
                 assets.ConditionYasuoQPhase2 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase2.asset");
                 assets.ConditionYasuoQPhase3 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_Phase3.asset");
+                assets.ConditionYasuoQEqPhase1 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_EQ_Phase1.asset");
+                assets.ConditionYasuoQEqPhase2 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_EQ_Phase2.asset");
+                assets.ConditionYasuoQEqPhase3 = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoQ_EQ_Phase3.asset");
                 assets.ConditionYasuoETargetNotDashed = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoE_TargetNotDashed.asset");
                 assets.ConditionYasuoRTargetAirborne = LoadOrCreate<ConditionDefinition>($"{folders.Conditions}/Condition_YasuoR_TargetAirborne.asset");
 
@@ -1034,6 +1137,13 @@ namespace CombatSystem.Editor
                 assets.EffectYasuoEDashMove = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_DashMove.asset");
                 assets.EffectYasuoEDashDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_DashDamage.asset");
                 assets.EffectYasuoEApplyDashMark = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_ApplyDashMark.asset");
+                assets.EffectYasuoEApplyDashState = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoE_ApplyDashState.asset");
+                assets.EffectYasuoQEqSlashDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_EQSlashDamage.asset");
+                assets.EffectYasuoQEqSlashEmpoweredDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_EQSlashEmpoweredDamage.asset");
+                assets.EffectYasuoQEqSlashApplyAirborneTag = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoQ_EQSlashApplyAirborneTag.asset");
+                assets.EffectYasuoRDashMove = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_DashMove.asset");
+                assets.EffectYasuoRApplyLastBreathState = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_ApplyLastBreathState.asset");
+                assets.EffectYasuoRApplyTargetSuspend = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_ApplyTargetSuspend.asset");
                 assets.EffectYasuoRDamage = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_Damage.asset");
                 assets.EffectYasuoRRemoveAirborneTag = LoadOrCreate<EffectDefinition>($"{folders.Effects}/Effect_YasuoR_RemoveAirborneTag.asset");
 
@@ -1233,7 +1343,7 @@ namespace CombatSystem.Editor
                     "Yasuo E Dash Move",
                     MoveStyle.Dash,
                     3f,
-                    18f,
+                    15f,
                     assets.TargetingSelf);
 
                 ConfigureEffectDamage(
@@ -1257,6 +1367,87 @@ namespace CombatSystem.Editor
                     "Yasuo E Apply Dash Mark",
                     assets.BuffYasuoDashMark);
 
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoEApplyDashState,
+                    "Effect_YasuoE_ApplyDashState",
+                    "Yasuo E Apply Dash State",
+                    assets.BuffYasuoEDashState,
+                    assets.TargetingSelf);
+
+                ConfigureEffectDamage(
+                    assets.EffectYasuoQEqSlashDamage,
+                    "Effect_YasuoQ_EQSlashDamage",
+                    "Yasuo Q EQ Slash Damage",
+                    22f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier,
+                    true);
+                ConfigureEffectExecutionContext(
+                    assets.EffectYasuoQEqSlashDamage,
+                    null,
+                    assets.TargetingYasuoQEqSlashEnemy);
+
+                ConfigureEffectDamage(
+                    assets.EffectYasuoQEqSlashEmpoweredDamage,
+                    "Effect_YasuoQ_EQSlashEmpoweredDamage",
+                    "Yasuo Q EQ Slash Empowered Damage",
+                    26f,
+                    DamageType.Physical,
+                    0f,
+                    0f,
+                    assets.AttackPower,
+                    1.1f,
+                    true,
+                    assets.CritChance,
+                    assets.CritMultiplier,
+                    true);
+                ConfigureEffectExecutionContext(
+                    assets.EffectYasuoQEqSlashEmpoweredDamage,
+                    null,
+                    assets.TargetingYasuoQEqSlashEnemy);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoQEqSlashApplyAirborneTag,
+                    "Effect_YasuoQ_EQSlashApplyAirborneTag",
+                    "Yasuo Q EQ Slash Apply Airborne",
+                    assets.BuffYasuoAirborneTag,
+                    assets.TargetingYasuoQEqSlashEnemy);
+
+                ConfigureEffectMove(
+                    assets.EffectYasuoRDashMove,
+                    "Effect_YasuoR_DashMove",
+                    "Yasuo R Dash Move",
+                    MoveStyle.Dash,
+                    0f,
+                    72f,
+                    assets.TargetingSelf,
+                    MoveDestinationPolicy.BehindExplicitTarget,
+                    MoveCollisionPolicy.IgnoreCharacterControllerCollisions,
+                    0.6f);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoRApplyLastBreathState,
+                    "Effect_YasuoR_ApplyLastBreathState",
+                    "Yasuo R Apply Last Breath State",
+                    assets.BuffYasuoLastBreathState,
+                    assets.TargetingSelf);
+
+                ConfigureEffectApplyBuff(
+                    assets.EffectYasuoRApplyTargetSuspend,
+                    "Effect_YasuoR_ApplyTargetSuspend",
+                    "Yasuo R Apply Target Suspend",
+                    assets.BuffYasuoLastBreathSuspend);
+                ConfigureEffectExecutionContext(
+                    assets.EffectYasuoRApplyTargetSuspend,
+                    assets.ConditionYasuoRTargetAirborne,
+                    assets.TargetingYasuoRAirborneCluster);
+
                 ConfigureEffectDamage(
                     assets.EffectYasuoRDamage,
                     "Effect_YasuoR_Damage",
@@ -1271,12 +1462,20 @@ namespace CombatSystem.Editor
                     assets.CritChance,
                     assets.CritMultiplier,
                     true);
+                ConfigureEffectExecutionContext(
+                    assets.EffectYasuoRDamage,
+                    assets.ConditionYasuoRTargetAirborne,
+                    assets.TargetingYasuoRAirborneCluster);
 
                 ConfigureEffectRemoveBuff(
                     assets.EffectYasuoRRemoveAirborneTag,
                     "Effect_YasuoR_RemoveAirborneTag",
                     "Yasuo R Remove Airborne",
                     assets.BuffYasuoAirborneTag);
+                ConfigureEffectExecutionContext(
+                    assets.EffectYasuoRRemoveAirborneTag,
+                    assets.ConditionYasuoRTargetAirborne,
+                    assets.TargetingYasuoRAirborneCluster);
 
                 ConfigureProjectile(
                     assets.ProjectileYasuoQTornado,
@@ -1355,6 +1554,12 @@ namespace CombatSystem.Editor
                         Type = ConditionType.SequencePhaseIs,
                         Subject = ConditionSubject.Caster,
                         PhaseThreshold = 1
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.NotHasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
                     });
 
                 ConfigureCondition(
@@ -1367,6 +1572,12 @@ namespace CombatSystem.Editor
                         Type = ConditionType.SequencePhaseIs,
                         Subject = ConditionSubject.Caster,
                         PhaseThreshold = 2
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.NotHasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
                     });
 
                 ConfigureCondition(
@@ -1379,6 +1590,66 @@ namespace CombatSystem.Editor
                         Type = ConditionType.SequencePhaseIs,
                         Subject = ConditionSubject.Caster,
                         PhaseThreshold = 3
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.NotHasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQEqPhase1,
+                    "Condition_YasuoQ_EQ_Phase1",
+                    "Yasuo EQ Phase 1",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 1
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.HasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQEqPhase2,
+                    "Condition_YasuoQ_EQ_Phase2",
+                    "Yasuo EQ Phase 2",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 2
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.HasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
+                    });
+
+                ConfigureCondition(
+                    assets.ConditionYasuoQEqPhase3,
+                    "Condition_YasuoQ_EQ_Phase3",
+                    "Yasuo EQ Phase 3",
+                    ConditionOperator.All,
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.SequencePhaseIs,
+                        Subject = ConditionSubject.Caster,
+                        PhaseThreshold = 3
+                    },
+                    new ConditionEntryData
+                    {
+                        Type = ConditionType.HasBuff,
+                        Subject = ConditionSubject.Caster,
+                        Buff = assets.BuffYasuoEDashState
                     });
 
                 ConfigureCondition(
@@ -1400,9 +1671,9 @@ namespace CombatSystem.Editor
                     ConditionOperator.All,
                     new ConditionEntryData
                     {
-                        Type = ConditionType.HasBuff,
+                        Type = ConditionType.HasControl,
                         Subject = ConditionSubject.Target,
-                        Buff = assets.BuffYasuoAirborneTag
+                        ControlType = ControlType.Knockup
                     });
 
                 ConfigureBuff(
@@ -1573,6 +1844,22 @@ namespace CombatSystem.Editor
                     null);
 
                 ConfigureBuff(
+                    assets.BuffYasuoEDashState,
+                    "Buff_YasuoEDashState",
+                    "Yasuo E Dash State",
+                    false,
+                    0.32f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    dispellable: false);
+
+                ConfigureBuff(
                     assets.BuffYasuoAirborneTag,
                     "Buff_YasuoAirborneTag",
                     "Yasuo Airborne Tag",
@@ -1586,6 +1873,62 @@ namespace CombatSystem.Editor
                     null,
                     new[] { ControlType.Knockup },
                     null);
+
+                ConfigureBuff(
+                    assets.BuffYasuoLastBreathState,
+                    "Buff_YasuoLastBreathState",
+                    "Yasuo Last Breath State",
+                    false,
+                    0.58f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagPhysical },
+                    null,
+                    new BuffTriggerData[]
+                    {
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnApply,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[]
+                            {
+                                assets.EffectCombatStateAddUntargetable,
+                                assets.EffectCombatStateAddInvulnerable
+                            }
+                        },
+                        new BuffTriggerData
+                        {
+                            Trigger = BuffTriggerType.OnExpire,
+                            Chance = 1f,
+                            Condition = null,
+                            Effects = new Object[]
+                            {
+                                assets.EffectCombatStateRemoveUntargetable,
+                                assets.EffectCombatStateRemoveInvulnerable
+                            }
+                        }
+                    },
+                    null,
+                    null,
+                    dispellable: false);
+
+                ConfigureBuff(
+                    assets.BuffYasuoLastBreathSuspend,
+                    "Buff_YasuoLastBreathSuspend",
+                    "Yasuo Last Breath Suspend",
+                    true,
+                    0.58f,
+                    0f,
+                    BuffStackingRule.Refresh,
+                    1,
+                    new Object[] { assets.TagPhysical },
+                    null,
+                    null,
+                    new[] { ControlType.Knockup },
+                    null,
+                    dispellable: false);
 
                 ConfigureUnit(
                     assets.UnitSummonTotem,
@@ -1812,7 +2155,7 @@ namespace CombatSystem.Editor
                     0f,
                     true,
                     true,
-                    assets.TargetingLineEnemy,
+                    assets.TargetingYasuoQLineEnemy,
                     new Object[] { assets.TagPhysical },
                     new SkillStepData
                     {
@@ -2339,6 +2682,30 @@ namespace CombatSystem.Editor
                         Delay = 0f,
                         Condition = assets.ConditionYasuoQPhase3,
                         Effects = new Object[] { assets.EffectYasuoQTornadoProjectile }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQEqPhase1,
+                        ExecuteOnce = true,
+                        Effects = new Object[] { assets.EffectYasuoQEqSlashDamage }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQEqPhase2,
+                        ExecuteOnce = true,
+                        Effects = new Object[] { assets.EffectYasuoQEqSlashDamage }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Condition = assets.ConditionYasuoQEqPhase3,
+                        ExecuteOnce = true,
+                        Effects = new Object[] { assets.EffectYasuoQEqSlashEmpoweredDamage, assets.EffectYasuoQEqSlashApplyAirborneTag }
                     });
 
                 assets.SkillYasuoW = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoW.asset");
@@ -2381,7 +2748,7 @@ namespace CombatSystem.Editor
                         Trigger = SkillStepTrigger.OnCastStart,
                         Delay = 0f,
                         Condition = assets.ConditionYasuoETargetNotDashed,
-                        Effects = new Object[] { assets.EffectYasuoEDashMove, assets.EffectYasuoEDashDamage, assets.EffectYasuoEApplyDashMark }
+                        Effects = new Object[] { assets.EffectYasuoEDashMove, assets.EffectYasuoEDashDamage, assets.EffectYasuoEApplyDashMark, assets.EffectYasuoEApplyDashState }
                     });
 
                 assets.SkillYasuoR = LoadOrCreate<SkillDefinition>($"{folders.Skills}/Skill_YasuoR.asset");
@@ -2390,19 +2757,40 @@ namespace CombatSystem.Editor
                     "Skill_YasuoR",
                     "Yasuo R - Last Breath",
                     ResourceType.Mana,
-                    50f,
                     0f,
                     0f,
+                    0.26f,
                     0f,
-                    true,
-                    true,
-                    assets.TargetingYasuoSingleEnemy,
+                    false,
+                    false,
+                    assets.TargetingYasuoRSingleEnemy,
                     new Object[] { assets.TagPhysical },
                     new SkillStepData
                     {
                         Trigger = SkillStepTrigger.OnCastStart,
                         Delay = 0f,
+                        Effects = new Object[] { assets.EffectYasuoRDashMove, assets.EffectYasuoRApplyLastBreathState, assets.EffectYasuoRApplyTargetSuspend }
+                    },
+                    0.16f);
+                ConfigureSkillCastConstraints(
+                    assets.SkillYasuoR,
+                    new SkillCastConstraintData
+                    {
                         Condition = assets.ConditionYasuoRTargetAirborne,
+                        FailReason = SkillCastFailReason.CastConstraintFailed
+                    });
+                ConfigureSkillSteps(
+                    assets.SkillYasuoR,
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastStart,
+                        Delay = 0f,
+                        Effects = new Object[] { assets.EffectYasuoRDashMove, assets.EffectYasuoRApplyLastBreathState, assets.EffectYasuoRApplyTargetSuspend }
+                    },
+                    new SkillStepData
+                    {
+                        Trigger = SkillStepTrigger.OnCastComplete,
+                        Delay = 0f,
                         Effects = new Object[] { assets.EffectYasuoRDamage, assets.EffectYasuoRRemoveAirborneTag }
                     });
 
@@ -3641,7 +4029,8 @@ namespace CombatSystem.Editor
             HitValidationPolicy hitValidation = HitValidationPolicy.AliveOnly,
             int lineOfSightMask = -1,
             float lineOfSightHeight = 1.5f,
-            bool requireExplicitTarget = false)
+            bool requireExplicitTarget = false,
+            bool ignoreOptionalExplicitTarget = false)
         {
             var so = new SerializedObject(targeting);
             SetDefinitionBase(so, id, displayName);
@@ -3656,6 +4045,7 @@ namespace CombatSystem.Editor
             so.FindProperty("includeSelf").boolValue = includeSelf;
             so.FindProperty("allowEmpty").boolValue = allowEmpty;
             so.FindProperty("requireExplicitTarget").boolValue = requireExplicitTarget;
+            so.FindProperty("ignoreOptionalExplicitTarget").boolValue = ignoreOptionalExplicitTarget;
             so.FindProperty("hitValidation").enumValueIndex = (int)hitValidation;
             so.FindProperty("lineOfSightMask").intValue = lineOfSightMask;
             so.FindProperty("lineOfSightHeight").floatValue = lineOfSightHeight;
@@ -3731,12 +4121,14 @@ namespace CombatSystem.Editor
             EffectDefinition effect,
             string id,
             string displayName,
-            BuffDefinition buff)
+            BuffDefinition buff,
+            TargetingDefinition overrideTargeting = null)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("effectType").enumValueIndex = (int)EffectType.ApplyBuff;
             so.FindProperty("buff").objectReferenceValue = buff;
+            so.FindProperty("overrideTargeting").objectReferenceValue = overrideTargeting;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -3750,6 +4142,22 @@ namespace CombatSystem.Editor
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("effectType").enumValueIndex = (int)EffectType.RemoveBuff;
             so.FindProperty("buff").objectReferenceValue = buff;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureEffectExecutionContext(
+            EffectDefinition effect,
+            ConditionDefinition condition = null,
+            TargetingDefinition overrideTargeting = null)
+        {
+            if (effect == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(effect);
+            so.FindProperty("condition").objectReferenceValue = condition;
+            so.FindProperty("overrideTargeting").objectReferenceValue = overrideTargeting;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -3796,12 +4204,33 @@ namespace CombatSystem.Editor
             MoveStyle moveStyle,
             float distance,
             float speed,
-            TargetingDefinition overrideTargeting = null)
+            TargetingDefinition overrideTargeting = null,
+            MoveDestinationPolicy moveDestinationPolicy = MoveDestinationPolicy.Legacy,
+            MoveCollisionPolicy moveCollisionPolicy = MoveCollisionPolicy.Default,
+            float moveTargetOffset = 0.8f)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("effectType").enumValueIndex = (int)EffectType.Move;
             so.FindProperty("moveStyle").enumValueIndex = (int)moveStyle;
+            var destinationPolicy = so.FindProperty("moveDestinationPolicy");
+            if (destinationPolicy != null)
+            {
+                destinationPolicy.enumValueIndex = (int)moveDestinationPolicy;
+            }
+
+            var collisionPolicy = so.FindProperty("moveCollisionPolicy");
+            if (collisionPolicy != null)
+            {
+                collisionPolicy.enumValueIndex = (int)moveCollisionPolicy;
+            }
+
+            var targetOffset = so.FindProperty("moveTargetOffset");
+            if (targetOffset != null)
+            {
+                targetOffset.floatValue = moveTargetOffset;
+            }
+
             so.FindProperty("moveDistance").floatValue = distance;
             so.FindProperty("moveSpeed").floatValue = speed;
             so.FindProperty("overrideTargeting").objectReferenceValue = overrideTargeting;
@@ -3902,6 +4331,7 @@ namespace CombatSystem.Editor
             public float Chance;
             public TagDefinition Tag;
             public BuffDefinition Buff;
+            public ControlType ControlType;
             public int StackThreshold;
             public int PhaseThreshold;
             public float Threshold;
@@ -3934,6 +4364,7 @@ namespace CombatSystem.Editor
                     entry.FindPropertyRelative("chance").floatValue = entries[i].Chance;
                     entry.FindPropertyRelative("tag").objectReferenceValue = entries[i].Tag;
                     entry.FindPropertyRelative("buff").objectReferenceValue = entries[i].Buff;
+                    entry.FindPropertyRelative("controlType").enumValueIndex = (int)entries[i].ControlType;
                     entry.FindPropertyRelative("stackThreshold").intValue = entries[i].StackThreshold;
                     entry.FindPropertyRelative("phaseThreshold").intValue = entries[i].PhaseThreshold;
                     entry.FindPropertyRelative("threshold").floatValue = entries[i].Threshold;
@@ -3964,11 +4395,13 @@ namespace CombatSystem.Editor
             Object[] modifiers,
             BuffTriggerData[] triggers,
             ControlType[] controlEffects = null,
-            ControlType[] controlImmunities = null)
+            ControlType[] controlImmunities = null,
+            bool dispellable = true)
         {
             var so = new SerializedObject(buff);
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("isDebuff").boolValue = isDebuff;
+            so.FindProperty("dispellable").boolValue = dispellable;
             so.FindProperty("duration").floatValue = duration;
             so.FindProperty("tickInterval").floatValue = tickInterval;
             so.FindProperty("stackingRule").enumValueIndex = (int)stackingRule;
@@ -4043,7 +4476,14 @@ namespace CombatSystem.Editor
             public SkillStepTrigger Trigger;
             public float Delay;
             public ConditionDefinition Condition;
+            public bool ExecuteOnce;
             public Object[] Effects;
+        }
+
+        private struct SkillCastConstraintData
+        {
+            public ConditionDefinition Condition;
+            public SkillCastFailReason FailReason;
         }
 
         private static void ConfigureSkill(
@@ -4155,7 +4595,44 @@ namespace CombatSystem.Editor
                 stepProp.FindPropertyRelative("trigger").enumValueIndex = (int)steps[i].Trigger;
                 stepProp.FindPropertyRelative("delay").floatValue = steps[i].Delay;
                 stepProp.FindPropertyRelative("condition").objectReferenceValue = steps[i].Condition;
+                var executeOnceProp = stepProp.FindPropertyRelative("executeOnce");
+                if (executeOnceProp != null)
+                {
+                    executeOnceProp.boolValue = steps[i].ExecuteOnce;
+                }
                 SetObjectList(stepProp.FindPropertyRelative("effects"), steps[i].Effects);
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureSkillCastConstraints(SkillDefinition skill, params SkillCastConstraintData[] constraints)
+        {
+            if (skill == null)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(skill);
+            var list = so.FindProperty("castConstraints");
+            if (list == null)
+            {
+                return;
+            }
+
+            if (constraints == null || constraints.Length == 0)
+            {
+                list.arraySize = 0;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            list.arraySize = constraints.Length;
+            for (int i = 0; i < constraints.Length; i++)
+            {
+                var constraint = list.GetArrayElementAtIndex(i);
+                constraint.FindPropertyRelative("condition").objectReferenceValue = constraints[i].Condition;
+                constraint.FindPropertyRelative("failReason").enumValueIndex = (int)constraints[i].FailReason;
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -4396,7 +4873,10 @@ namespace CombatSystem.Editor
                 assets.BuffGhostStep,
                 assets.BuffIronShell,
                 assets.BuffYasuoDashMark,
-                assets.BuffYasuoAirborneTag
+                assets.BuffYasuoEDashState,
+                assets.BuffYasuoAirborneTag,
+                assets.BuffYasuoLastBreathState,
+                assets.BuffYasuoLastBreathSuspend
             });
             SetObjectList(so.FindProperty("effects"), new Object[]
             {
@@ -4449,6 +4929,13 @@ namespace CombatSystem.Editor
                 assets.EffectYasuoEDashMove,
                 assets.EffectYasuoEDashDamage,
                 assets.EffectYasuoEApplyDashMark,
+                assets.EffectYasuoEApplyDashState,
+                assets.EffectYasuoQEqSlashDamage,
+                assets.EffectYasuoQEqSlashEmpoweredDamage,
+                assets.EffectYasuoQEqSlashApplyAirborneTag,
+                assets.EffectYasuoRDashMove,
+                assets.EffectYasuoRApplyLastBreathState,
+                assets.EffectYasuoRApplyTargetSuspend,
                 assets.EffectYasuoRDamage,
                 assets.EffectYasuoRRemoveAirborneTag
             });
@@ -4458,6 +4945,9 @@ namespace CombatSystem.Editor
                 assets.ConditionYasuoQPhase1,
                 assets.ConditionYasuoQPhase2,
                 assets.ConditionYasuoQPhase3,
+                assets.ConditionYasuoQEqPhase1,
+                assets.ConditionYasuoQEqPhase2,
+                assets.ConditionYasuoQEqPhase3,
                 assets.ConditionYasuoETargetNotDashed,
                 assets.ConditionYasuoRTargetAirborne
             });
@@ -4488,7 +4978,11 @@ namespace CombatSystem.Editor
                 assets.TargetingBoxEnemy,
                 assets.TargetingAllySingle,
                 assets.TargetingPointAny,
-                assets.TargetingYasuoSingleEnemy
+                assets.TargetingYasuoSingleEnemy,
+                assets.TargetingYasuoQLineEnemy,
+                assets.TargetingYasuoQEqSlashEnemy,
+                assets.TargetingYasuoRSingleEnemy,
+                assets.TargetingYasuoRAirborneCluster
             });
             SetObjectList(so.FindProperty("aiProfiles"), new Object[] { assets.AIBasic });
             SetObjectList(so.FindProperty("hudConfigs"), new Object[] { assets.HUDDefault });
