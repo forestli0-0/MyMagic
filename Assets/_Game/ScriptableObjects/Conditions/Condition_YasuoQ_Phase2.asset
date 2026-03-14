@@ -21,6 +21,16 @@ MonoBehaviour:
     chance: 0
     tag: {fileID: 0}
     buff: {fileID: 0}
+    controlType: 14
     stackThreshold: 0
     phaseThreshold: 2
+    threshold: 0
+  - type: 9
+    subject: 0
+    chance: 0
+    tag: {fileID: 0}
+    buff: {fileID: 11400000, guid: 4cf1d8a9c4f54d4cb7b3fd2f1463e781, type: 2}
+    controlType: 14
+    stackThreshold: 0
+    phaseThreshold: 0
     threshold: 0

@@ -58,7 +58,7 @@ MonoBehaviour:
     icon: {fileID: 21300030, guid: 7ab74e659e1f0a34d9cfec21c478fc12, type: 3}
   - phase: 3
     icon: {fileID: 21300032, guid: 7ab74e659e1f0a34d9cfec21c478fc12, type: 3}
-  targeting: {fileID: 11400000, guid: b9e9266ee3fe2a442b516374dd5b0339, type: 2}
+  targeting: {fileID: 11400000, guid: 6fc1213e77d949b7bbf00ff60a4fe132, type: 2}
   tags:
   - {fileID: 11400000, guid: 25886a5d1cc706f4091c5347a9d9b0d8, type: 2}
   castConstraints: []
@@ -66,6 +66,7 @@ MonoBehaviour:
   - trigger: 0
     delay: 0
     condition: {fileID: 11400000, guid: 7cf824ffa5c5f8d4e8a3876162b73e63, type: 2}
+    executeOnce: 0
     presentationCues:
     - cueId: Auto_StepCast
       eventType: 0
@@ -114,6 +115,7 @@ MonoBehaviour:
   - trigger: 0
     delay: 0
     condition: {fileID: 11400000, guid: d34dbc9621d016840965da8bd454288e, type: 2}
+    executeOnce: 0
     presentationCues:
     - cueId: Auto_StepCast
       eventType: 0
@@ -162,6 +164,7 @@ MonoBehaviour:
   - trigger: 0
     delay: 0
     condition: {fileID: 11400000, guid: 91e78599c615e3c479c3003f8cdd0844, type: 2}
+    executeOnce: 0
     presentationCues:
     - cueId: YasuoQ3_ProjectileSpawnTrail
       eventType: 3
@@ -270,3 +273,172 @@ MonoBehaviour:
       worldPosition: {x: 0, y: 0, z: 0}
     effects:
     - {fileID: 11400000, guid: 5691b5bdee9fa444db2f5a1c1d429609, type: 2}
+  - trigger: 0
+    delay: 0
+    condition: {fileID: 11400000, guid: cf8b31dfaa1b4e7496ec8f279d6b5426, type: 2}
+    executeOnce: 1
+    presentationCues:
+    - cueId: YasuoEQ_SpinCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 1
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.25
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: YasuoEQ_Hit
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    effects:
+    - {fileID: 11400000, guid: 1a88c8a0fe1b4d4bbb5c7d4678f5c4a2, type: 2}
+  - trigger: 0
+    delay: 0
+    condition: {fileID: 11400000, guid: cc5f6f29c8b8495b9f033967d73d4074, type: 2}
+    executeOnce: 1
+    presentationCues:
+    - cueId: YasuoEQ_SpinCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 1
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.25
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: YasuoEQ_Hit
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.9
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    effects:
+    - {fileID: 11400000, guid: 1a88c8a0fe1b4d4bbb5c7d4678f5c4a2, type: 2}
+  - trigger: 0
+    delay: 0
+    condition: {fileID: 11400000, guid: db31f2ad56174d6aa52c2a07e99136af, type: 2}
+    executeOnce: 1
+    presentationCues:
+    - cueId: YasuoEQ3_SpinCast
+      eventType: 0
+      anchorType: 0
+      spawnSpace: 1
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 0
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 3696007233179127096, guid: c248f95ffea8b8543bc7ad0fffe0216d,
+        type: 3}
+      followAnchor: 1
+      maxLifetime: 0.3
+      sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
+      audioBus: 0
+      audioVolume: 0.95
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: YasuoEQ3_Hit
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 0
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
+      audioBus: 0
+      audioVolume: 0.92
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    - cueId: YasuoEQ3_Knockup
+      eventType: 2
+      anchorType: 1
+      spawnSpace: 0
+      anchorChildPath:
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      filterByEffectType: 1
+      effectTypeFilter: 2
+      effectFilter: {fileID: 0}
+      animationTrigger:
+      vfxPrefab: {fileID: 3280519133390621005, guid: a71be3e7990efb040a07565c43cbb198,
+        type: 3}
+      followAnchor: 0
+      maxLifetime: 0.45
+      sfx: {fileID: 8300000, guid: 20254a1a0530d5346a4162732c355d47, type: 3}
+      audioBus: 0
+      audioVolume: 0.75
+      audioPitch: 1
+      audioSpatialBlend: 1
+      worldPosition: {x: 0, y: 0, z: 0}
+    effects:
+    - {fileID: 11400000, guid: 7d5d3cf20d8f49bfa9422feaf9a1e986, type: 2}
+    - {fileID: 11400000, guid: e9a4d1456d234785ae404e607c1763d4, type: 2}

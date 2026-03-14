@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfba16f1c3106cd40957233da6ed1223, type: 3}
-  m_Name: Condition_YasuoQ_Phase1
-  m_EditorClassIdentifier: 
-  id: Condition_YasuoQ_Phase1
-  displayName: Yasuo Q Phase 1
+  m_Name: Condition_YasuoQ_EQ_Phase2
+  m_EditorClassIdentifier:
+  id: Condition_YasuoQ_EQ_Phase2
+  displayName: Yasuo EQ Phase 2
   op: 0
   entries:
   - type: 12
@@ -23,9 +23,9 @@ MonoBehaviour:
     buff: {fileID: 0}
     controlType: 14
     stackThreshold: 0
-    phaseThreshold: 1
+    phaseThreshold: 2
     threshold: 0
-  - type: 9
+  - type: 3
     subject: 0
     chance: 0
     tag: {fileID: 0}

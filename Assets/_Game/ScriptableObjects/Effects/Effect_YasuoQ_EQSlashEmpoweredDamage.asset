@@ -10,36 +10,39 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
-  m_Name: Effect_YasuoE_DashMove
-  m_EditorClassIdentifier: 
-  id: Effect_YasuoE_DashMove
-  displayName: Yasuo E Dash Move
-  effectType: 5
+  m_Name: Effect_YasuoQ_EQSlashEmpoweredDamage
+  m_EditorClassIdentifier:
+  id: Effect_YasuoQ_EQSlashEmpoweredDamage
+  displayName: Yasuo Q EQ Slash Empowered Damage
+  effectType: 0
   condition: {fileID: 0}
-  overrideTargeting: {fileID: 11400000, guid: b09f3e999e6bfa34ea7ef9d4b4efc0f8, type: 2}
-  value: 0
+  overrideTargeting: {fileID: 11400000, guid: 5f6a8dc0d5124a2b97ef4f6d4ed9c3a1, type: 2}
+  value: 26
   resourceType: 0
   damageType: 0
-  scalingStat: {fileID: 0}
-  scalingRatio: 0
+  scalingStat: {fileID: 11400000, guid: 21318ce4fe0148b89282152139fb29e0, type: 2}
+  scalingRatio: 1.1
   canCrit: 1
   critChance: 0
   critMultiplier: 2
-  critChanceStat: {fileID: 0}
-  critMultiplierStat: {fileID: 0}
-  triggersOnHit: 0
+  critChanceStat: {fileID: 11400000, guid: c6f63db7148d440d849c4cb4dcaddd98, type: 2}
+  critMultiplierStat: {fileID: 11400000, guid: e0dba4ba3c414e698aa15d17b81599b6, type: 2}
+  triggersOnHit: 1
   cleanseAll: 0
   cleanseDebuffs: 0
   cleanseControls: 0
-  cleanseControlTypes: 
+  cleanseControlTypes:
   revealTarget: 0
   revealDuration: 0
   combatStateMode: 0
   combatStateFlags: 0
   spellShieldCharges: 1
   moveStyle: 0
-  moveDistance: 3
-  moveSpeed: 15
+  moveDestinationPolicy: 0
+  moveCollisionPolicy: 0
+  moveTargetOffset: 0.8
+  moveDistance: 0
+  moveSpeed: 0
   buff: {fileID: 0}
   projectile: {fileID: 0}
   triggeredSkill: {fileID: 0}

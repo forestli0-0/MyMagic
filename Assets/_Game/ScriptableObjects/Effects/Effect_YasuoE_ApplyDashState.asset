@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65621f445c0daa848a2a759162089f59, type: 3}
-  m_Name: Effect_YasuoE_DashMove
-  m_EditorClassIdentifier: 
-  id: Effect_YasuoE_DashMove
-  displayName: Yasuo E Dash Move
-  effectType: 5
+  m_Name: Effect_YasuoE_ApplyDashState
+  m_EditorClassIdentifier:
+  id: Effect_YasuoE_ApplyDashState
+  displayName: Yasuo E Apply Dash State
+  effectType: 2
   condition: {fileID: 0}
   overrideTargeting: {fileID: 11400000, guid: b09f3e999e6bfa34ea7ef9d4b4efc0f8, type: 2}
   value: 0
@@ -31,16 +31,19 @@ MonoBehaviour:
   cleanseAll: 0
   cleanseDebuffs: 0
   cleanseControls: 0
-  cleanseControlTypes: 
+  cleanseControlTypes:
   revealTarget: 0
   revealDuration: 0
   combatStateMode: 0
   combatStateFlags: 0
   spellShieldCharges: 1
   moveStyle: 0
-  moveDistance: 3
-  moveSpeed: 15
-  buff: {fileID: 0}
+  moveDestinationPolicy: 0
+  moveCollisionPolicy: 0
+  moveTargetOffset: 0.8
+  moveDistance: 0
+  moveSpeed: 0
+  buff: {fileID: 11400000, guid: 4cf1d8a9c4f54d4cb7b3fd2f1463e781, type: 2}
   projectile: {fileID: 0}
   triggeredSkill: {fileID: 0}
   duration: 0
