@@ -2798,6 +2798,8 @@ namespace CombatSystem.Editor
                 ConfigureAIProfile(assets.AIBasic, "AI_Basic", "Basic AI", 12f, 2f, 0.5f);
 
                 var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Player.prefab");
+                var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Enemy_Default.prefab");
+                var enemyBossPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Enemy_Boss.prefab");
 
                 assets.UnitPlayer = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Player.asset");
                 ConfigureUnit(
@@ -2865,7 +2867,8 @@ namespace CombatSystem.Editor
                     },
                     assets.SkillBasicAttack,
                     null,
-                    assets.AIBasic);
+                    assets.AIBasic,
+                    enemyPrefab);
 
                 assets.UnitEnemyHighHp = LoadOrCreate<UnitDefinition>($"{folders.Units}/Unit_Enemy_high_hp.asset");
                 ConfigureUnit(
@@ -2883,7 +2886,8 @@ namespace CombatSystem.Editor
                     },
                     assets.SkillBasicAttack,
                     null,
-                    assets.AIBasic);
+                    assets.AIBasic,
+                    enemyBossPrefab);
 
                 assets.HUDDefault = LoadOrCreate<HUDConfig>($"{folders.UI}/HUD_Default.asset");
                 ConfigureHUD(assets.HUDDefault, "HUD_Default", "Default HUD", 12, 12, true, true, true);
