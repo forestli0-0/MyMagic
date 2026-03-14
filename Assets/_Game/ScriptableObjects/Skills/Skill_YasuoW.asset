@@ -84,7 +84,7 @@ MonoBehaviour:
       worldPosition: {x: 0, y: 0, z: 0}
     - cueId: Auto_SummonCircle
       eventType: 0
-      anchorType: 3
+      anchorType: 0
       spawnSpace: 0
       anchorChildPath: 
       positionOffset: {x: 0, y: 0, z: 0}
