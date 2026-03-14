@@ -183,6 +183,8 @@ namespace CombatSystem.Data
         public float delay;
         [Tooltip("执行此步骤的前提条件")]
         public ConditionDefinition condition;
+        [Tooltip("若启用，则该步骤只执行一次，由效果自己的 OverrideTargeting 决定最终命中目标。")]
+        public bool executeOnce;
         
         [Header("表现 Cue（新流程）")]
         [Tooltip("步骤级表现配置，供 SkillPresentationSystem 通过事件总线消费")]

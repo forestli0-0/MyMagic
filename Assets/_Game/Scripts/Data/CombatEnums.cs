@@ -79,7 +79,9 @@ namespace CombatSystem.Data
         BuffStacksAtLeast = 10, // 指定 Buff 层数 >= 阈值
         BuffStacksBelow = 11,   // 指定 Buff 层数 < 阈值
         SequencePhaseIs = 12,   // 技能连段阶段 == 阈值
-        SequencePhaseAtLeast = 13 // 技能连段阶段 >= 阈值
+        SequencePhaseAtLeast = 13, // 技能连段阶段 >= 阈值
+        HasControl = 14,        // 拥有指定控制状态
+        NotHasControl = 15      // 不拥有指定控制状态
     }
 
     /// <summary>

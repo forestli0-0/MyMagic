@@ -124,6 +124,12 @@ namespace CombatSystem.Gameplay
                     // 反向 Buff 检测：主体不能持有指定 Buff
                     return subject.Buffs == null || !subject.Buffs.HasBuff(entry.buff);
 
+                case ConditionType.HasControl:
+                    return subject.Buffs != null && subject.Buffs.HasControl(entry.controlType);
+
+                case ConditionType.NotHasControl:
+                    return subject.Buffs == null || !subject.Buffs.HasControl(entry.controlType);
+
                 case ConditionType.BuffStacksAtLeast:
                 {
                     // Buff 层数检测：指定 Buff 层数 >= 阈值

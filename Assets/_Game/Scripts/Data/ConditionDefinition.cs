@@ -37,6 +37,8 @@ namespace CombatSystem.Data
         public TagDefinition tag;
         [Tooltip("Buff 相关条件时的指定 Buff")]
         public BuffDefinition buff;
+        [Tooltip("控制相关条件时的指定控制类型")]
+        public ControlType controlType = ControlType.All;
         [Tooltip("Buff 层数阈值（用于 BuffStacksAtLeast / BuffStacksBelow）")]
         public int stackThreshold = 1;
         [Tooltip("技能连段阶段阈值（用于 SequencePhaseIs / SequencePhaseAtLeast）")]

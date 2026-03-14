@@ -643,7 +643,7 @@ namespace CombatSystem.Gameplay
                 explicitTarget = resolvedRecastTarget;
             }
 
-            if (!IsExplicitTargetAlive(explicitTarget))
+            if (!ShouldIgnoreOptionalExplicitTarget(skill) && !IsExplicitTargetAlive(explicitTarget))
             {
                 return FailCast(SkillCastFailReason.TargetDead);
             }
@@ -661,25 +661,27 @@ namespace CombatSystem.Gameplay
                 return FailCast(canCastFailReason);
             }
 
+            var effectiveExplicitTarget = ResolveEvaluationExplicitTarget(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, sequencePhase);
+
             if (skill != null && skill.Targeting != null && skill.Targeting.Origin == TargetingOrigin.TargetPoint && !hasAimPoint)
             {
-                if (explicitTarget != null)
+                if (effectiveExplicitTarget != null)
                 {
-                    aimPoint = explicitTarget.transform.position;
+                    aimPoint = effectiveExplicitTarget.transform.position;
                     hasAimPoint = true;
                 }
             }
 
             // 锁定目标技能：有显式目标时强制使用“指向目标”的朝向，避免沿鼠标方向发射。
-            if (skill.Targeting != null && skill.Targeting.RequireExplicitTarget && explicitTarget != null && unitRoot != null)
+            if (skill.Targeting != null && skill.Targeting.RequireExplicitTarget && effectiveExplicitTarget != null && unitRoot != null)
             {
                 if (skill.Targeting.Origin == TargetingOrigin.TargetPoint)
                 {
-                    aimPoint = explicitTarget.transform.position;
+                    aimPoint = effectiveExplicitTarget.transform.position;
                     hasAimPoint = true;
                 }
 
-                var toExplicitTarget = explicitTarget.transform.position - unitRoot.transform.position;
+                var toExplicitTarget = effectiveExplicitTarget.transform.position - unitRoot.transform.position;
                 toExplicitTarget.y = 0f;
                 if (toExplicitTarget.sqrMagnitude > 0.0001f)
                 {
@@ -687,9 +689,9 @@ namespace CombatSystem.Gameplay
                 }
             }
 
-            if (aimDirection.sqrMagnitude <= 0.0001f && explicitTarget != null && unitRoot != null)
+            if (aimDirection.sqrMagnitude <= 0.0001f && effectiveExplicitTarget != null && unitRoot != null)
             {
-                var dir = explicitTarget.transform.position - unitRoot.transform.position;
+                var dir = effectiveExplicitTarget.transform.position - unitRoot.transform.position;
                 dir.y = 0f;
                 if (dir.sqrMagnitude > 0.0001f)
                 {
@@ -708,14 +710,14 @@ namespace CombatSystem.Gameplay
             }
 
             // 显式目标统一按“当前帧”的形状/距离进行校验，避免旧快照导致超范围命中。
-            if (explicitTarget != null && !IsTargetInRange(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection))
+            if (effectiveExplicitTarget != null && !IsTargetInRange(skill, effectiveExplicitTarget, hasAimPoint, aimPoint, aimDirection))
             {
                 return FailCast(SkillCastFailReason.OutOfRange);
             }
 
             // 收集目标
             var targets = SimpleListPool<CombatTarget>.Get();
-            if (!CollectTargets(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, targets))
+            if (!CollectTargets(skill, effectiveExplicitTarget, hasAimPoint, aimPoint, aimDirection, targets))
             {
                 SimpleListPool<CombatTarget>.Release(targets);
                 return FailCast(SkillCastFailReason.NoValidTargets);
@@ -731,6 +733,7 @@ namespace CombatSystem.Gameplay
             var chargeRatio = skill.ResolveChargeRatio(chargeDuration);
             var chargeMultiplier = skill.ResolveChargeMultiplier(chargeDuration);
             var castId = GenerateCastId();
+            var contextExplicitTarget = ResolveContextExplicitTarget(skill, effectiveExplicitTarget, targets);
 
             // 创建技能上下文
             var context = CreateContext(
@@ -738,7 +741,7 @@ namespace CombatSystem.Gameplay
                 hasAimPoint,
                 aimPoint,
                 aimDirection,
-                explicitTarget,
+                contextExplicitTarget,
                 chargeDuration,
                 chargeRatio,
                 chargeMultiplier,
@@ -815,7 +818,7 @@ namespace CombatSystem.Gameplay
                 isRecastCast,
                 activeRecast,
                 now,
-                explicitTarget,
+                contextExplicitTarget,
                 hasAimPoint,
                 aimPoint,
                 aimDirection,
@@ -1263,9 +1266,14 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
+            var resolvedSequencePhase = sequencePhase > 0
+                ? sequencePhase
+                : GetSequencePhaseForCast(skill, Time.time);
+            var evaluationTarget = ResolveEvaluationExplicitTarget(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase);
+
             var isRecastCast = TryGetRecastState(skill, out var recastState);
             if (isRecastCast
-                && !ResolveRecastTarget(skill, recastState, explicitTarget, out _))
+                && !ResolveRecastTarget(skill, recastState, evaluationTarget, out _))
             {
                 failReason = SkillCastFailReason.RecastTargetInvalid;
                 return false;
@@ -1277,7 +1285,7 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            if (!IsExplicitTargetAlive(explicitTarget))
+            if (!IsExplicitTargetAlive(evaluationTarget))
             {
                 failReason = SkillCastFailReason.TargetDead;
                 return false;
@@ -1289,15 +1297,12 @@ namespace CombatSystem.Gameplay
                 return false;
             }
 
-            var resolvedSequencePhase = sequencePhase > 0
-                ? sequencePhase
-                : GetSequencePhaseForCast(skill, Time.time);
-            if (!EvaluateCastConstraints(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase, out failReason))
+            if (!EvaluateCastConstraints(skill, evaluationTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase, out failReason))
             {
                 return false;
             }
 
-            var cost = ResolveModifiedResourceCost(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase);
+            var cost = ResolveModifiedResourceCost(skill, evaluationTarget, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase);
             if (isRecastCast && skill.RecastConfig != null && !skill.RecastConfig.ConsumesResourceOnRecast)
             {
                 cost = 0f;
@@ -1940,6 +1945,21 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (step.executeOnce)
+            {
+                if (TryGetSingleExecutionTarget(context, pending.Trigger, targets, out var executionTarget))
+                {
+                    ExecuteEffectsForTarget(step, effects, context, pending.Trigger, executionTarget);
+                }
+
+                if (!useSnapshot)
+                {
+                    SimpleListPool<CombatTarget>.Release(targets);
+                }
+
+                return;
+            }
+
             // 遍历所有目标
             for (int i = 0; i < targets.Count; i++)
             {
@@ -1955,22 +1975,63 @@ namespace CombatSystem.Gameplay
                     continue;
                 }
 
-                // 对该目标执行所有效果
-                var spellShieldChargesBefore = GetSpellShieldCharges(target);
-                for (int j = 0; j < effects.Count; j++)
-                {
-                    effectExecutor.ExecuteEffect(effects[j], context, target, pending.Trigger);
-                    if (HasSpellShieldConsumed(target, spellShieldChargesBefore))
-                    {
-                        // 护盾命中后终止该目标本次步骤的剩余效果，避免“先挡伤害后吃 Debuff”。
-                        break;
-                    }
-                }
+                ExecuteEffectsForTarget(step, effects, context, pending.Trigger, target);
             }
 
             if (!useSnapshot)
             {
                 SimpleListPool<CombatTarget>.Release(targets);
+            }
+        }
+
+        private bool TryGetSingleExecutionTarget(
+            SkillRuntimeContext context,
+            SkillStepTrigger trigger,
+            List<CombatTarget> targets,
+            out CombatTarget executionTarget)
+        {
+            executionTarget = default;
+            if (targets == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                var candidate = targets[i];
+                if (!IsTargetValidForStep(context, trigger, candidate))
+                {
+                    continue;
+                }
+
+                executionTarget = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ExecuteEffectsForTarget(
+            SkillStep step,
+            IReadOnlyList<EffectDefinition> effects,
+            SkillRuntimeContext context,
+            SkillStepTrigger trigger,
+            CombatTarget target)
+        {
+            if (step != null && step.condition != null && !ConditionEvaluator.Evaluate(step.condition, context, target))
+            {
+                return;
+            }
+
+            var spellShieldChargesBefore = GetSpellShieldCharges(target);
+            for (int j = 0; j < effects.Count; j++)
+            {
+                effectExecutor.ExecuteEffect(effects[j], context, target, trigger);
+                if (HasSpellShieldConsumed(target, spellShieldChargesBefore))
+                {
+                    // 护盾命中后终止该目标本次步骤的剩余效果，避免“先挡伤害后吃 Debuff”。
+                    break;
+                }
             }
         }
 
@@ -1987,14 +2048,233 @@ namespace CombatSystem.Gameplay
                 return 0f;
             }
 
-            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, explicitTarget, 0f, 0f, 1f, 0UL, -1, sequencePhase);
+            var evaluationTarget = ResolveEvaluationExplicitTarget(skill, explicitTarget, hasAimPoint, aimPoint, aimDirection, sequencePhase);
+            var context = CreateContext(skill, hasAimPoint, aimPoint, aimDirection, evaluationTarget, 0f, 0f, 1f, 0UL, -1, sequencePhase);
             var primaryTarget = default(CombatTarget);
-            if (explicitTarget != null)
+            if (evaluationTarget != null)
             {
-                CombatTarget.TryCreate(explicitTarget, out primaryTarget);
+                CombatTarget.TryCreate(evaluationTarget, out primaryTarget);
             }
 
             return ResolveModifiedResourceCost(skill, context, primaryTarget);
+        }
+
+        private static bool ShouldIgnoreOptionalExplicitTarget(SkillDefinition skill)
+        {
+            var targeting = skill != null ? skill.Targeting : null;
+            return targeting != null && !targeting.RequireExplicitTarget && targeting.IgnoreOptionalExplicitTarget;
+        }
+
+        public bool TryResolveAutoCastTarget(
+            SkillDefinition skill,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            out GameObject explicitTarget)
+        {
+            var sequencePhase = GetSequencePhaseForCast(skill, Time.time);
+            return TryResolveAutoCastTarget(skill, hasAimPoint, aimPoint, aimDirection, sequencePhase, out explicitTarget);
+        }
+
+        private GameObject ResolveEvaluationExplicitTarget(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            int sequencePhase = -1)
+        {
+            var candidate = ShouldIgnoreOptionalExplicitTarget(skill) ? null : explicitTarget;
+            if (candidate != null)
+            {
+                return candidate;
+            }
+
+            if (skill == null || skill.Targeting == null || skill.Targeting.RequireExplicitTarget || targetingSystem == null)
+            {
+                return candidate;
+            }
+
+            return TryResolveAutoCastTarget(skill, hasAimPoint, aimPoint, aimDirection, sequencePhase, out var resolved)
+                ? resolved
+                : null;
+        }
+
+        private static GameObject ResolveContextExplicitTarget(
+            SkillDefinition skill,
+            GameObject explicitTarget,
+            List<CombatTarget> targets)
+        {
+            if (!ShouldIgnoreOptionalExplicitTarget(skill))
+            {
+                return explicitTarget;
+            }
+
+            if (targets == null || targets.Count == 0)
+            {
+                return explicitTarget;
+            }
+
+            return targets[0].GameObject;
+        }
+
+        private bool TryResolveAutoCastTarget(
+            SkillDefinition skill,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            int sequencePhase,
+            out GameObject explicitTarget)
+        {
+            explicitTarget = null;
+            if (skill == null || skill.Targeting == null || targetingSystem == null || unitRoot == null)
+            {
+                return false;
+            }
+
+            var resolvedSequencePhase = sequencePhase > 0
+                ? sequencePhase
+                : GetSequencePhaseForCast(skill, Time.time);
+            var sort = skill.Targeting.Sort;
+            var origin = ResolveAutoTargetOrigin(skill.Targeting, hasAimPoint, aimPoint);
+            var candidates = SimpleListPool<CombatTarget>.Get();
+            var best = default(CombatTarget);
+            var hasBest = false;
+            var bestMetric = 0f;
+            var randomCount = 0;
+
+            try
+            {
+                targetingSystem.CollectAllCandidates(skill.Targeting, unitRoot, candidates, hasAimPoint, aimPoint, aimDirection);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var candidate = candidates[i];
+                    if (!candidate.IsValid || candidate.GameObject == null)
+                    {
+                        continue;
+                    }
+
+                    if (!IsAutoCastTargetCandidate(skill, candidate, hasAimPoint, aimPoint, aimDirection, resolvedSequencePhase))
+                    {
+                        continue;
+                    }
+
+                    if (sort == TargetSort.Random)
+                    {
+                        randomCount++;
+                        if (!hasBest || UnityEngine.Random.Range(0, randomCount) == 0)
+                        {
+                            best = candidate;
+                            hasBest = true;
+                        }
+
+                        continue;
+                    }
+
+                    if (sort == TargetSort.None)
+                    {
+                        explicitTarget = candidate.GameObject;
+                        return true;
+                    }
+
+                    var metric = GetAutoTargetMetric(sort, origin, candidate);
+                    if (!hasBest || metric < bestMetric)
+                    {
+                        best = candidate;
+                        bestMetric = metric;
+                        hasBest = true;
+                    }
+                }
+
+                if (!hasBest)
+                {
+                    return false;
+                }
+
+                explicitTarget = best.GameObject;
+                return explicitTarget != null;
+            }
+            finally
+            {
+                SimpleListPool<CombatTarget>.Release(candidates);
+            }
+        }
+
+        private bool IsAutoCastTargetCandidate(
+            SkillDefinition skill,
+            CombatTarget candidate,
+            bool hasAimPoint,
+            Vector3 aimPoint,
+            Vector3 aimDirection,
+            int sequencePhase)
+        {
+            if (!PassesAlivePolicy(skill, candidate))
+            {
+                return false;
+            }
+
+            return EvaluateCastConstraints(skill, candidate.GameObject, hasAimPoint, aimPoint, aimDirection, sequencePhase, out _);
+        }
+
+        private static bool PassesAlivePolicy(SkillDefinition skill, CombatTarget candidate)
+        {
+            if (!candidate.IsValid)
+            {
+                return false;
+            }
+
+            var targeting = skill != null ? skill.Targeting : null;
+            if (targeting == null || targeting.HitValidation < HitValidationPolicy.AliveOnly)
+            {
+                return true;
+            }
+
+            return candidate.Health == null || candidate.Health.IsAlive;
+        }
+
+        private Vector3 ResolveAutoTargetOrigin(TargetingDefinition targeting, bool hasAimPoint, Vector3 aimPoint)
+        {
+            var origin = unitRoot != null ? unitRoot.transform.position : transform.position;
+            if (targeting != null && targeting.Origin == TargetingOrigin.TargetPoint && hasAimPoint)
+            {
+                origin = aimPoint;
+            }
+
+            return origin;
+        }
+
+        private static float GetAutoTargetMetric(TargetSort sort, Vector3 origin, CombatTarget candidate)
+        {
+            switch (sort)
+            {
+                case TargetSort.Farthest:
+                    return -GetAutoTargetDistanceSqr(origin, candidate);
+                case TargetSort.LowestHealth:
+                    return GetAutoTargetHealthValue(candidate);
+                case TargetSort.HighestHealth:
+                    return -GetAutoTargetHealthValue(candidate);
+                case TargetSort.Random:
+                case TargetSort.None:
+                case TargetSort.Closest:
+                default:
+                    return GetAutoTargetDistanceSqr(origin, candidate);
+            }
+        }
+
+        private static float GetAutoTargetDistanceSqr(Vector3 origin, CombatTarget candidate)
+        {
+            if (candidate.Transform == null)
+            {
+                return float.MaxValue;
+            }
+
+            var offset = candidate.Transform.position - origin;
+            return offset.sqrMagnitude;
+        }
+
+        private static float GetAutoTargetHealthValue(CombatTarget candidate)
+        {
+            return candidate.Health != null ? candidate.Health.Current : float.MaxValue;
         }
 
         private float ResolveModifiedResourceCost(SkillDefinition skill, SkillRuntimeContext context, CombatTarget primaryTarget)
