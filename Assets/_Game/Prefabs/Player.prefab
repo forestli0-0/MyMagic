@@ -602,6 +602,18 @@ MonoBehaviour:
   movingSuppressSpeed: 0.2
   hitReactionCooldown: 1
   hitMaxHoldSeconds: 0.08
+  enableKnockupVisualLift: 1
+  knockupLiftHeight: 0.9
+  knockupLiftInSpeed: 10
+  knockupLiftOutSpeed: 14
+  enableLastBreathAerialVisual: 1
+  lastBreathSkillId: Skill_YasuoR
+  lastBreathHeadPadding: 0.15
+  lastBreathHoverHeight: 0.45
+  lastBreathEnterSpeed: 24
+  lastBreathExitSpeed: 14
+  lastBreathLingerAfterComplete: 0.18
+  lastBreathFallbackHeadHeight: 1.5
 --- !u!1 &2080525573497573601
 GameObject:
   m_ObjectHideFlags: 0

@@ -71,6 +71,17 @@ namespace CombatSystem.Core
         [SerializeField, Min(0f)] private float knockupLiftInSpeed = 10f;
         [SerializeField, Min(0f)] private float knockupLiftOutSpeed = 14f;
 
+        [Header("Yasuo R Visual")]
+        [Tooltip("通过 VisualRoot 偏移模拟亚索 R 的贴身腾空、悬停与落地，不改逻辑体位置。")]
+        [SerializeField] private bool enableLastBreathAerialVisual = true;
+        [SerializeField] private string lastBreathSkillId = "Skill_YasuoR";
+        [SerializeField, Min(0f)] private float lastBreathHeadPadding = 0.15f;
+        [SerializeField, Min(0f)] private float lastBreathHoverHeight = 0.45f;
+        [SerializeField, Min(0f)] private float lastBreathEnterSpeed = 24f;
+        [SerializeField, Min(0f)] private float lastBreathExitSpeed = 14f;
+        [SerializeField, Min(0f)] private float lastBreathLingerAfterComplete = 0.18f;
+        [SerializeField, Min(0f)] private float lastBreathFallbackHeadHeight = 1.5f;
+
         private readonly List<RendererState> cachedRootRenderers = new List<RendererState>(8);
         private readonly HashSet<Renderer> rootRendererSet = new HashSet<Renderer>();
 
@@ -88,6 +99,11 @@ namespace CombatSystem.Core
         private Vector3 visualRootBaselineLocalPosition;
         private bool hasVisualRootBaseline;
         private float currentKnockupVisualLift;
+        private CombatEventHub subscribedEventHub;
+        private Transform lastBreathTargetTransform;
+        private Vector3 currentLastBreathLocalOffset;
+        private bool lastBreathAerialActive;
+        private float lastBreathReleaseTime = float.NegativeInfinity;
 
         // Animator parameter cache
         private int moveSpeedHash;
@@ -341,6 +357,7 @@ namespace CombatSystem.Core
             visualRootBaselineLocalPosition = root.localPosition;
             hasVisualRootBaseline = true;
             currentKnockupVisualLift = 0f;
+            currentLastBreathLocalOffset = Vector3.zero;
         }
 
         private void ResolveAnimator()
@@ -514,6 +531,20 @@ namespace CombatSystem.Core
                 skillUser.SkillCastInterrupted -= HandleSkillCastInterrupted;
                 skillUser.SkillCastInterrupted += HandleSkillCastInterrupted;
             }
+
+            var eventHub = unitRoot != null ? unitRoot.EventHub : null;
+            if (subscribedEventHub != null && subscribedEventHub != eventHub)
+            {
+                subscribedEventHub.SkillStepExecuted -= HandleSkillStepExecuted;
+                subscribedEventHub = null;
+            }
+
+            if (eventHub != null)
+            {
+                subscribedEventHub = eventHub;
+                subscribedEventHub.SkillStepExecuted -= HandleSkillStepExecuted;
+                subscribedEventHub.SkillStepExecuted += HandleSkillStepExecuted;
+            }
         }
 
         private void UnsubscribeEvents()
@@ -529,6 +560,12 @@ namespace CombatSystem.Core
                 skillUser.SkillCastStarted -= HandleSkillCastStarted;
                 skillUser.SkillCastCompleted -= HandleSkillCastCompleted;
                 skillUser.SkillCastInterrupted -= HandleSkillCastInterrupted;
+            }
+
+            if (subscribedEventHub != null)
+            {
+                subscribedEventHub.SkillStepExecuted -= HandleSkillStepExecuted;
+                subscribedEventHub = null;
             }
         }
 
@@ -572,6 +609,11 @@ namespace CombatSystem.Core
                 animator.SetBool(castingHash, false);
             }
 
+            if (IsLastBreathSkill(evt.Skill))
+            {
+                ReleaseLastBreathAerialVisual(immediate: false);
+            }
+
             currentCastSkillName = string.Empty;
             hasLoggedDriftForCurrentCast = false;
         }
@@ -588,8 +630,39 @@ namespace CombatSystem.Core
                 animator.SetBool(castingHash, false);
             }
 
+            if (IsLastBreathSkill(evt.Skill))
+            {
+                ReleaseLastBreathAerialVisual(immediate: true);
+            }
+
             currentCastSkillName = string.Empty;
             hasLoggedDriftForCurrentCast = false;
+        }
+
+        private void HandleSkillStepExecuted(SkillStepExecutedEvent evt)
+        {
+            if (unitRoot == null || evt.Caster != unitRoot)
+            {
+                return;
+            }
+
+            if (evt.Trigger != SkillStepTrigger.OnCastStart || !IsLastBreathSkill(evt.Skill))
+            {
+                return;
+            }
+
+            var targetTransform = evt.ExplicitTarget != null
+                ? evt.ExplicitTarget.transform
+                : evt.PrimaryTarget.Transform;
+            if (targetTransform == null)
+            {
+                ReleaseLastBreathAerialVisual(immediate: true);
+                return;
+            }
+
+            lastBreathTargetTransform = targetTransform;
+            lastBreathAerialActive = true;
+            lastBreathReleaseTime = float.PositiveInfinity;
         }
 
         private void HandleHealthChanged(HealthChangedEvent evt)
@@ -636,6 +709,7 @@ namespace CombatSystem.Core
 
             isDead = true;
             forceExitHitAt = -1f;
+            ClearLastBreathAerialVisualState();
             if (hasDeadBool)
             {
                 animator.SetBool(deadHash, true);
@@ -740,37 +814,10 @@ namespace CombatSystem.Core
             }
 
             EnsureVisualRootBaseline(root);
+            UpdateLastBreathAerialVisuals(root);
+            UpdateKnockupVisualLift();
 
-            if (!enableKnockupVisualLift)
-            {
-                if (currentKnockupVisualLift > 0f)
-                {
-                    currentKnockupVisualLift = 0f;
-                    root.localPosition = visualRootBaselineLocalPosition;
-                }
-
-                return;
-            }
-
-            var knockupActive = buffController != null && buffController.HasControl(ControlType.Knockup);
-            var targetLift = knockupActive ? Mathf.Max(0f, knockupLiftHeight) : 0f;
-            var speed = targetLift > currentKnockupVisualLift
-                ? Mathf.Max(0f, knockupLiftInSpeed)
-                : Mathf.Max(0f, knockupLiftOutSpeed);
-
-            if (speed <= 0f)
-            {
-                currentKnockupVisualLift = targetLift;
-            }
-            else
-            {
-                currentKnockupVisualLift = Mathf.MoveTowards(
-                    currentKnockupVisualLift,
-                    targetLift,
-                    speed * Time.deltaTime);
-            }
-
-            var targetLocalPosition = visualRootBaselineLocalPosition + Vector3.up * currentKnockupVisualLift;
+            var targetLocalPosition = visualRootBaselineLocalPosition + currentLastBreathLocalOffset + Vector3.up * currentKnockupVisualLift;
             if ((root.localPosition - targetLocalPosition).sqrMagnitude > 0.000001f)
             {
                 root.localPosition = targetLocalPosition;
@@ -786,6 +833,7 @@ namespace CombatSystem.Core
 
             visualOffsetRoot.localPosition = visualRootBaselineLocalPosition;
             currentKnockupVisualLift = 0f;
+            ClearLastBreathAerialVisualState();
         }
 
         private void CacheAnimatorParameters()
@@ -904,6 +952,7 @@ namespace CombatSystem.Core
         {
             isDead = false;
             forceExitHitAt = -1f;
+            ClearLastBreathAerialVisualState();
 
             if (animator == null)
             {
@@ -933,6 +982,196 @@ namespace CombatSystem.Core
 
             animator.CrossFadeInFixedTime("Locomotion", 0.08f, 0, 0f);
             CaptureMotionBaseline();
+        }
+
+        private void UpdateKnockupVisualLift()
+        {
+            if (!enableKnockupVisualLift)
+            {
+                currentKnockupVisualLift = 0f;
+                return;
+            }
+
+            var knockupActive = buffController != null && buffController.HasControl(ControlType.Knockup);
+            var targetLift = knockupActive ? Mathf.Max(0f, knockupLiftHeight) : 0f;
+            var speed = targetLift > currentKnockupVisualLift
+                ? Mathf.Max(0f, knockupLiftInSpeed)
+                : Mathf.Max(0f, knockupLiftOutSpeed);
+
+            if (speed <= 0f)
+            {
+                currentKnockupVisualLift = targetLift;
+                return;
+            }
+
+            currentKnockupVisualLift = Mathf.MoveTowards(
+                currentKnockupVisualLift,
+                targetLift,
+                speed * Time.deltaTime);
+        }
+
+        private void UpdateLastBreathAerialVisuals(Transform root)
+        {
+            if (!enableLastBreathAerialVisual)
+            {
+                currentLastBreathLocalOffset = Vector3.zero;
+                lastBreathAerialActive = false;
+                lastBreathTargetTransform = null;
+                lastBreathReleaseTime = float.NegativeInfinity;
+                return;
+            }
+
+            var shouldHover = lastBreathAerialActive && Time.time < lastBreathReleaseTime;
+            var targetLocalOffset = Vector3.zero;
+            var moveSpeed = Mathf.Max(0f, lastBreathExitSpeed);
+
+            if (shouldHover && TryResolveLastBreathTargetLocalOffset(root, out targetLocalOffset))
+            {
+                moveSpeed = Mathf.Max(0f, lastBreathEnterSpeed);
+            }
+            else
+            {
+                targetLocalOffset = Vector3.zero;
+                if (shouldHover)
+                {
+                    lastBreathReleaseTime = Time.time;
+                }
+            }
+
+            if (moveSpeed <= 0f)
+            {
+                currentLastBreathLocalOffset = targetLocalOffset;
+            }
+            else
+            {
+                currentLastBreathLocalOffset = Vector3.MoveTowards(
+                    currentLastBreathLocalOffset,
+                    targetLocalOffset,
+                    moveSpeed * Time.deltaTime);
+            }
+
+            if (!shouldHover && currentLastBreathLocalOffset.sqrMagnitude <= 0.000001f)
+            {
+                ClearLastBreathAerialVisualState();
+            }
+        }
+
+        private void ReleaseLastBreathAerialVisual(bool immediate)
+        {
+            if (!lastBreathAerialActive && currentLastBreathLocalOffset.sqrMagnitude <= 0.000001f)
+            {
+                return;
+            }
+
+            lastBreathAerialActive = true;
+            lastBreathReleaseTime = immediate
+                ? Time.time
+                : Time.time + Mathf.Max(0f, lastBreathLingerAfterComplete);
+        }
+
+        private void ClearLastBreathAerialVisualState()
+        {
+            currentLastBreathLocalOffset = Vector3.zero;
+            lastBreathTargetTransform = null;
+            lastBreathAerialActive = false;
+            lastBreathReleaseTime = float.NegativeInfinity;
+        }
+
+        private bool TryResolveLastBreathTargetLocalOffset(Transform root, out Vector3 localOffset)
+        {
+            localOffset = Vector3.zero;
+            if (root == null || !TryResolveLastBreathTargetHeadPosition(out var headWorldPosition))
+            {
+                return false;
+            }
+
+            var desiredWorldPosition = headWorldPosition + Vector3.up * Mathf.Max(0f, lastBreathHoverHeight);
+            var parent = root.parent != null ? root.parent : transform;
+            var desiredLocalPosition = parent.InverseTransformPoint(desiredWorldPosition);
+            localOffset = desiredLocalPosition - visualRootBaselineLocalPosition;
+            return true;
+        }
+
+        private bool TryResolveLastBreathTargetHeadPosition(out Vector3 headWorldPosition)
+        {
+            headWorldPosition = Vector3.zero;
+            if (lastBreathTargetTransform == null)
+            {
+                return false;
+            }
+
+            if (TryGetBoundsTop(lastBreathTargetTransform.GetComponent<CharacterController>(), out headWorldPosition) ||
+                TryGetBoundsTop(lastBreathTargetTransform.GetComponent<Collider>(), out headWorldPosition) ||
+                TryGetBoundsTop(lastBreathTargetTransform.GetComponentInChildren<Renderer>(), out headWorldPosition))
+            {
+                headWorldPosition += Vector3.up * Mathf.Max(0f, lastBreathHeadPadding);
+                return true;
+            }
+
+            headWorldPosition = lastBreathTargetTransform.position + Vector3.up * Mathf.Max(0f, lastBreathFallbackHeadHeight);
+            return true;
+        }
+
+        private static bool TryGetBoundsTop(CharacterController controller, out Vector3 top)
+        {
+            top = Vector3.zero;
+            if (controller == null)
+            {
+                return false;
+            }
+
+            var bounds = controller.bounds;
+            if (bounds.size.sqrMagnitude <= 0.000001f)
+            {
+                return false;
+            }
+
+            top = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            return true;
+        }
+
+        private static bool TryGetBoundsTop(Collider collider, out Vector3 top)
+        {
+            top = Vector3.zero;
+            if (collider == null || !collider.enabled)
+            {
+                return false;
+            }
+
+            var bounds = collider.bounds;
+            if (bounds.size.sqrMagnitude <= 0.000001f)
+            {
+                return false;
+            }
+
+            top = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            return true;
+        }
+
+        private static bool TryGetBoundsTop(Renderer renderer, out Vector3 top)
+        {
+            top = Vector3.zero;
+            if (renderer == null || !renderer.enabled)
+            {
+                return false;
+            }
+
+            var bounds = renderer.bounds;
+            if (bounds.size.sqrMagnitude <= 0.000001f)
+            {
+                return false;
+            }
+
+            top = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            return true;
+        }
+
+        private bool IsLastBreathSkill(SkillDefinition skill)
+        {
+            return enableLastBreathAerialVisual &&
+                   skill != null &&
+                   !string.IsNullOrWhiteSpace(lastBreathSkillId) &&
+                   string.Equals(skill.Id, lastBreathSkillId, StringComparison.Ordinal);
         }
 
         private void EnsureAnimationEventProxy()

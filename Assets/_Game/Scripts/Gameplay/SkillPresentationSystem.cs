@@ -273,6 +273,12 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            // 空目标效果事件仍可能存在，但依赖目标锚点的命中特效不应回退到错误坐标。
+            if (RequiresValidTargetAnchor(cue.anchorType) && evt.Target.Transform == null)
+            {
+                return;
+            }
+
             ResolveAnchor(cue, evt, out var anchor, out var worldPosition, out var worldRotation);
             PlayCue(cue, evt.Caster, anchor, worldPosition, worldRotation);
         }
@@ -419,6 +425,12 @@ namespace CombatSystem.Gameplay
 
             var child = anchorRoot.Find(anchorChildPath);
             return child != null ? child : anchorRoot;
+        }
+
+        private static bool RequiresValidTargetAnchor(PresentationAnchorType anchorType)
+        {
+            return anchorType == PresentationAnchorType.PrimaryTarget
+                || anchorType == PresentationAnchorType.ExplicitTarget;
         }
 
         private static void ResolveAnchor(
