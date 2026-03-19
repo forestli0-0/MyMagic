@@ -81,6 +81,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
         type: 3}
+      vfxScale: 0.3
       followAnchor: 0
       maxLifetime: 0.5
       sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
@@ -102,6 +103,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.45
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
@@ -130,6 +132,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
         type: 3}
+      vfxScale: 0.3
       followAnchor: 0
       maxLifetime: 0.5
       sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
@@ -151,6 +154,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.45
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
@@ -200,6 +204,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 3538170396574824354, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.6
       sfx: {fileID: 0}
@@ -221,6 +226,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 7177991128484655659, guid: 59a35ab9f68edff40b6e5332bed330f5,
         type: 3}
+      vfxScale: 0.3
       followAnchor: 0
       maxLifetime: 0.5
       sfx: {fileID: 8300000, guid: ad183432758a048408c994284ee25917, type: 3}
@@ -263,6 +269,7 @@ MonoBehaviour:
       animationTrigger: 
       vfxPrefab: {fileID: 2504214343621411470, guid: 3ed0d324122d7b24eaec75c55c74aafc,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.55
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
@@ -312,6 +319,7 @@ MonoBehaviour:
       animationTrigger:
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.45
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
@@ -361,6 +369,7 @@ MonoBehaviour:
       animationTrigger:
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.45
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}
@@ -410,6 +419,7 @@ MonoBehaviour:
       animationTrigger:
       vfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0,
         type: 3}
+      vfxScale: 0.5
       followAnchor: 0
       maxLifetime: 0.45
       sfx: {fileID: 8300000, guid: 77b0018f8fae68041aad47ed7588283f, type: 3}

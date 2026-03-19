@@ -318,6 +318,12 @@ namespace CombatSystem.Gameplay
                     instance.transform.localPosition = cue.positionOffset;
                     instance.transform.localRotation = Quaternion.Euler(cue.rotationOffset);
                 }
+
+                if (instance != null)
+                {
+                    var scale = Mathf.Max(0.01f, cue.vfxScale);
+                    instance.transform.localScale = cue.vfxPrefab.transform.localScale * scale;
+                }
             }
 
             if (cue.sfx != null && audioEmitterPool != null)

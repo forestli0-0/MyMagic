@@ -41,6 +41,7 @@ namespace CombatSystem.Gameplay
             {
                 instance.transform.SetParent(parent, false);
                 instance.transform.SetPositionAndRotation(position, rotation);
+                instance.transform.localScale = prefab.transform.localScale;
                 instance.SetActive(true);
             }
 

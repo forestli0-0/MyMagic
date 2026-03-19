@@ -79,6 +79,10 @@ namespace CombatSystem.Data
         [Tooltip("可选：要播放的 VFX 预制体。")]
         public GameObject vfxPrefab;
 
+        [Tooltip("VFX 根节点缩放倍率。")]
+        [Min(0.01f)]
+        public float vfxScale = 1f;
+
         [Tooltip("VFX 是否跟随锚点。")]
         public bool followAnchor;
 

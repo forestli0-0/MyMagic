@@ -38,6 +38,9 @@ MonoBehaviour:
   combatStateFlags: 0
   spellShieldCharges: 1
   moveStyle: 0
+  moveDestinationPolicy: 5
+  moveCollisionPolicy: 1
+  moveTargetOffset: 0.8
   moveDistance: 3
   moveSpeed: 15
   buff: {fileID: 0}
