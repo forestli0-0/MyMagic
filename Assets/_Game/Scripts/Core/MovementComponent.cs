@@ -103,7 +103,8 @@ namespace CombatSystem.Core
         private bool forcedIgnoreCollisions;
         /// <summary>记录关闭前的碰撞检测状态</summary>
         private bool forcedPrevDetectCollisions = true;
-
+        /// <summary>记录关闭前的重叠恢复状态</summary>
+        private bool forcedPrevOverlapRecovery = true;
         #endregion
 
         #region 公共属性
@@ -275,7 +276,12 @@ namespace CombatSystem.Core
         /// 强制位移会覆盖常规移动，直到位移完成。
         /// 位移过程中会持续进行碰撞检测。
         /// </remarks>
-        public void ApplyForcedMove(Vector3 direction, float distance, float speed, bool rotate, bool ignoreCollisions = false)
+        public void ApplyForcedMove(
+            Vector3 direction,
+            float distance,
+            float speed,
+            bool rotate,
+            bool ignoreCollisions = false)
         {
             if (distance <= 0f || direction.sqrMagnitude <= 0.0001f)
             {
@@ -287,19 +293,20 @@ namespace CombatSystem.Core
             forcedRemaining = distance;
             forcedSpeed = speed;
             forcedRotate = rotate;
+            RestoreForcedCollisionState();
+
+            if (!ignoreCollisions)
+            {
+                return;
+            }
 
             if (controller != null)
             {
-                if (ignoreCollisions)
-                {
-                    forcedPrevDetectCollisions = controller.detectCollisions;
-                    controller.detectCollisions = false;
-                    forcedIgnoreCollisions = true;
-                }
-                else
-                {
-                    RestoreForcedCollisionState();
-                }
+                forcedPrevDetectCollisions = controller.detectCollisions;
+                forcedPrevOverlapRecovery = controller.enableOverlapRecovery;
+                controller.detectCollisions = false;
+                controller.enableOverlapRecovery = false;
+                forcedIgnoreCollisions = true;
             }
         }
 
@@ -402,6 +409,13 @@ namespace CombatSystem.Core
         {
             if (controller != null)
             {
+                if (forcedIgnoreCollisions)
+                {
+                    displacement = ResolveForcedGhostDisplacement(displacement);
+                    transform.position += displacement;
+                    return;
+                }
+
                 controller.Move(displacement);
                 return;
             }
@@ -412,17 +426,84 @@ namespace CombatSystem.Core
 
         private void RestoreForcedCollisionState()
         {
-            if (!forcedIgnoreCollisions)
-            {
-                return;
-            }
-
-            if (controller != null)
+            if (controller != null && forcedIgnoreCollisions)
             {
                 controller.detectCollisions = forcedPrevDetectCollisions;
+                controller.enableOverlapRecovery = forcedPrevOverlapRecovery;
+            }
+            forcedIgnoreCollisions = false;
+        }
+
+        /// <summary>
+        /// 强制位移的“鬼步”模式：忽略单位碰撞，但仍被场景阻挡体拦下。
+        /// </summary>
+        private Vector3 ResolveForcedGhostDisplacement(Vector3 displacement)
+        {
+            if (controller == null)
+            {
+                return displacement;
             }
 
-            forcedIgnoreCollisions = false;
+            var distance = displacement.magnitude;
+            if (distance <= 0.0001f)
+            {
+                return displacement;
+            }
+
+            var direction = displacement / distance;
+            var (point1, point2, radius) = GetControllerCapsuleWorld();
+            var hits = Physics.CapsuleCastAll(
+                point1,
+                point2,
+                radius,
+                direction,
+                distance,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            var nearestDistance = distance;
+            for (int i = 0; i < hits.Length; i++)
+            {
+                var hit = hits[i];
+                var collider = hit.collider;
+                if (collider == null || ShouldIgnoreForcedGhostHit(collider))
+                {
+                    continue;
+                }
+
+                nearestDistance = Mathf.Min(nearestDistance, Mathf.Max(0f, hit.distance - 0.01f));
+            }
+
+            return direction * nearestDistance;
+        }
+
+        private (Vector3 point1, Vector3 point2, float radius) GetControllerCapsuleWorld()
+        {
+            var lossyScale = transform.lossyScale;
+            var maxHorizontalScale = Mathf.Max(Mathf.Abs(lossyScale.x), Mathf.Abs(lossyScale.z));
+            var verticalScale = Mathf.Abs(lossyScale.y);
+            var radius = Mathf.Max(0.05f, controller.radius * maxHorizontalScale - controller.skinWidth);
+            var height = Mathf.Max(controller.height * verticalScale, radius * 2f + 0.01f);
+            var center = transform.TransformPoint(controller.center);
+            var halfSegment = Mathf.Max(0f, height * 0.5f - radius);
+            var point1 = center + Vector3.up * halfSegment;
+            var point2 = center - Vector3.up * halfSegment;
+            return (point1, point2, radius);
+        }
+
+        private bool ShouldIgnoreForcedGhostHit(Collider collider)
+        {
+            if (collider == null)
+            {
+                return true;
+            }
+
+            if (collider.transform == transform || collider.transform.IsChildOf(transform))
+            {
+                return true;
+            }
+
+            return collider.GetComponentInParent<UnitRoot>() != null;
         }
 
         /// <summary>

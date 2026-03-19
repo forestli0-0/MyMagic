@@ -710,7 +710,9 @@ namespace CombatSystem.Gameplay
             }
 
             // 显式目标统一按“当前帧”的形状/距离进行校验，避免旧快照导致超范围命中。
-            if (effectiveExplicitTarget != null && !IsTargetInRange(skill, effectiveExplicitTarget, hasAimPoint, aimPoint, aimDirection))
+            if (effectiveExplicitTarget != null
+                && ShouldEnforceExplicitTargetRange(skill)
+                && !IsTargetInRange(skill, effectiveExplicitTarget, hasAimPoint, aimPoint, aimDirection))
             {
                 return FailCast(SkillCastFailReason.OutOfRange);
             }
@@ -2065,6 +2067,47 @@ namespace CombatSystem.Gameplay
             return targeting != null && !targeting.RequireExplicitTarget && targeting.IgnoreOptionalExplicitTarget;
         }
 
+        private static bool ShouldResolveSoftEvaluationExplicitTarget(SkillDefinition skill)
+        {
+            var targeting = skill != null ? skill.Targeting : null;
+            if (targeting == null || targeting.RequireExplicitTarget)
+            {
+                return false;
+            }
+
+            switch (targeting.Mode)
+            {
+                case TargetingMode.Single:
+                case TargetingMode.Chain:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool ShouldEnforceExplicitTargetRange(SkillDefinition skill)
+        {
+            var targeting = skill != null ? skill.Targeting : null;
+            if (targeting == null)
+            {
+                return false;
+            }
+
+            if (targeting.RequireExplicitTarget)
+            {
+                return true;
+            }
+
+            switch (targeting.Mode)
+            {
+                case TargetingMode.Single:
+                case TargetingMode.Chain:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public bool TryResolveAutoCastTarget(
             SkillDefinition skill,
             bool hasAimPoint,
@@ -2091,6 +2134,11 @@ namespace CombatSystem.Gameplay
             }
 
             if (skill == null || skill.Targeting == null || skill.Targeting.RequireExplicitTarget || targetingSystem == null)
+            {
+                return candidate;
+            }
+
+            if (!ShouldResolveSoftEvaluationExplicitTarget(skill))
             {
                 return candidate;
             }

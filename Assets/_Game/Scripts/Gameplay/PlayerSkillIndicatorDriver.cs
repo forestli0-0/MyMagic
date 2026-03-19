@@ -853,14 +853,7 @@ namespace CombatSystem.Gameplay
             }
             // 保存当前预览到的目标；自动锁定类技能只拿它做预览/朝向，不把它当作输入硬选中。
             var previewTarget = currentTarget != null ? currentTarget.gameObject : null;
-            var selectedTarget = previewTarget;
-            if (skill != null
-                && skill.Targeting != null
-                && skill.Targeting.IgnoreOptionalExplicitTarget
-                && !skill.Targeting.RequireExplicitTarget)
-            {
-                selectedTarget = null;
-            }
+            var selectedTarget = ShouldPassPreviewTargetAsExplicitTarget(skill) ? previewTarget : null;
 
             // 先取消瞄准状态
             CancelAim();
@@ -901,6 +894,34 @@ namespace CombatSystem.Gameplay
 
             // 尝试施放技能，传递选中的目标作为显式目标
             skillUser.TryCast(skill, selectedTarget, hadAimPoint, aimPoint, direction, chargeDuration);
+        }
+
+        private static bool ShouldPassPreviewTargetAsExplicitTarget(SkillDefinition skill)
+        {
+            var targeting = skill != null ? skill.Targeting : null;
+            if (targeting == null)
+            {
+                return false;
+            }
+
+            if (targeting.RequireExplicitTarget)
+            {
+                return true;
+            }
+
+            if (targeting.IgnoreOptionalExplicitTarget)
+            {
+                return false;
+            }
+
+            switch (targeting.Mode)
+            {
+                case TargetingMode.Single:
+                case TargetingMode.Chain:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>

@@ -127,6 +127,9 @@ namespace CombatSystem.Debugging
                 }
 
                 builder.Append('\n');
+                builder.Append("LastFail: ")
+                    .Append(skillUser.LastCastFailReason)
+                    .Append('\n');
             }
 
             if (cooldown != null)

@@ -445,7 +445,12 @@ namespace CombatSystem.Gameplay
                 var rotate = effect.MoveStyle == MoveStyle.Dash || effect.MoveStyle == MoveStyle.Leap;
                 if (moveSpeed > 0f)
                 {
-                    mover.ApplyForcedMove(direction, resolvedDistance, moveSpeed, rotate, ignoreCollisionsDuringForcedMove);
+                    mover.ApplyForcedMove(
+                        direction,
+                        resolvedDistance,
+                        moveSpeed,
+                        rotate,
+                        ignoreCollisionsDuringForcedMove);
                 }
                 else
                 {
