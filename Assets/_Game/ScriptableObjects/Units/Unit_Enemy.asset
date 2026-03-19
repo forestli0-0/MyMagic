@@ -30,6 +30,6 @@ MonoBehaviour:
     value: 1
   - stat: {fileID: 11400000, guid: eca70f4b21eea224aa83f018b644b0d4, type: 2}
     value: 3.5
-  basicAttack: {fileID: 11400000, guid: e89dee26b36ffe3438d4051ec4ab7f67, type: 2}
+  basicAttack: {fileID: 11400000, guid: c46de70757e74db599e6a7c19cb64829, type: 2}
   startingSkills: []
   aiProfile: {fileID: 11400000, guid: d2cd490960c577341abb79ff22d73fc5, type: 2}

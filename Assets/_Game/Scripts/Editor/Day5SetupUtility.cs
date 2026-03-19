@@ -17,6 +17,8 @@ namespace CombatSystem.EditorTools
         private const string MainQuestPath = "Assets/_Game/ScriptableObjects/Quests/Quest_Main_FirstTrade.asset";
         private const string SideQuestPath = "Assets/_Game/ScriptableObjects/Quests/Quest_Side_FieldSupplies.asset";
         private const string GameDatabasePath = "Assets/_Game/ScriptableObjects/Database/GameDatabase.asset";
+        private static readonly Vector2 QuestHudAnchoredPosition = new Vector2(24f, -96f);
+        private static readonly Vector2 QuestHudSize = new Vector2(420f, 190f);
 
         [MenuItem("Combat/Day5/Setup Quest Assets")]
         public static void SetupQuestAssets()
@@ -243,6 +245,7 @@ namespace CombatSystem.EditorTools
             var existing = Object.FindFirstObjectByType<QuestTrackerHUD>(FindObjectsInactive.Include);
             if (existing != null)
             {
+                ApplyQuestHudLayout(existing.transform as RectTransform);
                 var serializedExisting = new SerializedObject(existing);
                 serializedExisting.FindProperty("questTracker").objectReferenceValue = tracker;
                 serializedExisting.FindProperty("database").objectReferenceValue = database;
@@ -261,11 +264,7 @@ namespace CombatSystem.EditorTools
             var panel = new GameObject("QuestHUD", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             var panelRect = panel.GetComponent<RectTransform>();
             panelRect.SetParent(uiRoot.HudCanvas.transform, false);
-            panelRect.anchorMin = new Vector2(0f, 1f);
-            panelRect.anchorMax = new Vector2(0f, 1f);
-            panelRect.pivot = new Vector2(0f, 1f);
-            panelRect.anchoredPosition = new Vector2(24f, -24f);
-            panelRect.sizeDelta = new Vector2(420f, 190f);
+            ApplyQuestHudLayout(panelRect);
 
             var panelImage = panel.GetComponent<Image>();
             panelImage.color = new Color(0.04f, 0.06f, 0.1f, 0.72f);
@@ -301,6 +300,21 @@ namespace CombatSystem.EditorTools
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(hud);
             return hud;
+        }
+
+        // Keep the quest tracker below the top-left health/progression cluster.
+        private static void ApplyQuestHudLayout(RectTransform rectTransform)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.anchoredPosition = QuestHudAnchoredPosition;
+            rectTransform.sizeDelta = QuestHudSize;
         }
 
         private static void EnsureVendorQuestGiver(QuestDefinition mainQuest, QuestTracker tracker)

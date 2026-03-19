@@ -302,6 +302,9 @@ namespace CombatSystem.Editor
             var castAnchor = PresentationAnchorType.Caster;
             var castFollow = false;
             var castLifetime = 0.5f;
+            var castScale = 1f;
+            var hitScale = 0.5f;
+            var projectileHitScale = 0.5f;
             var projectileSpawnPrefab = vfx.ProjectileTrail;
             var projectileHitPrefab = vfx.ProjectileImpact;
             var projectileReturnPrefab = vfx.ReturnFlash;
@@ -329,6 +332,11 @@ namespace CombatSystem.Editor
             {
                 castPrefab = vfx.MeleeSwing;
                 castLifetime = 0.35f;
+            }
+
+            if (skillName.Contains("yasuoq"))
+            {
+                castScale = 0.3f;
             }
 
             if (isFireball)
@@ -388,6 +396,7 @@ namespace CombatSystem.Editor
                     anchorType = castAnchor,
                     spawnSpace = PresentationSpawnSpace.World,
                     vfxPrefab = castPrefab,
+                    vfxScale = castScale,
                     followAnchor = castFollow,
                     maxLifetime = castLifetime,
                     sfx = audio.Cast,
@@ -426,6 +435,7 @@ namespace CombatSystem.Editor
                         anchorType = PresentationAnchorType.PrimaryTarget,
                         spawnSpace = PresentationSpawnSpace.World,
                         vfxPrefab = projectileHitPrefab,
+                        vfxScale = projectileHitScale,
                         maxLifetime = 0.55f,
                         sfx = audio.Hit,
                         audioBus = AudioBusType.Sfx,
@@ -489,6 +499,7 @@ namespace CombatSystem.Editor
                         filterByEffectType = true,
                         effectTypeFilter = EffectType.Damage,
                         vfxPrefab = vfx.HitSpark,
+                        vfxScale = hitScale,
                         maxLifetime = 0.45f,
                         sfx = audio.Hit,
                         audioBus = AudioBusType.Sfx,

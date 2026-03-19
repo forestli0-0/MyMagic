@@ -1344,7 +1344,10 @@ namespace CombatSystem.Editor
                     MoveStyle.Dash,
                     3f,
                     15f,
-                    assets.TargetingSelf);
+                    assets.TargetingSelf,
+                    MoveDestinationPolicy.BehindExplicitTarget,
+                    MoveCollisionPolicy.IgnoreCharacterControllerCollisions,
+                    0.8f);
 
                 ConfigureEffectDamage(
                     assets.EffectYasuoEDashDamage,

@@ -92,7 +92,7 @@ namespace CombatSystem.UI
 
             if (priceText != null)
             {
-                priceText.text = hasItem ? $"G {state.Price}" : string.Empty;
+                priceText.text = hasItem ? $"{state.Price}G" : string.Empty;
             }
 
             if (stockText != null)
@@ -100,18 +100,22 @@ namespace CombatSystem.UI
                 if (state == null)
                 {
                     stockText.text = string.Empty;
+                    stockText.color = new Color(0.79f, 0.86f, 0.94f, 1f);
                 }
                 else if (!state.Definition.CanBuy)
                 {
-                    stockText.text = "locked";
+                    stockText.text = "锁定";
+                    stockText.color = new Color(1f, 0.72f, 0.62f, 0.95f);
                 }
                 else if (state.IsSoldOut)
                 {
-                    stockText.text = "sold out";
+                    stockText.text = "售罄";
+                    stockText.color = new Color(1f, 0.72f, 0.62f, 0.95f);
                 }
                 else
                 {
-                    stockText.text = state.InfiniteStock ? "inf" : state.RemainingStock.ToString();
+                    stockText.text = state.InfiniteStock ? "∞" : state.RemainingStock.ToString();
+                    stockText.color = new Color(0.79f, 0.86f, 0.94f, 1f);
                 }
             }
 

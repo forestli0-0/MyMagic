@@ -408,6 +408,10 @@ MonoBehaviour:
   raycastDistance: 200
   inputReader: {fileID: 0}
   autoFindInputReader: 1
+  enableOverflowSkillHotkeys: 1
+  overflowSkillHotkeys: 2f0000003000000031000000320000000d0000000e000000
+  skillBarUI: {fileID: 0}
+  autoFindSkillBarUI: 1
 --- !u!114 &4085964281505129908
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -545,7 +549,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ce87820ed5c0434898a1586dc99b1a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startingAmount: 0
+  startingAmount: 300
   maxAmount: 0
   initializeOnAwake: 1
 --- !u!114 &4569712509572376812
@@ -583,6 +587,7 @@ MonoBehaviour:
   movement: {fileID: 4932691524152171117}
   skillUser: {fileID: 3203202813011051223}
   health: {fileID: 3577631922818317307}
+  buffController: {fileID: 0}
   hitFlashReceiver: {fileID: 4569712509572376812}
   visualRoot: {fileID: 7203401602227046431}
   animator: {fileID: 0}
@@ -592,6 +597,7 @@ MonoBehaviour:
   autoFindAnimatorOnModel: 1
   refreshHitFlashTargetsAfterModelSwap: 1
   enableDebugLog: 0
+  useLocomotionLoopFallback: 0
   lockModelLocalPositionWhenNoRootMotion: 1
   modelAnchorTolerance: 0.01
   logModelAnchorDrift: 0

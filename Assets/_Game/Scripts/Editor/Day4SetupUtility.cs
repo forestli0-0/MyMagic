@@ -18,6 +18,7 @@ namespace CombatSystem.EditorTools
 {
     public static class Day4SetupUtility
     {
+        private const int DefaultPlayerStartingCurrency = 300;
         private const string LootTablePath = "Assets/_Game/ScriptableObjects/Loot/LootTable_Default.asset";
         private const string VendorPath = "Assets/_Game/ScriptableObjects/Vendors/Vendor_Default.asset";
         private const string LootPickupPrefabPath = "Assets/_Game/Prefabs/LootPickup.prefab";
@@ -25,6 +26,7 @@ namespace CombatSystem.EditorTools
         private const string GameDatabasePath = "Assets/_Game/ScriptableObjects/Database/GameDatabase.asset";
         private const string InputActionsPath = "Assets/_Game/Input/CombatInputActions.inputactions";
         private const string VendorSceneName = "Vendor";
+        private const string VendorScenePath = "Assets/Scenes/Vendor.unity";
         private const string TownScenePath = "Assets/Scenes/Town.unity";
         private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
 
@@ -57,7 +59,17 @@ namespace CombatSystem.EditorTools
             var currency = prefab.GetComponent<CurrencyComponent>();
             if (currency == null)
             {
-                prefab.AddComponent<CurrencyComponent>();
+                currency = prefab.AddComponent<CurrencyComponent>();
+            }
+
+            if (currency != null)
+            {
+                var currencySerialized = new SerializedObject(currency);
+                currencySerialized.FindProperty("startingAmount").intValue = DefaultPlayerStartingCurrency;
+                currencySerialized.FindProperty("maxAmount").intValue = 0;
+                currencySerialized.FindProperty("initializeOnAwake").boolValue = true;
+                currencySerialized.ApplyModifiedProperties();
+                EditorUtility.SetDirty(currency);
             }
 
             PrefabUtility.SaveAsPrefabAsset(prefab, PlayerPrefabPath);
@@ -113,7 +125,16 @@ namespace CombatSystem.EditorTools
                 return;
             }
 
-            SetupVendorNpcAndUiInActiveScene();
+            SetupVendorNpcAndUiInActiveScene(true);
+        }
+
+        [MenuItem("Combat/Day4/Rebuild Vendor UI (Town + Vendor)")]
+        public static void RebuildVendorUiForCoreScenes()
+        {
+            SetupPlayerPrefab();
+            SetupVendorRuntimeForScene(TownScenePath);
+            SetupVendorRuntimeForScene(VendorScenePath);
+            Debug.Log("[Day4] Vendor UI rebuilt for Town and Vendor scenes.");
         }
 
         [MenuItem("Combat/Day4/Migrate Vendor Runtime To Town")]
@@ -146,7 +167,7 @@ namespace CombatSystem.EditorTools
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             SceneManager.SetActiveScene(scene);
 
-            SetupVendorNpcAndUiInActiveScene();
+            SetupVendorNpcAndUiInActiveScene(true);
             Day5SetupUtility.SetupQuestRuntime();
             if (Application.isBatchMode)
             {
@@ -220,7 +241,7 @@ namespace CombatSystem.EditorTools
             }
         }
 
-        private static void SetupVendorNpcAndUiInActiveScene()
+        private static void SetupVendorNpcAndUiInActiveScene(bool forceRebuild)
         {
             var vendor = AssetDatabase.LoadAssetAtPath<VendorDefinition>(VendorPath);
             if (vendor == null)
@@ -230,7 +251,7 @@ namespace CombatSystem.EditorTools
 
             EnsureEventSystemInput();
             var vendorService = EnsureVendorService(vendor);
-            var vendorScreen = EnsureVendorScreen(vendorService, false);
+            var vendorScreen = EnsureVendorScreen(vendorService, forceRebuild);
             EnsureVendorNpc(vendorScreen);
 
             if (!Application.isBatchMode && vendorScreen != null)
@@ -628,20 +649,23 @@ namespace CombatSystem.EditorTools
             backdropRect.offsetMin = Vector2.zero;
             backdropRect.offsetMax = Vector2.zero;
             var backdropImage = backdrop.GetComponent<Image>();
-            backdropImage.color = new Color(0f, 0f, 0f, 0.55f);
+            backdropImage.color = new Color(0.02f, 0.04f, 0.08f, 0.72f);
 
             var window = CreateUiPanel("Window", screen.transform, Vector2.one);
             var windowRect = window.GetComponent<RectTransform>();
-            windowRect.anchorMin = new Vector2(0.06f, 0.06f);
-            windowRect.anchorMax = new Vector2(0.94f, 0.94f);
+            windowRect.anchorMin = new Vector2(0.05f, 0.05f);
+            windowRect.anchorMax = new Vector2(0.95f, 0.95f);
             windowRect.offsetMin = Vector2.zero;
             windowRect.offsetMax = Vector2.zero;
             var windowImage = window.GetComponent<Image>();
-            windowImage.color = new Color(0.11f, 0.13f, 0.18f, 0.96f);
+            windowImage.color = new Color(0.08f, 0.12f, 0.18f, 0.97f);
+            var windowOutline = window.AddComponent<Outline>();
+            windowOutline.effectColor = new Color(0.18f, 0.31f, 0.52f, 0.9f);
+            windowOutline.effectDistance = new Vector2(2f, -2f);
 
             var windowLayout = window.AddComponent<VerticalLayoutGroup>();
-            windowLayout.padding = new RectOffset(14, 14, 14, 14);
-            windowLayout.spacing = 12f;
+            windowLayout.padding = new RectOffset(18, 18, 18, 18);
+            windowLayout.spacing = 14f;
             windowLayout.childAlignment = TextAnchor.UpperLeft;
             windowLayout.childControlHeight = true;
             windowLayout.childControlWidth = true;
@@ -650,34 +674,52 @@ namespace CombatSystem.EditorTools
 
             var header = CreateUiPanel("Header", window.transform, Vector2.one);
             var headerImage = header.GetComponent<Image>();
-            headerImage.color = new Color(0.15f, 0.18f, 0.24f, 1f);
+            headerImage.color = new Color(0.1f, 0.16f, 0.24f, 1f);
             var headerLayout = header.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.padding = new RectOffset(12, 12, 8, 8);
-            headerLayout.spacing = 8f;
+            headerLayout.padding = new RectOffset(18, 18, 14, 14);
+            headerLayout.spacing = 18f;
             headerLayout.childAlignment = TextAnchor.MiddleLeft;
             headerLayout.childControlHeight = true;
             headerLayout.childControlWidth = true;
-            headerLayout.childForceExpandHeight = true;
+            headerLayout.childForceExpandHeight = false;
             headerLayout.childForceExpandWidth = false;
-            header.AddComponent<LayoutElement>().preferredHeight = 54f;
+            header.AddComponent<LayoutElement>().preferredHeight = 68f;
 
-            var titleText = CreateText("Title", header.transform, font, "Vendor");
-            titleText.fontSize = 24;
+            var titleBlock = new GameObject("TitleBlock", typeof(RectTransform), typeof(LayoutElement));
+            titleBlock.transform.SetParent(header.transform, false);
+            var titleBlockLayout = titleBlock.AddComponent<VerticalLayoutGroup>();
+            titleBlockLayout.spacing = 0f;
+            titleBlockLayout.childAlignment = TextAnchor.MiddleLeft;
+            titleBlockLayout.childControlHeight = true;
+            titleBlockLayout.childControlWidth = true;
+            titleBlockLayout.childForceExpandHeight = false;
+            titleBlockLayout.childForceExpandWidth = true;
+            var titleBlockElement = titleBlock.GetComponent<LayoutElement>();
+            titleBlockElement.flexibleWidth = 1f;
+            titleBlockElement.minWidth = 0f;
+
+            var titleText = CreateText("ScreenTitle", titleBlock.transform, font, "商人交易");
+            titleText.fontSize = 30;
+            titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.MiddleLeft;
-            titleText.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            titleText.GetComponent<LayoutElement>().preferredHeight = 34f;
 
-            var hintText = CreateText("Hint", header.transform, font, "Select an item to trade");
-            hintText.fontSize = 13;
-            hintText.alignment = TextAnchor.MiddleRight;
-            hintText.color = new Color(0.85f, 0.9f, 1f, 0.95f);
-            hintText.GetComponent<LayoutElement>().preferredWidth = 260f;
+            var currencyText = CreateText("CurrencyText", header.transform, font, "0G");
+            currencyText.fontSize = 30;
+            currencyText.fontStyle = FontStyle.Bold;
+            currencyText.alignment = TextAnchor.MiddleRight;
+            currencyText.color = new Color(1f, 0.84f, 0.32f, 1f);
+            var currencyTextElement = currencyText.GetComponent<LayoutElement>();
+            currencyTextElement.preferredWidth = 150f;
+            currencyTextElement.minWidth = 120f;
+            currencyTextElement.preferredHeight = 40f;
 
             var body = CreateUiPanel("Body", window.transform, Vector2.one);
             var bodyImage = body.GetComponent<Image>();
-            bodyImage.color = new Color(0.08f, 0.1f, 0.14f, 0.95f);
+            bodyImage.color = new Color(0.05f, 0.08f, 0.13f, 0.96f);
             var bodyLayout = body.AddComponent<HorizontalLayoutGroup>();
-            bodyLayout.padding = new RectOffset(10, 10, 10, 10);
-            bodyLayout.spacing = 12f;
+            bodyLayout.padding = new RectOffset(14, 14, 14, 14);
+            bodyLayout.spacing = 14f;
             bodyLayout.childAlignment = TextAnchor.UpperLeft;
             bodyLayout.childControlHeight = true;
             bodyLayout.childControlWidth = true;
@@ -685,36 +727,50 @@ namespace CombatSystem.EditorTools
             bodyLayout.childForceExpandWidth = false;
             var bodyElement = body.AddComponent<LayoutElement>();
             bodyElement.flexibleHeight = 1f;
-            bodyElement.minHeight = 420f;
+            bodyElement.minHeight = 540f;
 
             var vendorPanel = CreateUiPanel("VendorPanel", body.transform, Vector2.one);
-            vendorPanel.GetComponent<Image>().color = new Color(0.12f, 0.15f, 0.2f, 0.95f);
+            vendorPanel.GetComponent<Image>().color = new Color(0.09f, 0.13f, 0.2f, 0.98f);
             var vendorElement = vendorPanel.AddComponent<LayoutElement>();
-            vendorElement.preferredWidth = 320f;
-            vendorElement.minWidth = 300f;
+            vendorElement.preferredWidth = 370f;
+            vendorElement.minWidth = 340f;
+            vendorElement.flexibleWidth = 0.9f;
             var vendorLayout = vendorPanel.AddComponent<VerticalLayoutGroup>();
-            vendorLayout.padding = new RectOffset(10, 10, 10, 10);
-            vendorLayout.spacing = 8f;
+            vendorLayout.padding = new RectOffset(12, 12, 12, 12);
+            vendorLayout.spacing = 10f;
             vendorLayout.childAlignment = TextAnchor.UpperLeft;
             vendorLayout.childControlHeight = true;
             vendorLayout.childControlWidth = true;
             vendorLayout.childForceExpandHeight = false;
             vendorLayout.childForceExpandWidth = true;
 
-            var vendorTitle = CreateText("VendorTitle", vendorPanel.transform, font, "Vendor");
-            vendorTitle.fontSize = 18;
+            var vendorHeader = CreateUiPanel("VendorHeader", vendorPanel.transform, Vector2.one);
+            vendorHeader.GetComponent<Image>().color = new Color(0.07f, 0.1f, 0.16f, 0.98f);
+            vendorHeader.AddComponent<LayoutElement>().preferredHeight = 46f;
+            var vendorHeaderLayout = vendorHeader.AddComponent<VerticalLayoutGroup>();
+            vendorHeaderLayout.padding = new RectOffset(12, 12, 9, 9);
+            vendorHeaderLayout.spacing = 0f;
+            vendorHeaderLayout.childAlignment = TextAnchor.UpperLeft;
+            vendorHeaderLayout.childControlHeight = true;
+            vendorHeaderLayout.childControlWidth = true;
+            vendorHeaderLayout.childForceExpandHeight = false;
+            vendorHeaderLayout.childForceExpandWidth = true;
+
+            var vendorTitle = CreateText("VendorTitle", vendorHeader.transform, font, "商店货架");
+            vendorTitle.fontSize = 20;
+            vendorTitle.fontStyle = FontStyle.Bold;
             vendorTitle.alignment = TextAnchor.MiddleLeft;
-            vendorTitle.GetComponent<LayoutElement>().preferredHeight = 30f;
+            vendorTitle.GetComponent<LayoutElement>().preferredHeight = 28f;
 
             var vendorListRoot = CreateUiPanel("VendorList", vendorPanel.transform, Vector2.one);
-            vendorListRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.28f);
+            vendorListRoot.GetComponent<Image>().color = new Color(0.03f, 0.06f, 0.1f, 0.92f);
             var vendorListElement = vendorListRoot.AddComponent<LayoutElement>();
             vendorListElement.flexibleHeight = 1f;
-            vendorListElement.minHeight = 320f;
+            vendorListElement.minHeight = 360f;
             var vendorListGrid = vendorListRoot.AddComponent<GridLayoutGroup>();
-            vendorListGrid.padding = new RectOffset(8, 8, 8, 8);
-            vendorListGrid.cellSize = new Vector2(82f, 82f);
-            vendorListGrid.spacing = new Vector2(8f, 8f);
+            vendorListGrid.padding = new RectOffset(10, 10, 10, 10);
+            vendorListGrid.cellSize = new Vector2(96f, 96f);
+            vendorListGrid.spacing = new Vector2(10f, 10f);
             vendorListGrid.startCorner = GridLayoutGroup.Corner.UpperLeft;
             vendorListGrid.startAxis = GridLayoutGroup.Axis.Horizontal;
             vendorListGrid.childAlignment = TextAnchor.UpperLeft;
@@ -727,75 +783,200 @@ namespace CombatSystem.EditorTools
             SetPrivateField(vendorList, "slotTemplate", vendorSlotTemplate);
 
             var detailPanel = CreateUiPanel("SelectionDetails", body.transform, Vector2.one);
-            detailPanel.GetComponent<Image>().color = new Color(0.12f, 0.15f, 0.2f, 0.95f);
+            detailPanel.GetComponent<Image>().color = new Color(0.09f, 0.13f, 0.2f, 0.98f);
             var detailElement = detailPanel.AddComponent<LayoutElement>();
-            detailElement.preferredWidth = 360f;
-            detailElement.minWidth = 320f;
+            detailElement.preferredWidth = 430f;
+            detailElement.minWidth = 400f;
+            detailElement.flexibleWidth = 1f;
             var detailLayout = detailPanel.AddComponent<VerticalLayoutGroup>();
             detailLayout.padding = new RectOffset(12, 12, 12, 12);
-            detailLayout.spacing = 6f;
+            detailLayout.spacing = 10f;
             detailLayout.childAlignment = TextAnchor.UpperLeft;
             detailLayout.childControlHeight = true;
             detailLayout.childControlWidth = true;
             detailLayout.childForceExpandHeight = false;
             detailLayout.childForceExpandWidth = true;
 
-            var detailsTitle = CreateText("DetailsTitle", detailPanel.transform, font, "Item Details");
-            detailsTitle.fontSize = 18;
-            detailsTitle.alignment = TextAnchor.MiddleLeft;
-            detailsTitle.GetComponent<LayoutElement>().preferredHeight = 30f;
+            var detailHeader = CreateUiPanel("DetailHeader", detailPanel.transform, Vector2.one);
+            detailHeader.GetComponent<Image>().color = new Color(0.07f, 0.1f, 0.16f, 0.98f);
+            detailHeader.AddComponent<LayoutElement>().preferredHeight = 124f;
+            var detailHeaderLayout = detailHeader.AddComponent<HorizontalLayoutGroup>();
+            detailHeaderLayout.padding = new RectOffset(14, 14, 14, 14);
+            detailHeaderLayout.spacing = 12f;
+            detailHeaderLayout.childAlignment = TextAnchor.UpperLeft;
+            detailHeaderLayout.childControlHeight = true;
+            detailHeaderLayout.childControlWidth = true;
+            detailHeaderLayout.childForceExpandHeight = false;
+            detailHeaderLayout.childForceExpandWidth = false;
 
-            var detailTitle = CreateText("DetailTitle", detailPanel.transform, font, "No item selected");
-            detailTitle.fontSize = 17;
-            detailTitle.alignment = TextAnchor.UpperLeft;
-            detailTitle.GetComponent<LayoutElement>().preferredHeight = 30f;
-            var detailMeta = CreateText("DetailMeta", detailPanel.transform, font, "Click a vendor or inventory slot.");
-            detailMeta.fontSize = 14;
+            var detailIconFrame = CreateUiPanel("DetailIconFrame", detailHeader.transform, new Vector2(92f, 92f));
+            detailIconFrame.GetComponent<Image>().color = new Color(0.12f, 0.2f, 0.31f, 1f);
+            var detailIconFrameElement = detailIconFrame.AddComponent<LayoutElement>();
+            detailIconFrameElement.preferredWidth = 92f;
+            detailIconFrameElement.preferredHeight = 92f;
+            detailIconFrameElement.minWidth = 92f;
+            detailIconFrameElement.minHeight = 92f;
+            var detailIcon = new GameObject("DetailIcon", typeof(RectTransform), typeof(Image));
+            detailIcon.transform.SetParent(detailIconFrame.transform, false);
+            var detailIconRect = detailIcon.GetComponent<RectTransform>();
+            detailIconRect.anchorMin = Vector2.zero;
+            detailIconRect.anchorMax = Vector2.one;
+            detailIconRect.offsetMin = new Vector2(10f, 10f);
+            detailIconRect.offsetMax = new Vector2(-10f, -10f);
+            var detailIconImage = detailIcon.GetComponent<Image>();
+            detailIconImage.preserveAspect = true;
+            detailIconImage.raycastTarget = false;
+
+            var detailTextBlock = new GameObject("DetailTextBlock", typeof(RectTransform), typeof(LayoutElement));
+            detailTextBlock.transform.SetParent(detailHeader.transform, false);
+            var detailTextLayout = detailTextBlock.AddComponent<VerticalLayoutGroup>();
+            detailTextLayout.spacing = 4f;
+            detailTextLayout.childAlignment = TextAnchor.UpperLeft;
+            detailTextLayout.childControlHeight = true;
+            detailTextLayout.childControlWidth = true;
+            detailTextLayout.childForceExpandHeight = false;
+            detailTextLayout.childForceExpandWidth = true;
+            var detailTextBlockElement = detailTextBlock.GetComponent<LayoutElement>();
+            detailTextBlockElement.flexibleWidth = 1f;
+            detailTextBlockElement.minWidth = 0f;
+
+            var detailsTitle = CreateText("DetailsTitle", detailTextBlock.transform, font, "交易详情");
+            detailsTitle.fontSize = 12;
+            detailsTitle.color = new Color(0.74f, 0.8f, 0.9f, 0.9f);
+            detailsTitle.alignment = TextAnchor.MiddleLeft;
+            detailsTitle.GetComponent<LayoutElement>().preferredHeight = 20f;
+
+            var detailTitle = CreateText("DetailTitle", detailTextBlock.transform, font, "未选中物品");
+            detailTitle.fontSize = 22;
+            detailTitle.fontStyle = FontStyle.Bold;
+            detailTitle.alignment = TextAnchor.MiddleLeft;
+            detailTitle.GetComponent<LayoutElement>().preferredHeight = 34f;
+
+            var detailMeta = CreateText("DetailMeta", detailTextBlock.transform, font, "从左侧商店货架或右侧背包中选择一件物品。");
+            detailMeta.fontSize = 13;
+            detailMeta.color = new Color(0.82f, 0.87f, 0.94f, 0.95f);
             detailMeta.alignment = TextAnchor.UpperLeft;
             detailMeta.horizontalOverflow = HorizontalWrapMode.Wrap;
             detailMeta.verticalOverflow = VerticalWrapMode.Overflow;
-            detailMeta.GetComponent<LayoutElement>().preferredHeight = 42f;
-            var detailPrice = CreateText("DetailPrice", detailPanel.transform, font, string.Empty);
-            detailPrice.fontSize = 14;
+            detailMeta.GetComponent<LayoutElement>().preferredHeight = 34f;
+
+            var quoteCard = CreateUiPanel("QuoteCard", detailPanel.transform, Vector2.one);
+            quoteCard.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.18f, 0.98f);
+            quoteCard.AddComponent<LayoutElement>().preferredHeight = 54f;
+            var quoteLayout = quoteCard.AddComponent<VerticalLayoutGroup>();
+            quoteLayout.padding = new RectOffset(14, 14, 12, 12);
+            quoteLayout.spacing = 0f;
+            quoteLayout.childAlignment = TextAnchor.UpperLeft;
+            quoteLayout.childControlHeight = true;
+            quoteLayout.childControlWidth = true;
+            quoteLayout.childForceExpandHeight = false;
+            quoteLayout.childForceExpandWidth = true;
+
+            var detailPrice = CreateText("DetailPrice", quoteCard.transform, font, string.Empty);
+            detailPrice.fontSize = 22;
             detailPrice.alignment = TextAnchor.UpperLeft;
-            detailPrice.GetComponent<LayoutElement>().preferredHeight = 32f;
-            var detailDescription = CreateText("DetailDescription", detailPanel.transform, font, "Item info, price and stock will appear here.");
+            detailPrice.color = new Color(0.97f, 0.84f, 0.42f, 1f);
+            detailPrice.GetComponent<LayoutElement>().preferredHeight = 28f;
+
+            var actionRow = new GameObject("ActionRow", typeof(RectTransform), typeof(LayoutElement));
+            actionRow.transform.SetParent(detailPanel.transform, false);
+            var actionRowLayout = actionRow.AddComponent<HorizontalLayoutGroup>();
+            actionRowLayout.spacing = 10f;
+            actionRowLayout.childAlignment = TextAnchor.MiddleCenter;
+            actionRowLayout.childControlHeight = true;
+            actionRowLayout.childControlWidth = true;
+            actionRowLayout.childForceExpandHeight = false;
+            actionRowLayout.childForceExpandWidth = true;
+            actionRow.GetComponent<LayoutElement>().preferredHeight = 46f;
+
+            var buyButton = CreateButton("BuyButton", actionRow.transform, font, "购买");
+            var buyButtonLayout = buyButton.GetComponent<LayoutElement>();
+            buyButtonLayout.minWidth = 150f;
+            buyButtonLayout.preferredWidth = 0f;
+            buyButtonLayout.flexibleWidth = 1f;
+            buyButtonLayout.minHeight = 46f;
+            buyButtonLayout.preferredHeight = 46f;
+
+            var sellButton = CreateButton("SellButton", actionRow.transform, font, "出售");
+            var sellButtonLayout = sellButton.GetComponent<LayoutElement>();
+            sellButtonLayout.minWidth = 150f;
+            sellButtonLayout.preferredWidth = 0f;
+            sellButtonLayout.flexibleWidth = 1f;
+            sellButtonLayout.minHeight = 46f;
+            sellButtonLayout.preferredHeight = 46f;
+
+            var detailDescriptionPanel = CreateUiPanel("DescriptionPanel", detailPanel.transform, Vector2.one);
+            detailDescriptionPanel.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.18f, 0.98f);
+            var detailDescriptionPanelElement = detailDescriptionPanel.AddComponent<LayoutElement>();
+            detailDescriptionPanelElement.flexibleHeight = 1f;
+            detailDescriptionPanelElement.minHeight = 168f;
+            var detailDescriptionLayout = detailDescriptionPanel.AddComponent<VerticalLayoutGroup>();
+            detailDescriptionLayout.padding = new RectOffset(14, 14, 12, 12);
+            detailDescriptionLayout.spacing = 6f;
+            detailDescriptionLayout.childAlignment = TextAnchor.UpperLeft;
+            detailDescriptionLayout.childControlHeight = true;
+            detailDescriptionLayout.childControlWidth = true;
+            detailDescriptionLayout.childForceExpandHeight = false;
+            detailDescriptionLayout.childForceExpandWidth = true;
+
+            var descriptionTitle = CreateText("DescriptionTitle", detailDescriptionPanel.transform, font, "物品说明");
+            descriptionTitle.fontSize = 14;
+            descriptionTitle.fontStyle = FontStyle.Bold;
+            descriptionTitle.alignment = TextAnchor.MiddleLeft;
+            descriptionTitle.GetComponent<LayoutElement>().preferredHeight = 24f;
+
+            var detailDescription = CreateText("DetailDescription", detailDescriptionPanel.transform, font, "这里会显示物品说明、价格和库存等信息。");
             detailDescription.fontSize = 13;
             detailDescription.alignment = TextAnchor.UpperLeft;
+            detailDescription.color = new Color(0.85f, 0.89f, 0.95f, 0.98f);
             detailDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
             detailDescription.verticalOverflow = VerticalWrapMode.Overflow;
             var detailDescriptionElement = detailDescription.GetComponent<LayoutElement>();
-            detailDescriptionElement.preferredHeight = 120f;
+            detailDescriptionElement.preferredHeight = 150f;
             detailDescriptionElement.flexibleHeight = 1f;
 
             var inventoryPanel = CreateUiPanel("InventoryPanel", body.transform, Vector2.one);
-            inventoryPanel.GetComponent<Image>().color = new Color(0.12f, 0.15f, 0.2f, 0.95f);
+            inventoryPanel.GetComponent<Image>().color = new Color(0.09f, 0.13f, 0.2f, 0.98f);
             var inventoryElement = inventoryPanel.AddComponent<LayoutElement>();
-            inventoryElement.preferredWidth = 560f;
-            inventoryElement.minWidth = 500f;
+            inventoryElement.preferredWidth = 620f;
+            inventoryElement.minWidth = 560f;
+            inventoryElement.flexibleWidth = 1.2f;
             var inventoryLayout = inventoryPanel.AddComponent<VerticalLayoutGroup>();
-            inventoryLayout.padding = new RectOffset(10, 10, 10, 10);
-            inventoryLayout.spacing = 8f;
+            inventoryLayout.padding = new RectOffset(12, 12, 12, 12);
+            inventoryLayout.spacing = 10f;
             inventoryLayout.childAlignment = TextAnchor.UpperLeft;
             inventoryLayout.childControlHeight = true;
             inventoryLayout.childControlWidth = true;
             inventoryLayout.childForceExpandHeight = false;
             inventoryLayout.childForceExpandWidth = true;
 
-            var inventoryTitle = CreateText("InventoryTitle", inventoryPanel.transform, font, "Inventory");
-            inventoryTitle.fontSize = 18;
+            var inventoryHeader = CreateUiPanel("InventoryHeader", inventoryPanel.transform, Vector2.one);
+            inventoryHeader.GetComponent<Image>().color = new Color(0.07f, 0.1f, 0.16f, 0.98f);
+            inventoryHeader.AddComponent<LayoutElement>().preferredHeight = 46f;
+            var inventoryHeaderLayout = inventoryHeader.AddComponent<VerticalLayoutGroup>();
+            inventoryHeaderLayout.padding = new RectOffset(12, 12, 9, 9);
+            inventoryHeaderLayout.spacing = 0f;
+            inventoryHeaderLayout.childAlignment = TextAnchor.UpperLeft;
+            inventoryHeaderLayout.childControlHeight = true;
+            inventoryHeaderLayout.childControlWidth = true;
+            inventoryHeaderLayout.childForceExpandHeight = false;
+            inventoryHeaderLayout.childForceExpandWidth = true;
+
+            var inventoryTitle = CreateText("InventoryTitle", inventoryHeader.transform, font, "我的背包");
+            inventoryTitle.fontSize = 20;
+            inventoryTitle.fontStyle = FontStyle.Bold;
             inventoryTitle.alignment = TextAnchor.MiddleLeft;
-            inventoryTitle.GetComponent<LayoutElement>().preferredHeight = 30f;
+            inventoryTitle.GetComponent<LayoutElement>().preferredHeight = 28f;
 
             var inventoryGridRoot = CreateUiPanel("InventoryGrid", inventoryPanel.transform, Vector2.one);
-            inventoryGridRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.28f);
+            inventoryGridRoot.GetComponent<Image>().color = new Color(0.03f, 0.06f, 0.1f, 0.92f);
             var inventoryGridElement = inventoryGridRoot.AddComponent<LayoutElement>();
             inventoryGridElement.flexibleHeight = 1f;
-            inventoryGridElement.minHeight = 320f;
+            inventoryGridElement.minHeight = 360f;
             var inventoryGridLayout = inventoryGridRoot.AddComponent<GridLayoutGroup>();
-            inventoryGridLayout.padding = new RectOffset(8, 8, 8, 8);
+            inventoryGridLayout.padding = new RectOffset(10, 10, 10, 10);
             inventoryGridLayout.cellSize = new Vector2(80f, 80f);
-            inventoryGridLayout.spacing = new Vector2(8f, 8f);
+            inventoryGridLayout.spacing = new Vector2(10f, 10f);
             inventoryGridLayout.startCorner = GridLayoutGroup.Corner.UpperLeft;
             inventoryGridLayout.startAxis = GridLayoutGroup.Axis.Horizontal;
             inventoryGridLayout.childAlignment = TextAnchor.UpperLeft;
@@ -817,38 +998,27 @@ namespace CombatSystem.EditorTools
                 }
             }
 
+            NormalizeInventorySlotTemplate(inventorySlotTemplate, font);
             SetPrivateField(inventoryGrid, "slotsRoot", inventoryGridRoot.GetComponent<RectTransform>());
             SetPrivateField(inventoryGrid, "slotTemplate", inventorySlotTemplate);
 
             var footer = CreateUiPanel("Footer", window.transform, Vector2.one);
-            footer.GetComponent<Image>().color = new Color(0.15f, 0.18f, 0.24f, 1f);
+            footer.GetComponent<Image>().color = new Color(0.09f, 0.14f, 0.22f, 1f);
             var footerElement = footer.AddComponent<LayoutElement>();
-            footerElement.preferredHeight = 64f;
+            footerElement.preferredHeight = 30f;
             var footerLayout = footer.AddComponent<HorizontalLayoutGroup>();
-            footerLayout.padding = new RectOffset(12, 12, 8, 8);
-            footerLayout.spacing = 12f;
-            footerLayout.childAlignment = TextAnchor.MiddleLeft;
+            footerLayout.padding = new RectOffset(14, 14, 8, 8);
+            footerLayout.spacing = 0f;
+            footerLayout.childAlignment = TextAnchor.MiddleRight;
             footerLayout.childControlHeight = true;
             footerLayout.childControlWidth = true;
             footerLayout.childForceExpandWidth = false;
 
-            var buyButton = CreateButton("BuyButton", footer.transform, font, "Buy");
-            var sellButton = CreateButton("SellButton", footer.transform, font, "Sell");
-            var statusText = CreateText("StatusText", footer.transform, font, string.Empty);
-            statusText.alignment = TextAnchor.MiddleLeft;
-            statusText.color = new Color(1f, 0.93f, 0.55f, 1f);
-            var statusElement = statusText.GetComponent<LayoutElement>();
-            statusElement.preferredWidth = 420f;
-            statusElement.flexibleWidth = 1f;
-
-            var currencyLabel = CreateText("CurrencyLabel", footer.transform, font, "Gold");
-            currencyLabel.alignment = TextAnchor.MiddleRight;
-            currencyLabel.fontSize = 16;
-            var currencyText = CreateText("CurrencyText", footer.transform, font, "0");
-            currencyText.alignment = TextAnchor.MiddleRight;
-            currencyText.fontSize = 20;
-            currencyText.color = new Color(1f, 0.84f, 0.3f, 1f);
-            currencyText.GetComponent<LayoutElement>().preferredWidth = 90f;
+            var footerClose = CreateText("FooterClose", footer.transform, font, "Esc 关闭");
+            footerClose.fontSize = 12;
+            footerClose.color = new Color(0.74f, 0.8f, 0.9f, 0.92f);
+            footerClose.alignment = TextAnchor.MiddleRight;
+            footerClose.GetComponent<LayoutElement>().preferredWidth = 100f;
 
             var serialized = new SerializedObject(screen);
             serialized.FindProperty("uiManager").objectReferenceValue = uiRoot.Manager;
@@ -860,11 +1030,13 @@ namespace CombatSystem.EditorTools
             serialized.FindProperty("buyButton").objectReferenceValue = buyButton;
             serialized.FindProperty("sellButton").objectReferenceValue = sellButton;
             serialized.FindProperty("currencyText").objectReferenceValue = currencyText;
-            serialized.FindProperty("statusText").objectReferenceValue = statusText;
+            serialized.FindProperty("statusText").objectReferenceValue = null;
+            serialized.FindProperty("screenTitleText").objectReferenceValue = titleText;
             serialized.FindProperty("detailTitleText").objectReferenceValue = detailTitle;
             serialized.FindProperty("detailMetaText").objectReferenceValue = detailMeta;
             serialized.FindProperty("detailPriceText").objectReferenceValue = detailPrice;
             serialized.FindProperty("detailDescriptionText").objectReferenceValue = detailDescription;
+            serialized.FindProperty("detailIconImage").objectReferenceValue = detailIconImage;
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(screen);
         }
@@ -1016,15 +1188,22 @@ namespace CombatSystem.EditorTools
             root.transform.SetParent(parent, false);
             root.SetActive(false);
             var button = root.AddComponent<Button>();
-            root.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.2f);
+            var rootImage = root.GetComponent<Image>();
+            rootImage.color = new Color(0.03f, 0.09f, 0.16f, 0.96f);
+            var rootOutline = root.AddComponent<Outline>();
+            rootOutline.effectColor = new Color(0.14f, 0.24f, 0.38f, 0.95f);
+            rootOutline.effectDistance = new Vector2(1f, -1f);
 
             var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(root.transform, false);
             var iconRect = icon.GetComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.1f, 0.3f);
-            iconRect.anchorMax = new Vector2(0.9f, 0.9f);
+            iconRect.anchorMin = new Vector2(0.12f, 0.26f);
+            iconRect.anchorMax = new Vector2(0.88f, 0.82f);
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
+            var iconImage = icon.GetComponent<Image>();
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
 
             var selection = new GameObject("Selection", typeof(RectTransform), typeof(Image));
             selection.transform.SetParent(root.transform, false);
@@ -1037,24 +1216,58 @@ namespace CombatSystem.EditorTools
             selectionImage.color = new Color(1f, 1f, 1f, 0.15f);
             selectionImage.enabled = false;
 
-            var priceText = CreateText("Price", root.transform, font, "0");
+            var priceChip = new GameObject("PriceChip", typeof(RectTransform), typeof(Image));
+            priceChip.transform.SetParent(root.transform, false);
+            var priceChipRect = priceChip.GetComponent<RectTransform>();
+            priceChipRect.anchorMin = new Vector2(0.05f, 0.06f);
+            priceChipRect.anchorMax = new Vector2(0.56f, 0.24f);
+            priceChipRect.offsetMin = Vector2.zero;
+            priceChipRect.offsetMax = Vector2.zero;
+            var priceChipImage = priceChip.GetComponent<Image>();
+            priceChipImage.color = new Color(0.1f, 0.14f, 0.22f, 0.94f);
+            priceChipImage.raycastTarget = false;
+
+            var priceText = CreateText("Price", priceChip.transform, font, "0G");
+            priceText.fontSize = 11;
+            priceText.fontStyle = FontStyle.Bold;
+            priceText.alignment = TextAnchor.MiddleCenter;
+            priceText.color = new Color(1f, 0.86f, 0.42f, 1f);
             var priceRect = priceText.GetComponent<RectTransform>();
-            priceRect.anchorMin = new Vector2(0.05f, 0.05f);
-            priceRect.anchorMax = new Vector2(0.45f, 0.25f);
+            priceRect.anchorMin = Vector2.zero;
+            priceRect.anchorMax = Vector2.one;
             priceRect.offsetMin = Vector2.zero;
             priceRect.offsetMax = Vector2.zero;
 
-            var stockText = CreateText("Stock", root.transform, font, "inf");
+            var stockChip = new GameObject("StockChip", typeof(RectTransform), typeof(Image));
+            stockChip.transform.SetParent(root.transform, false);
+            var stockChipRect = stockChip.GetComponent<RectTransform>();
+            stockChipRect.anchorMin = new Vector2(0.58f, 0.04f);
+            stockChipRect.anchorMax = new Vector2(0.95f, 0.24f);
+            stockChipRect.offsetMin = Vector2.zero;
+            stockChipRect.offsetMax = Vector2.zero;
+            var stockChipImage = stockChip.GetComponent<Image>();
+            stockChipImage.color = new Color(0f, 0f, 0f, 0f);
+            stockChipImage.raycastTarget = false;
+
+            var stockText = CreateText("Stock", stockChip.transform, font, "∞");
+            stockText.fontSize = 14;
+            stockText.fontStyle = FontStyle.Bold;
+            stockText.alignment = TextAnchor.MiddleRight;
+            stockText.color = new Color(0.79f, 0.86f, 0.94f, 1f);
+            stockText.raycastTarget = false;
             var stockRect = stockText.GetComponent<RectTransform>();
-            stockRect.anchorMin = new Vector2(0.55f, 0.05f);
-            stockRect.anchorMax = new Vector2(0.95f, 0.25f);
+            stockRect.anchorMin = Vector2.zero;
+            stockRect.anchorMax = Vector2.one;
             stockRect.offsetMin = Vector2.zero;
             stockRect.offsetMax = Vector2.zero;
+            var stockOutline = stockText.gameObject.AddComponent<Outline>();
+            stockOutline.effectColor = new Color(0.02f, 0.05f, 0.1f, 0.92f);
+            stockOutline.effectDistance = new Vector2(1f, -1f);
 
             var slot = root.AddComponent<VendorItemSlotUI>();
             SetPrivateField(slot, "button", button);
-            SetPrivateField(slot, "background", root.GetComponent<Image>());
-            SetPrivateField(slot, "icon", icon.GetComponent<Image>());
+            SetPrivateField(slot, "background", rootImage);
+            SetPrivateField(slot, "icon", iconImage);
             SetPrivateField(slot, "selection", selection.GetComponent<Image>());
             SetPrivateField(slot, "priceText", priceText);
             SetPrivateField(slot, "stockText", stockText);
@@ -1092,10 +1305,13 @@ namespace CombatSystem.EditorTools
             var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(root.transform, false);
             var iconRect = icon.GetComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.1f, 0.3f);
-            iconRect.anchorMax = new Vector2(0.9f, 0.9f);
+            iconRect.anchorMin = new Vector2(0.14f, 0.14f);
+            iconRect.anchorMax = new Vector2(0.86f, 0.86f);
             iconRect.offsetMin = Vector2.zero;
             iconRect.offsetMax = Vector2.zero;
+            var iconImage = icon.GetComponent<Image>();
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
 
             var selection = new GameObject("Selection", typeof(RectTransform), typeof(Image));
             selection.transform.SetParent(root.transform, false);
@@ -1110,18 +1326,73 @@ namespace CombatSystem.EditorTools
 
             var stackText = CreateText("Stack", root.transform, font, string.Empty);
             var stackRect = stackText.GetComponent<RectTransform>();
-            stackRect.anchorMin = new Vector2(0.05f, 0.05f);
-            stackRect.anchorMax = new Vector2(0.4f, 0.25f);
+            stackRect.anchorMin = new Vector2(0.64f, 0.04f);
+            stackRect.anchorMax = new Vector2(0.94f, 0.24f);
             stackRect.offsetMin = Vector2.zero;
             stackRect.offsetMax = Vector2.zero;
+            stackText.fontSize = 18;
+            stackText.fontStyle = FontStyle.Bold;
+            stackText.alignment = TextAnchor.MiddleRight;
+            stackText.color = Color.white;
+            stackText.raycastTarget = false;
+            var stackOutline = stackText.gameObject.AddComponent<Outline>();
+            stackOutline.effectColor = new Color(0.04f, 0.07f, 0.12f, 0.94f);
+            stackOutline.effectDistance = new Vector2(1f, -1f);
 
             var slot = root.AddComponent<InventorySlotUI>();
             SetPrivateField(slot, "button", button);
             SetPrivateField(slot, "background", root.GetComponent<Image>());
-            SetPrivateField(slot, "icon", icon.GetComponent<Image>());
+            SetPrivateField(slot, "icon", iconImage);
             SetPrivateField(slot, "selection", selection.GetComponent<Image>());
             SetPrivateField(slot, "stackText", stackText);
             return slot;
+        }
+
+        private static void NormalizeInventorySlotTemplate(InventorySlotUI slot, Font font)
+        {
+            if (slot == null)
+            {
+                return;
+            }
+
+            var icon = GetPrivateFieldObject<Image>(slot, "icon");
+            if (icon != null)
+            {
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                var iconRect = icon.rectTransform;
+                iconRect.anchorMin = new Vector2(0.14f, 0.14f);
+                iconRect.anchorMax = new Vector2(0.86f, 0.86f);
+                iconRect.offsetMin = Vector2.zero;
+                iconRect.offsetMax = Vector2.zero;
+            }
+
+            var stackText = GetPrivateFieldObject<Text>(slot, "stackText");
+            if (stackText != null)
+            {
+                if (font != null)
+                {
+                    stackText.font = font;
+                }
+
+                stackText.fontSize = 18;
+                stackText.fontStyle = FontStyle.Bold;
+                stackText.alignment = TextAnchor.MiddleRight;
+                stackText.color = Color.white;
+                stackText.raycastTarget = false;
+                var stackRect = stackText.rectTransform;
+                stackRect.anchorMin = new Vector2(0.64f, 0.04f);
+                stackRect.anchorMax = new Vector2(0.94f, 0.24f);
+                stackRect.offsetMin = Vector2.zero;
+                stackRect.offsetMax = Vector2.zero;
+
+                if (stackText.GetComponent<Outline>() == null)
+                {
+                    var outline = stackText.gameObject.AddComponent<Outline>();
+                    outline.effectColor = new Color(0.04f, 0.07f, 0.12f, 0.94f);
+                    outline.effectDistance = new Vector2(1f, -1f);
+                }
+            }
         }
 
         private static void SetPrivateField(Object target, string fieldName, Object value)
@@ -1141,6 +1412,18 @@ namespace CombatSystem.EditorTools
             prop.objectReferenceValue = value;
             serialized.ApplyModifiedProperties();
             EditorUtility.SetDirty(target);
+        }
+
+        private static T GetPrivateFieldObject<T>(Object target, string fieldName) where T : Object
+        {
+            if (target == null)
+            {
+                return null;
+            }
+
+            var serialized = new SerializedObject(target);
+            var prop = serialized.FindProperty(fieldName);
+            return prop != null ? prop.objectReferenceValue as T : null;
         }
 
         private static void EnsureItemEconomyDefaults(IReadOnlyList<ItemDefinition> items)

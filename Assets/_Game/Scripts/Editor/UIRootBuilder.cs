@@ -463,6 +463,40 @@ namespace CombatSystem.Editor
             }
         }
 
+        [MenuItem("Combat/UI/Rebuild Basic UI For All Scenes")]
+        public static void RebuildBasicUiForAllScenes()
+        {
+            var sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets/Scenes" });
+            var rebuiltCount = 0;
+            var skippedCount = 0;
+
+            for (var i = 0; i < sceneGuids.Length; i++)
+            {
+                var scenePath = AssetDatabase.GUIDToAssetPath(sceneGuids[i]);
+                if (string.IsNullOrWhiteSpace(scenePath))
+                {
+                    continue;
+                }
+
+                var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+                if (!scene.IsValid())
+                {
+                    continue;
+                }
+
+                if (Object.FindFirstObjectByType<UIRoot>(FindObjectsInactive.Include) == null)
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                BuildBasicUI();
+                rebuiltCount++;
+            }
+
+            Debug.Log($"[UIRootBuilder] Rebuilt basic UI for {rebuiltCount} scene(s). Skipped {skippedCount} scene(s) without UIRoot.");
+        }
+
         [MenuItem("Combat/UI/Fix UIRoot Canvases")]
         public static void FixUIRootCanvases()
         {
@@ -757,6 +791,20 @@ namespace CombatSystem.Editor
             }
 
             property.stringValue = value ?? string.Empty;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetSerialized(Object target, string propertyName, int value)
+        {
+            var serialized = new SerializedObject(target);
+            var property = serialized.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[UIRootBuilder] Missing property: {propertyName} on {target.name}");
+                return;
+            }
+
+            property.intValue = value;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -2900,6 +2948,7 @@ namespace CombatSystem.Editor
             var rarityEpicButton = (Button)null;
             var rarityLegendaryButton = (Button)null;
             var capacityText = (Text)null;
+            var skillLoadoutPanel = (SkillLoadoutPanelUI)null;
 
             var contentLayout = shell.Content.gameObject.AddComponent<VerticalLayoutGroup>();
             contentLayout.spacing = 8f;
@@ -3119,7 +3168,7 @@ namespace CombatSystem.Editor
 
             var sideLayout = sidePanel.AddComponent<VerticalLayoutGroup>();
             sideLayout.padding = new RectOffset(16, 16, 16, 16);
-            sideLayout.spacing = 12f;
+            sideLayout.spacing = 10f;
             sideLayout.childAlignment = TextAnchor.UpperCenter;
             sideLayout.childControlHeight = true;
             sideLayout.childControlWidth = true;
@@ -3148,8 +3197,8 @@ namespace CombatSystem.Editor
             equipmentLayout.childForceExpandWidth = true;
 
             var equipmentElement = equipmentSection.AddComponent<LayoutElement>();
-            equipmentElement.preferredHeight = 390f;
-            equipmentElement.minHeight = 390f;
+            equipmentElement.preferredHeight = 320f;
+            equipmentElement.minHeight = 320f;
             equipmentElement.flexibleHeight = 0f;
 
             var equipmentTitleGo = CreateUIElement("EquipmentTitle", equipmentSection.transform);
@@ -3190,6 +3239,37 @@ namespace CombatSystem.Editor
             SetSerialized(equipmentPanel, "slotTemplate", equipmentSlotTemplate);
             SetSerialized(equipmentPanel, "silhouetteRoot", silhouetteRect);
 
+            var loadoutSection = CreateUIElement("SkillLoadoutSection", sidePanel.transform);
+            var loadoutImage = loadoutSection.AddComponent<Image>();
+            loadoutImage.sprite = sprite;
+            loadoutImage.type = Image.Type.Sliced;
+            loadoutImage.color = GameplayMenuPanelColor;
+            loadoutImage.raycastTarget = true;
+
+            var loadoutLayout = loadoutSection.AddComponent<VerticalLayoutGroup>();
+            loadoutLayout.padding = new RectOffset(12, 12, 12, 12);
+            loadoutLayout.spacing = 8f;
+            loadoutLayout.childAlignment = TextAnchor.UpperLeft;
+            loadoutLayout.childControlHeight = true;
+            loadoutLayout.childControlWidth = true;
+            loadoutLayout.childForceExpandHeight = false;
+            loadoutLayout.childForceExpandWidth = true;
+
+            var loadoutElement = loadoutSection.AddComponent<LayoutElement>();
+            loadoutElement.preferredHeight = 144f;
+            loadoutElement.minHeight = 144f;
+            loadoutElement.flexibleHeight = 0f;
+
+            var loadoutTitleGo = CreateUIElement("SkillLoadoutTitle", loadoutSection.transform);
+            var loadoutTitle = CreateText(loadoutTitleGo, "技能装配", font, 22, TextAnchor.MiddleLeft);
+            loadoutTitle.color = Color.white;
+            AddLayoutElement(loadoutTitleGo, 34f);
+
+            var loadoutBar = CreateMenuSkillBar(loadoutSection.transform, sprite, font, 6);
+            skillLoadoutPanel = loadoutSection.AddComponent<SkillLoadoutPanelUI>();
+            SetSerialized(skillLoadoutPanel, "skillBar", loadoutBar);
+            SetSerialized(skillLoadoutPanel, "maxVisibleSlots", 6);
+
             var detailsSection = CreateUIElement("DetailsSection", sidePanel.transform);
             var detailsImage = detailsSection.AddComponent<Image>();
             detailsImage.sprite = sprite;
@@ -3198,8 +3278,8 @@ namespace CombatSystem.Editor
             detailsImage.raycastTarget = true;
 
             var detailsLayout = detailsSection.AddComponent<VerticalLayoutGroup>();
-            detailsLayout.padding = new RectOffset(14, 14, 14, 14);
-            detailsLayout.spacing = 8f;
+            detailsLayout.padding = new RectOffset(12, 12, 12, 12);
+            detailsLayout.spacing = 6f;
             detailsLayout.childAlignment = TextAnchor.UpperLeft;
             detailsLayout.childControlHeight = true;
             detailsLayout.childControlWidth = true;
@@ -3211,9 +3291,9 @@ namespace CombatSystem.Editor
             detailsElement.flexibleWidth = 1f;
 
             var detailsTitleGo = CreateUIElement("DetailsTitle", detailsSection.transform);
-            var detailsTitle = CreateText(detailsTitleGo, "物品详情", font, 24, TextAnchor.MiddleLeft);
+            var detailsTitle = CreateText(detailsTitleGo, "物品详情", font, 22, TextAnchor.MiddleLeft);
             detailsTitle.color = Color.white;
-            AddLayoutElement(detailsTitleGo, 38f);
+            AddLayoutElement(detailsTitleGo, 34f);
 
             var headerRow = CreateUIElement("Header", detailsSection.transform);
             var headerLayout = headerRow.AddComponent<HorizontalLayoutGroup>();
@@ -3223,13 +3303,13 @@ namespace CombatSystem.Editor
             headerLayout.childControlWidth = true;
             headerLayout.childForceExpandHeight = false;
             headerLayout.childForceExpandWidth = false;
-            AddLayoutElement(headerRow, 84f);
+            AddLayoutElement(headerRow, 74f);
 
             var iconGo = CreateUIElement("Icon", headerRow.transform);
             var iconImage = iconGo.AddComponent<Image>();
             iconImage.preserveAspect = true;
             iconImage.raycastTarget = false;
-            SetLayoutSize(iconGo, 74f, 74f);
+            SetLayoutSize(iconGo, 66f, 66f);
 
             var infoRoot = CreateUIElement("Info", headerRow.transform);
             var infoLayout = infoRoot.AddComponent<VerticalLayoutGroup>();
@@ -3239,42 +3319,71 @@ namespace CombatSystem.Editor
             infoLayout.childControlWidth = true;
             infoLayout.childForceExpandHeight = false;
             infoLayout.childForceExpandWidth = true;
-            AddLayoutElement(infoRoot, 74f, 0f);
+            AddLayoutElement(infoRoot, 66f, 0f);
 
             var nameGo = CreateUIElement("Name", infoRoot.transform);
             var nameText = CreateText(nameGo, "物品名称", font, 24, TextAnchor.MiddleLeft);
             nameText.color = Color.white;
-            AddLayoutElement(nameGo, 30f);
+            AddLayoutElement(nameGo, 28f);
 
             var slotGo = CreateUIElement("Slot", infoRoot.transform);
             var slotText = CreateText(slotGo, "类型", font, 16, TextAnchor.MiddleLeft);
             slotText.color = new Color(0.84f, 0.87f, 0.92f, 1f);
-            AddLayoutElement(slotGo, 22f);
+            AddLayoutElement(slotGo, 20f);
 
             var descriptionGo = CreateUIElement("Description", detailsSection.transform);
-            var descriptionText = CreateText(descriptionGo, string.Empty, font, 16, TextAnchor.UpperLeft);
+            var descriptionText = CreateText(descriptionGo, string.Empty, font, 15, TextAnchor.UpperLeft);
             descriptionText.color = new Color(0.88f, 0.9f, 0.94f, 1f);
-            descriptionText.lineSpacing = 1.15f;
+            descriptionText.lineSpacing = 1.08f;
             descriptionText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            descriptionText.verticalOverflow = VerticalWrapMode.Overflow;
-            AddLayoutElement(descriptionGo, 78f);
+            descriptionText.verticalOverflow = VerticalWrapMode.Truncate;
+            AddLayoutElement(descriptionGo, 54f);
 
-            var statsRoot = CreateUIElement("Stats", detailsSection.transform);
+            var statsViewport = CreateUIElement("StatsViewport", detailsSection.transform);
+            var statsViewportImage = statsViewport.AddComponent<Image>();
+            statsViewportImage.sprite = sprite;
+            statsViewportImage.type = Image.Type.Sliced;
+            statsViewportImage.color = new Color(0.08f, 0.11f, 0.17f, 0.34f);
+            statsViewportImage.raycastTarget = true;
+            var statsMask = statsViewport.AddComponent<Mask>();
+            statsMask.showMaskGraphic = true;
+            var statsViewportRect = statsViewport.GetComponent<RectTransform>();
+            var statsScroll = statsViewport.AddComponent<ScrollRect>();
+            statsScroll.horizontal = false;
+            statsScroll.vertical = true;
+            statsScroll.movementType = ScrollRect.MovementType.Clamped;
+            statsScroll.scrollSensitivity = 20f;
+            var statsViewportElement = statsViewport.AddComponent<LayoutElement>();
+            statsViewportElement.flexibleHeight = 1f;
+            statsViewportElement.flexibleWidth = 1f;
+            statsViewportElement.minHeight = 120f;
+
+            var statsRoot = CreateUIElement("Content", statsViewport.transform);
+            var statsRootRect = statsRoot.GetComponent<RectTransform>();
+            statsRootRect.anchorMin = new Vector2(0f, 1f);
+            statsRootRect.anchorMax = new Vector2(1f, 1f);
+            statsRootRect.pivot = new Vector2(0.5f, 1f);
+            statsRootRect.anchoredPosition = Vector2.zero;
+            statsRootRect.sizeDelta = Vector2.zero;
+
             var statsLayout = statsRoot.AddComponent<VerticalLayoutGroup>();
-            statsLayout.spacing = 5f;
+            statsLayout.padding = new RectOffset(4, 4, 4, 4);
+            statsLayout.spacing = 4f;
             statsLayout.childAlignment = TextAnchor.UpperLeft;
             statsLayout.childControlHeight = true;
             statsLayout.childControlWidth = true;
             statsLayout.childForceExpandHeight = false;
             statsLayout.childForceExpandWidth = true;
-            var statsElement = statsRoot.AddComponent<LayoutElement>();
-            statsElement.flexibleHeight = 1f;
-            statsElement.flexibleWidth = 1f;
+            var statsFitter = statsRoot.AddComponent<ContentSizeFitter>();
+            statsFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            statsFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            statsScroll.viewport = statsViewportRect;
+            statsScroll.content = statsRootRect;
 
             var statTemplateGo = CreateUIElement("StatLine", statsRoot.transform);
             var statTemplate = CreateText(statTemplateGo, "属性 +0", font, 16, TextAnchor.MiddleLeft);
             statTemplate.color = new Color(0.93f, 0.95f, 0.99f, 1f);
-            AddLayoutElement(statTemplateGo, 22f);
+            AddLayoutElement(statTemplateGo, 20f);
             statTemplateGo.SetActive(false);
 
             var buttonsRow = CreateUIElement("Buttons", detailsSection.transform);
@@ -3285,28 +3394,29 @@ namespace CombatSystem.Editor
             buttonsLayout.childControlWidth = true;
             buttonsLayout.childForceExpandHeight = false;
             buttonsLayout.childForceExpandWidth = true;
-            AddLayoutElement(buttonsRow, 52f);
+            AddLayoutElement(buttonsRow, 46f);
 
             var equipButton = CreateButton(buttonsRow.transform, "装备", sprite, font);
             var unequipButton = CreateButton(buttonsRow.transform, "卸下", sprite, font);
-            SetLayoutSize(equipButton.gameObject, 44f, 180f);
-            SetLayoutSize(unequipButton.gameObject, 44f, 180f);
+            SetLayoutSize(equipButton.gameObject, 42f, 172f);
+            SetLayoutSize(unequipButton.gameObject, 42f, 172f);
 
             var actionHintGo = CreateUIElement("ActionHint", detailsSection.transform);
-            var actionHintText = CreateText(actionHintGo, "选择背包或装备中的物品", font, 15, TextAnchor.MiddleLeft);
+            var actionHintText = CreateText(actionHintGo, "选择背包或装备中的物品", font, 14, TextAnchor.MiddleLeft);
             actionHintText.color = new Color(0.84f, 0.89f, 0.96f, 1f);
-            AddLayoutElement(actionHintGo, 26f);
+            AddLayoutElement(actionHintGo, 20f);
 
             var comparePanel = detailsSection.AddComponent<ItemComparePanelUI>();
             SetSerialized(comparePanel, "icon", iconImage);
             SetSerialized(comparePanel, "nameText", nameText);
             SetSerialized(comparePanel, "slotText", slotText);
             SetSerialized(comparePanel, "descriptionText", descriptionText);
-            SetSerialized(comparePanel, "statsRoot", statsRoot.GetComponent<RectTransform>());
+            SetSerialized(comparePanel, "statsRoot", statsRootRect);
             SetSerialized(comparePanel, "statTemplate", statTemplate);
 
             SetSerialized(screen, "inventoryGrid", inventoryGrid);
             SetSerialized(screen, "equipmentPanel", equipmentPanel);
+            SetSerialized(screen, "skillLoadoutPanel", skillLoadoutPanel);
             SetSerialized(screen, "comparePanel", comparePanel);
             SetSerialized(screen, "allFilterButton", filterAllButton);
             SetSerialized(screen, "equipmentFilterButton", filterEquipmentButton);
@@ -3642,6 +3752,12 @@ namespace CombatSystem.Editor
             }
             UIStyleKit.ApplySelectableStateColors(dropdown, GameplayMenuTabInactiveColor, 0.1f, 0.18f, 0.52f, 0.08f);
 
+            var nativeButton = dropdown.GetComponent<Button>();
+            if (nativeButton != null)
+            {
+                nativeButton.transition = Selectable.Transition.None;
+            }
+
             var caption = dropdown.captionText;
             if (caption == null)
             {
@@ -3659,6 +3775,12 @@ namespace CombatSystem.Editor
                 caption.fontSize = 17;
                 caption.color = GameplayMenuTabActiveTextColor;
                 caption.alignment = TextAnchor.MiddleLeft;
+                var captionRect = caption.rectTransform;
+                if (captionRect != null)
+                {
+                    captionRect.offsetMin = new Vector2(12f, 0f);
+                    captionRect.offsetMax = new Vector2(-12f, 0f);
+                }
             }
 
             var itemText = dropdown.itemText;
@@ -3724,11 +3846,7 @@ namespace CombatSystem.Editor
             var arrow = dropdown.transform.Find("Arrow");
             if (arrow != null)
             {
-                var arrowImage = arrow.GetComponent<Image>();
-                if (arrowImage != null)
-                {
-                    arrowImage.color = GameplayMenuTabActiveTextColor;
-                }
+                arrow.gameObject.SetActive(false);
             }
 
             if (dropdown.template != null)
@@ -4031,7 +4149,6 @@ namespace CombatSystem.Editor
             SetSerialized(tabs, "questButton", questButton);
             SetSerializedEnum(tabs, "activeTab", (int)activeTab);
             SetSerialized(tabs, "activeTabId", ResolveGameplayTabId(activeTab));
-            SetSerialized(tabs, "disableActiveTabButton", true);
             SetSerializedColor(tabs, "activeColor", GameplayMenuTabActiveColor);
             SetSerializedColor(tabs, "inactiveColor", GameplayMenuTabInactiveColor);
             SetSerializedColor(tabs, "activeTextColor", GameplayMenuTabActiveTextColor);
@@ -4206,6 +4323,107 @@ namespace CombatSystem.Editor
             }
 
             return root.gameObject.AddComponent<SkillBarUI>();
+        }
+
+        private static SkillBarUI CreateMenuSkillBar(Transform parent, Sprite sprite, Font font, int slots)
+        {
+            var slotCount = Mathf.Max(1, slots);
+            const float slotSize = 58f;
+            const float slotSpacing = 8f;
+
+            var root = CreateUIElement("SkillLoadoutBar", parent);
+            var background = root.AddComponent<Image>();
+            background.sprite = sprite;
+            background.type = Image.Type.Sliced;
+            background.color = new Color(0.1f, 0.14f, 0.2f, 0.9f);
+            background.raycastTarget = true;
+
+            var rootLayout = root.AddComponent<HorizontalLayoutGroup>();
+            rootLayout.padding = new RectOffset(10, 10, 10, 10);
+            rootLayout.spacing = slotSpacing;
+            rootLayout.childAlignment = TextAnchor.MiddleCenter;
+            rootLayout.childControlHeight = false;
+            rootLayout.childControlWidth = false;
+            rootLayout.childForceExpandHeight = false;
+            rootLayout.childForceExpandWidth = false;
+
+            var rootElement = root.AddComponent<LayoutElement>();
+            rootElement.preferredHeight = slotSize + 20f;
+            rootElement.minHeight = slotSize + 20f;
+            rootElement.flexibleWidth = 1f;
+
+            for (var i = 0; i < slotCount; i++)
+            {
+                var slot = CreateUIElement($"Slot_{i + 1}", root.transform);
+                var slotRect = slot.GetComponent<RectTransform>();
+                slotRect.sizeDelta = new Vector2(slotSize, slotSize);
+                SetLayoutSize(slot, slotSize, slotSize);
+
+                var slotBackground = slot.AddComponent<Image>();
+                slotBackground.sprite = sprite;
+                slotBackground.type = Image.Type.Sliced;
+                slotBackground.color = new Color(0.22f, 0.29f, 0.38f, 0.96f);
+                slotBackground.raycastTarget = true;
+
+                var outline = slot.AddComponent<Outline>();
+                outline.effectColor = new Color(0.18f, 0.32f, 0.54f, 0.92f);
+                outline.effectDistance = new Vector2(1f, -1f);
+
+                var iconGo = CreateUIElement("Icon", slot.transform);
+                var iconRect = iconGo.GetComponent<RectTransform>();
+                StretchRect(iconRect);
+                iconRect.offsetMin = new Vector2(7f, 7f);
+                iconRect.offsetMax = new Vector2(-7f, -7f);
+                var icon = iconGo.AddComponent<Image>();
+                icon.sprite = sprite;
+                icon.type = Image.Type.Sliced;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+
+                var cooldownGo = CreateUIElement("Cooldown", slot.transform);
+                var cooldownRect = cooldownGo.GetComponent<RectTransform>();
+                StretchRect(cooldownRect);
+                var cooldown = cooldownGo.AddComponent<Image>();
+                cooldown.sprite = sprite;
+                cooldown.color = new Color(0f, 0f, 0f, 0.62f);
+                cooldown.type = Image.Type.Filled;
+                cooldown.fillMethod = Image.FillMethod.Radial360;
+                cooldown.fillOrigin = 2;
+                cooldown.fillAmount = 0f;
+                cooldown.raycastTarget = false;
+
+                var cooldownTextGo = CreateUIElement("CooldownText", slot.transform);
+                var cooldownTextRect = cooldownTextGo.GetComponent<RectTransform>();
+                StretchRect(cooldownTextRect);
+                var cooldownText = CreateText(cooldownTextGo, string.Empty, font, 16, TextAnchor.MiddleCenter);
+                cooldownText.color = Color.white;
+
+                var keyGo = CreateUIElement("Key", slot.transform);
+                var keyRect = keyGo.GetComponent<RectTransform>();
+                keyRect.anchorMin = new Vector2(0f, 1f);
+                keyRect.anchorMax = new Vector2(0f, 1f);
+                keyRect.pivot = new Vector2(0f, 1f);
+                keyRect.anchoredPosition = new Vector2(8f, -6f);
+                keyRect.sizeDelta = new Vector2(26f, 16f);
+                var keyText = CreateText(keyGo, string.Empty, font, 10, TextAnchor.UpperLeft);
+                keyText.color = new Color(0.92f, 0.96f, 1f, 1f);
+
+                var slotUi = slot.AddComponent<SkillSlotUI>();
+                SetSerialized(slotUi, "icon", icon);
+                SetSerialized(slotUi, "cooldownFill", cooldown);
+                SetSerialized(slotUi, "cooldownText", cooldownText);
+                SetSerialized(slotUi, "keyText", keyText);
+                SetSerialized(slotUi, "slotBackground", slotBackground);
+                SetSerializedColor(slotUi, "occupiedBackgroundColor", new Color(0.11f, 0.18f, 0.28f, 0.98f));
+                SetSerializedColor(slotUi, "emptyBackgroundColor", new Color(0.26f, 0.33f, 0.43f, 0.95f));
+            }
+
+            var bar = root.gameObject.AddComponent<SkillBarUI>();
+            SetSerialized(bar, "slotRoot", root.transform);
+            SetSerialized(bar, "barBackground", background);
+            SetSerialized(bar, "autoCreateBarBackground", false);
+            SetSerialized(bar, "maxSlotsOverride", slotCount);
+            return bar;
         }
 
         internal static BuffBarUI CreateHudBuffBar(Transform parent, Sprite sprite, Font font, int slots)
