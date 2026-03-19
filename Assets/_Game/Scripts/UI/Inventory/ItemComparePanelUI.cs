@@ -25,7 +25,7 @@ namespace CombatSystem.UI
         [SerializeField] private RectTransform statsRoot;
         [SerializeField] private Text statTemplate;
         [SerializeField] private Color projectedHeaderColor = new Color(0.78f, 0.84f, 0.95f, 1f);
-        [SerializeField, Range(6, 24)] private int reservedStatRows = 12;
+        [SerializeField, Range(0, 12)] private int reservedStatRows = 0;
 
         private readonly List<Text> statEntries = new List<Text>();
         private ItemInstance currentItem;

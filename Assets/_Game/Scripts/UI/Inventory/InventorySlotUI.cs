@@ -56,6 +56,7 @@ namespace CombatSystem.UI
                 button.onClick.AddListener(HandleClicked);
             }
 
+            EnsureSlotVisualDefaults();
             EnsureSkillBadgeVisual();
             RefreshSkillBadgeVisual();
             RefreshVisualState();
@@ -232,6 +233,23 @@ namespace CombatSystem.UI
             }
 
             background.color = skillEquipped ? equippedColor : baseColor;
+        }
+
+        private void EnsureSlotVisualDefaults()
+        {
+            if (icon != null)
+            {
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+            }
+
+            if (stackText != null)
+            {
+                stackText.alignment = TextAnchor.MiddleRight;
+                stackText.fontStyle = FontStyle.Bold;
+                stackText.fontSize = Mathf.Max(stackText.fontSize, 16);
+                stackText.raycastTarget = false;
+            }
         }
 
         private void EnsureSkillBadgeVisual()

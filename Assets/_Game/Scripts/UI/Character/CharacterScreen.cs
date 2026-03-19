@@ -155,7 +155,7 @@ namespace CombatSystem.UI
             EnsureReferences();
             if (uiManager != null)
             {
-                uiManager.SetHudSkillBarOnlyVisible(true);
+                uiManager.SetHudVisible(false);
             }
 
             EnsureStatHoverTargets();
@@ -171,6 +171,11 @@ namespace CombatSystem.UI
 
         public override void OnFocus()
         {
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(false);
+            }
+
             Refresh();
         }
 

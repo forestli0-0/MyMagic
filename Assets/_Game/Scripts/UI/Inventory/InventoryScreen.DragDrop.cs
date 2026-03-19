@@ -557,15 +557,10 @@ namespace CombatSystem.UI
             {
                 if (TryResolveLinkedSkill(sourceItem, out _))
                 {
-                    UIToast.Info("请拖到下方技能栏槽位。");
+                    UIToast.Info("请拖到右侧技能装配槽位。");
                 }
 
                 return false;
-            }
-
-            if (skillBar == null)
-            {
-                skillBar = FindFirstObjectByType<SkillBarUI>(FindObjectsInactive.Include);
             }
 
             if (!TryResolveLinkedSkill(sourceItem, out var linkedSkill))
@@ -574,19 +569,20 @@ namespace CombatSystem.UI
                 return false;
             }
 
-            if (skillBar == null)
+            EnsureSkillLoadoutPanelReference();
+            if (skillLoadoutPanel == null)
             {
-                UIToast.Warning("技能栏未就绪。");
+                UIToast.Warning("技能装配区未就绪。");
                 return false;
             }
 
-            if (!skillBar.CanAssignSkillToSlot(linkedSkill, targetSlot))
+            if (!skillLoadoutPanel.CanAssignSkillToSlot(linkedSkill, targetSlot))
             {
                 UIToast.Warning("该槽位不可装配此技能。");
                 return false;
             }
 
-            if (!skillBar.TryAssignSkillToSlot(linkedSkill, targetSlot))
+            if (!skillLoadoutPanel.TryAssignSkillToSlot(linkedSkill, targetSlot))
             {
                 UIToast.Warning("技能装配失败。");
                 return false;
@@ -653,10 +649,10 @@ namespace CombatSystem.UI
                 }
             }
 
-            EnsureSkillBarReference();
-            if (skillBar != null)
+            EnsureSkillLoadoutPanelReference();
+            if (skillLoadoutPanel != null)
             {
-                var fallback = skillBar.ResolveSlotAtScreenPoint(eventData.position, eventData.enterEventCamera);
+                var fallback = skillLoadoutPanel.ResolveSlotAtScreenPoint(eventData.position, eventData.enterEventCamera);
                 if (fallback != null)
                 {
                     return fallback;
@@ -683,13 +679,13 @@ namespace CombatSystem.UI
                 return InventoryGridUI.SkillEquipState.None;
             }
 
-            EnsureSkillBarReference();
-            if (skillBar == null)
+            EnsureSkillLoadoutPanelReference();
+            if (skillLoadoutPanel == null)
             {
                 return InventoryGridUI.SkillEquipState.None;
             }
 
-            return skillBar.TryGetSkillSlotNumber(linkedSkill, out var slotNumber)
+            return skillLoadoutPanel.TryGetSkillSlotNumber(linkedSkill, out var slotNumber)
                 ? InventoryGridUI.SkillEquipState.EquippedInSlot(slotNumber)
                 : InventoryGridUI.SkillEquipState.None;
         }
@@ -703,18 +699,18 @@ namespace CombatSystem.UI
 
             var equipState = ResolveSkillEquipStateForItem(item);
             return equipState.IsEquipped
-                ? $"技能栏：已装配（槽 {equipState.SlotNumber}）"
-                : "技能栏：未装配";
+                ? $"技能装配：已装配（槽 {equipState.SlotNumber}）"
+                : "技能装配：未装配";
         }
 
-        private void EnsureSkillBarReference()
+        private void EnsureSkillLoadoutPanelReference()
         {
-            if (skillBar != null)
+            if (skillLoadoutPanel != null)
             {
                 return;
             }
 
-            skillBar = FindFirstObjectByType<SkillBarUI>(FindObjectsInactive.Include);
+            skillLoadoutPanel = GetComponentInChildren<SkillLoadoutPanelUI>(true);
         }
 
         private void HandleEquipmentSlotDropped(EquipmentSlotUI slot, PointerEventData eventData)

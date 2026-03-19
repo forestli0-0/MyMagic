@@ -20,23 +20,21 @@ namespace CombatSystem.UI
     /// 
     /// 使用方式：
     /// - 通过 I 键（InventoryHotkey）开关界面
-    /// - 继承 UIScreenBase，与底部常驻技能栏协同显示
+    /// - 继承 UIScreenBase，并在页内提供技能装配面板
     /// </remarks>
     public partial class InventoryScreen : UIScreenBase
     {
         private const int InvalidSelectionIndex = -1;
         private const float NoHoverClearPending = -1f;
         private const float InvalidClickTimestamp = -999f;
-        private const float DefaultEquipmentSectionHeight = 390f;
+        private const float DefaultEquipmentSectionHeight = 320f;
         private const int LayoutLookupDepth = 8;
-        private const float GameplayMenuBottomGap = 4f;
-        private const float FallbackBottomClearance = 96f;
 
         [Header("References")]
         [SerializeField] private UIManager uiManager;
         [SerializeField] private InventoryComponent inventory;
         [SerializeField] private EquipmentComponent equipment;
-        [SerializeField] private SkillBarUI skillBar;
+        [SerializeField] private SkillLoadoutPanelUI skillLoadoutPanel;
         [SerializeField] private StatsComponent playerStats;
 
         [Header("Widgets")]
@@ -102,11 +100,6 @@ namespace CombatSystem.UI
         private InventoryActionCommand currentSecondaryAction = InventoryActionCommand.None;
         private int lastInventoryClickIndex = InvalidSelectionIndex;
         private float lastInventoryClickAt = InvalidClickTimestamp;
-        private RectTransform rootRectTransform;
-        private bool rootRectBaselineCaptured;
-        private Vector2 rootOffsetMinBaseline;
-        private Vector2 rootOffsetMaxBaseline;
-        private readonly Vector3[] skillBarWorldCorners = new Vector3[4];
 
         private enum InventoryFilter
         {
@@ -231,11 +224,10 @@ namespace CombatSystem.UI
         {
             ApplyThemeColors();
             EnsureReferences();
-            ApplyGameplayBottomSafePadding();
             EnsureStableEquipmentPanelHeight();
             if (uiManager != null)
             {
-                uiManager.SetHudSkillBarOnlyVisible(true);
+                uiManager.SetHudVisible(false);
             }
 
             EnsureActionProfilesConfigured();
@@ -250,7 +242,6 @@ namespace CombatSystem.UI
             EndDrag();
             ResetDoubleClickState();
             ClearHoveredEquipmentState();
-            RestoreGameplayBottomSafePadding();
         }
 
         private void OnDestroy()
@@ -266,8 +257,12 @@ namespace CombatSystem.UI
 
         public override void OnFocus()
         {
-            ApplyGameplayBottomSafePadding();
             EnsureStableEquipmentPanelHeight();
+            if (uiManager != null)
+            {
+                uiManager.SetHudVisible(false);
+            }
+
             RefreshAll();
         }
 
@@ -281,7 +276,6 @@ namespace CombatSystem.UI
         private void OnDisable()
         {
             UIThemeRuntime.ThemeChanged -= HandleThemeChanged;
-            RestoreGameplayBottomSafePadding();
         }
 
         private void Update()
@@ -469,7 +463,15 @@ namespace CombatSystem.UI
                 playerStats = FindFirstObjectByType<StatsComponent>();
             }
 
-            EnsureSkillBarReference();
+            if (skillLoadoutPanel == null)
+            {
+                skillLoadoutPanel = GetComponentInChildren<SkillLoadoutPanelUI>(true);
+            }
+
+            if (skillLoadoutPanel != null)
+            {
+                skillLoadoutPanel.RefreshBinding();
+            }
 
             if (comparePanel != null)
             {
@@ -477,96 +479,6 @@ namespace CombatSystem.UI
             }
 
             EnsureSkillFilterButton();
-        }
-
-        private void ApplyGameplayBottomSafePadding()
-        {
-            var rect = transform as RectTransform;
-            if (rect == null)
-            {
-                return;
-            }
-
-            rootRectTransform = rect;
-            CaptureRootRectBaselineIfNeeded(rect);
-
-            var requiredBottomInset = ResolveBottomSafeInset(rect);
-            var targetMin = rootOffsetMinBaseline;
-            if (requiredBottomInset > targetMin.y)
-            {
-                targetMin.y = requiredBottomInset;
-            }
-
-            if (rect.offsetMin != targetMin)
-            {
-                rect.offsetMin = targetMin;
-            }
-
-            if (rect.offsetMax != rootOffsetMaxBaseline)
-            {
-                rect.offsetMax = rootOffsetMaxBaseline;
-            }
-        }
-
-        private void RestoreGameplayBottomSafePadding()
-        {
-            if (!rootRectBaselineCaptured || rootRectTransform == null)
-            {
-                return;
-            }
-
-            if (rootRectTransform.offsetMin != rootOffsetMinBaseline)
-            {
-                rootRectTransform.offsetMin = rootOffsetMinBaseline;
-            }
-
-            if (rootRectTransform.offsetMax != rootOffsetMaxBaseline)
-            {
-                rootRectTransform.offsetMax = rootOffsetMaxBaseline;
-            }
-        }
-
-        private void CaptureRootRectBaselineIfNeeded(RectTransform rect)
-        {
-            if (rootRectBaselineCaptured)
-            {
-                return;
-            }
-
-            rootOffsetMinBaseline = rect.offsetMin;
-            rootOffsetMaxBaseline = rect.offsetMax;
-            rootRectBaselineCaptured = true;
-        }
-
-        private float ResolveBottomSafeInset(RectTransform screenRect)
-        {
-            var fallback = Mathf.Max(0f, FallbackBottomClearance);
-            if (skillBar == null)
-            {
-                return fallback;
-            }
-
-            var skillRect = skillBar.transform as RectTransform;
-            if (skillRect == null)
-            {
-                return fallback;
-            }
-
-            var parentRect = screenRect.parent as RectTransform;
-            if (parentRect == null)
-            {
-                return fallback;
-            }
-
-            skillRect.GetWorldCorners(skillBarWorldCorners);
-            var topLeft = RectTransformUtility.WorldToScreenPoint(null, skillBarWorldCorners[1]);
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, topLeft, null, out var topLocal))
-            {
-                return fallback;
-            }
-
-            var topFromBottom = topLocal.y + (parentRect.rect.height * parentRect.pivot.y);
-            return Mathf.Max(fallback, topFromBottom + GameplayMenuBottomGap);
         }
 
         private void EnsureStableEquipmentPanelHeight()
@@ -901,6 +813,11 @@ namespace CombatSystem.UI
                 equipment.EquipmentChanged += HandleEquipmentChanged;
             }
 
+            if (skillLoadoutPanel != null)
+            {
+                skillLoadoutPanel.LoadoutChanged += HandleSkillLoadoutChanged;
+            }
+
             if (inventoryGrid != null)
             {
                 inventoryGrid.SlotSelected += HandleInventorySlotSelected;
@@ -1018,6 +935,11 @@ namespace CombatSystem.UI
                 equipment.EquipmentChanged -= HandleEquipmentChanged;
             }
 
+            if (skillLoadoutPanel != null)
+            {
+                skillLoadoutPanel.LoadoutChanged -= HandleSkillLoadoutChanged;
+            }
+
             if (inventoryGrid != null)
             {
                 inventoryGrid.SlotSelected -= HandleInventorySlotSelected;
@@ -1121,6 +1043,11 @@ namespace CombatSystem.UI
 
         private void RefreshAll()
         {
+            if (skillLoadoutPanel != null)
+            {
+                skillLoadoutPanel.RefreshBinding();
+            }
+
             RefreshInventoryGrid();
 
             if (equipmentPanel != null)
@@ -1140,6 +1067,12 @@ namespace CombatSystem.UI
 
         private void HandleEquipmentChanged()
         {
+            RefreshSelectionAfterChange();
+        }
+
+        private void HandleSkillLoadoutChanged()
+        {
+            RefreshInventoryGrid();
             RefreshSelectionAfterChange();
         }
 
