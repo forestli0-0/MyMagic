@@ -10,6 +10,14 @@
 - 项目重心：运行时系统设计、场景与流程打通、编辑器辅助工具、基础测试覆盖
 - 说明：部分美术与演示资源使用第三方免费素材，核心玩法代码、运行时系统和编辑器工具为个人实现
 
+## Demo
+
+[![Gameplay Demo](docs/media/unity-combat-demo.gif)](docs/media/unity-combat-demo.mp4)
+
+- README 预览：`docs/media/unity-combat-demo.gif`
+- 完整演示视频（2m10s）：[`docs/media/unity-combat-demo.mp4`](docs/media/unity-combat-demo.mp4)
+- 演示内容包含基础战斗、HUD/UI、场景流程与实际游玩片段
+
 ## 核心内容
 
 - 数据驱动配置：技能、Buff、单位、关卡、任务、遭遇、成长、物品、掉落、商店等均基于 `ScriptableObject` 定义，并由 `GameDatabase` 统一索引
