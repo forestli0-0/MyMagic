@@ -25,6 +25,7 @@ namespace CombatSystem.Gameplay
         private float orbitAngle;
         private Rigidbody body;
         private SphereCollider runtimeHitCollider;
+        private TrailRenderer[] trailRenderers;
         private readonly List<int> hitIds = new List<int>(8);
         private static int nextRuntimeProjectileInstanceId = 1;
 
@@ -32,6 +33,7 @@ namespace CombatSystem.Gameplay
         {
             body = GetComponent<Rigidbody>();
             runtimeHitCollider = GetComponent<SphereCollider>();
+            trailRenderers = GetComponentsInChildren<TrailRenderer>(true);
         }
 
         public void SetPool(ProjectilePool projectilePool, GameObject prefab)
@@ -83,6 +85,7 @@ namespace CombatSystem.Gameplay
             projectileInstanceId = GenerateProjectileInstanceId();
             parentProjectileInstanceId = Mathf.Max(0, parentInstanceId);
             ApplyHitRadius();
+            ResetVisualTrails();
             RaiseLifecycleEvent(ProjectileLifecycleType.Spawn, target, parentProjectileInstanceId);
         }
 
@@ -496,6 +499,26 @@ namespace CombatSystem.Gameplay
             }
 
             gameObject.SetActive(false);
+        }
+
+        private void ResetVisualTrails()
+        {
+            if (trailRenderers == null || trailRenderers.Length == 0)
+            {
+                trailRenderers = GetComponentsInChildren<TrailRenderer>(true);
+            }
+
+            for (int i = 0; i < trailRenderers.Length; i++)
+            {
+                var trail = trailRenderers[i];
+                if (trail == null)
+                {
+                    continue;
+                }
+
+                trail.Clear();
+                trail.emitting = true;
+            }
         }
 
         private static int GenerateProjectileInstanceId()

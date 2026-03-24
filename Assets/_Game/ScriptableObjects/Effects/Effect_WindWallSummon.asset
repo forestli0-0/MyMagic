@@ -43,7 +43,7 @@ MonoBehaviour:
   buff: {fileID: 0}
   projectile: {fileID: 0}
   triggeredSkill: {fileID: 0}
-  duration: 0
+  duration: 4
   interval: 0
   summonPrefab: {fileID: 5225737371074697662, guid: c16f38d751dc19848894a1adcbdf60ff,
     type: 3}

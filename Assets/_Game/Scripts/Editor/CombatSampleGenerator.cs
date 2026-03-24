@@ -1293,7 +1293,8 @@ namespace CombatSystem.Editor
                     "Effect_WindWallSummon",
                     "Wind Wall Summon",
                     null,
-                    assets.PrefabWindWall);
+                    assets.PrefabWindWall,
+                    4f);
 
                 ConfigureEffectDamage(
                     assets.EffectYasuoQThrustDamage,
@@ -4262,13 +4263,15 @@ namespace CombatSystem.Editor
             string id,
             string displayName,
             UnitDefinition summonUnit,
-            GameObject summonPrefab)
+            GameObject summonPrefab,
+            float duration = 0f)
         {
             var so = new SerializedObject(effect);
             SetDefinitionBase(so, id, displayName);
             so.FindProperty("effectType").enumValueIndex = (int)EffectType.Summon;
             so.FindProperty("summonUnit").objectReferenceValue = summonUnit;
             so.FindProperty("summonPrefab").objectReferenceValue = summonPrefab;
+            so.FindProperty("duration").floatValue = Mathf.Max(0f, duration);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
