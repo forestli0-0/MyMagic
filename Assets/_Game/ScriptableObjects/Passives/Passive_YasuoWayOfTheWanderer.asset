@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f099effb4d5480fbd64cc0a7ea436ec, type: 3}
+  m_Name: Passive_YasuoWayOfTheWanderer
+  m_EditorClassIdentifier: 
+  id: Passive_YasuoWayOfTheWanderer
+  displayName: Yasuo Passive - Way of the Wanderer
+  icon: {fileID: 0}
+  tags: []
+  activationBuffs:
+  - {fileID: 11400000, guid: 36284823dfe5482f99a4a2ea822ca93b, type: 2}
+  triggers:
+  - triggerType: 4
+    chance: 1
+    condition: {fileID: 11400000, guid: f451bf0e6a614b6dac66a74ca948be85, type: 2}
+    effects:
+    - {fileID: 11400000, guid: 9d1aab57ef2d4b0981785d47dd7aa5b1, type: 2}
+    - {fileID: 11400000, guid: 4f95b743334f44299ff77d40707417c9, type: 2}
+  meterDrivers:
+  - resource: {fileID: 11400000, guid: cb5f35ba1a79403fadf5fd906d0b0a1c, type: 2}
+    driverType: 0
+    rateOrAmount: 20
+    condition: {fileID: 0}
+  - resource: {fileID: 11400000, guid: cb5f35ba1a79403fadf5fd906d0b0a1c, type: 2}
+    driverType: 2
+    rateOrAmount: 10
+    condition: {fileID: 0}
