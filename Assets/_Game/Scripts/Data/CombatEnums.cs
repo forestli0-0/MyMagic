@@ -81,7 +81,11 @@ namespace CombatSystem.Data
         SequencePhaseIs = 12,   // 技能连段阶段 == 阈值
         SequencePhaseAtLeast = 13, // 技能连段阶段 >= 阈值
         HasControl = 14,        // 拥有指定控制状态
-        NotHasControl = 15      // 不拥有指定控制状态
+        NotHasControl = 15,     // 不拥有指定控制状态
+        ResourceAtLeast = 16,   // 指定资源值 >= 阈值
+        ResourceBelow = 17,     // 指定资源值 < 阈值
+        ResourcePercentAtLeast = 18, // 指定资源百分比 >= 阈值
+        ResourcePercentBelow = 19 // 指定资源百分比 < 阈值
     }
 
     /// <summary>
@@ -124,6 +128,16 @@ namespace CombatSystem.Data
     }
 
     /// <summary>
+    /// 资源效果的执行模式。
+    /// </summary>
+    public enum ResourceOperation
+    {
+        Add = 0,        // 增减指定数值（正加负减）
+        Spend = 1,      // 消耗指定数值
+        SetCurrent = 2  // 直接设置当前值
+    }
+
+    /// <summary>
     /// Buff 堆叠/共存规则。
     /// </summary>
     public enum BuffStackingRule
@@ -146,6 +160,30 @@ namespace CombatSystem.Data
         OnSkillCast,    // 释放技能时
         OnKill,         // 击杀时
         OnAttack        // 普攻开始时
+    }
+
+    /// <summary>
+    /// 被动触发器类型。
+    /// </summary>
+    public enum PassiveTriggerType
+    {
+        OnActivated = 0,    // 被动激活时
+        OnAttack = 1,       // 普攻开始时
+        OnSkillCast = 2,    // 释放技能时
+        OnHit = 3,          // 命中目标时
+        OnDamaged = 4,      // 受到伤害时
+        OnKill = 5,         // 击杀时
+        OnResourceChanged = 6 // 资源变化时
+    }
+
+    /// <summary>
+    /// 被动资源驱动类型。
+    /// </summary>
+    public enum PassiveMeterDriverType
+    {
+        AddByMoveDistance = 0,       // 按移动距离增减
+        AddPerSecondWhileMoving = 1, // 移动时每秒变化
+        DecayPerSecondWhileIdle = 2  // 静止时每秒衰减
     }
 
     /// <summary>

@@ -38,7 +38,7 @@ namespace CombatSystem.Core
 
         private void Awake()
         {
-            if (useUnitDefinitionTags && unitRoot != null)
+            if (useUnitDefinitionTags && unitRoot != null && !ShouldDeferInitializationToUnitRoot())
             {
                 Initialize(unitRoot.Definition);
             }
@@ -75,6 +75,16 @@ namespace CombatSystem.Core
         public bool HasTag(TagDefinition tag)
         {
             return tag != null && tags.Contains(tag);
+        }
+
+        private bool ShouldDeferInitializationToUnitRoot()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            return unitRoot != null;
         }
     }
 }

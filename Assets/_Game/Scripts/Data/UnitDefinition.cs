@@ -28,6 +28,8 @@ namespace CombatSystem.Data
         [SerializeField] private SkillDefinition basicAttack;
         [Tooltip("单位初始拥有的技能列表")]
         [SerializeField] private List<SkillDefinition> startingSkills = new List<SkillDefinition>();
+        [Tooltip("单位初始拥有的被动列表")]
+        [SerializeField] private List<PassiveDefinition> startingPassives = new List<PassiveDefinition>();
         
         [Header("AI 配置")]
         [Tooltip("该单位使用的 AI 决策逻辑")]
@@ -40,6 +42,7 @@ namespace CombatSystem.Data
         public IReadOnlyList<StatValue> BaseStats => baseStats;
         public SkillDefinition BasicAttack => basicAttack;
         public IReadOnlyList<SkillDefinition> StartingSkills => startingSkills;
+        public IReadOnlyList<PassiveDefinition> StartingPassives => startingPassives;
         public AIProfile AIProfile => aiProfile;
     }
 }

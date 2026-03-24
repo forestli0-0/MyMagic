@@ -14,6 +14,7 @@ namespace CombatSystem.Data
         [SerializeField] private Sprite icon;
         
         [Header("消耗与冷却")]
+        [SerializeField] private ResourceDefinition resourceDefinition;
         [SerializeField] private ResourceType resourceType = ResourceType.Mana;
         [SerializeField] private float resourceCost;
         [SerializeField] private float cooldown;
@@ -78,6 +79,7 @@ namespace CombatSystem.Data
         [SerializeField] private List<SkillStep> steps = new List<SkillStep>();
 
         public Sprite Icon => icon;
+        public ResourceDefinition ResourceDefinition => resourceDefinition;
         public ResourceType ResourceType => resourceType;
         public float ResourceCost => resourceCost;
         public float Cooldown => cooldown;

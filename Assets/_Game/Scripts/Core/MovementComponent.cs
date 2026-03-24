@@ -1,3 +1,4 @@
+using System;
 using CombatSystem.Data;
 using CombatSystem.Gameplay;
 using UnityEngine;
@@ -119,6 +120,11 @@ namespace CombatSystem.Core
         /// </summary>
         public float MoveSpeed => GetMoveSpeed();
 
+        /// <summary>
+        /// 每帧移动采样事件，用于被动/专属资源监听移动状态。
+        /// </summary>
+        public event Action<MovementSampleEvent> MovementSampled;
+
         #endregion
 
         #region Unity 生命周期
@@ -171,11 +177,13 @@ namespace CombatSystem.Core
         /// </summary>
         private void Update()
         {
+            var startPosition = transform.position;
             if (blockMovementWhenDead && health != null && !health.IsAlive)
             {
                 forcedActive = false;
                 RestoreForcedCollisionState();
                 ClearMoveInput();
+                RaiseMovementSample(startPosition);
                 return;
             }
 
@@ -185,23 +193,27 @@ namespace CombatSystem.Core
             if (forcedActive)
             {
                 ProcessForcedMove(deltaTime);
+                RaiseMovementSample(startPosition);
                 return;
             }
 
             if (TryGetControlMove(out var controlDirection, out var controlRotate))
             {
                 ProcessControlMove(deltaTime, controlDirection, controlRotate);
+                RaiseMovementSample(startPosition);
                 return;
             }
 
             // 处理常规移动输入
             ProcessNormalMove(deltaTime);
+            RaiseMovementSample(startPosition);
         }
 
         private void OnDisable()
         {
             forcedActive = false;
             RestoreForcedCollisionState();
+            RaiseMovementSample(transform.position);
         }
 
         #endregion
@@ -760,6 +772,15 @@ namespace CombatSystem.Core
             }
 
             return buffController.HasControlFlag(ControlFlag.BlocksRotation);
+        }
+
+        private void RaiseMovementSample(Vector3 startPosition)
+        {
+            var displacement = transform.position - startPosition;
+            var horizontal = displacement;
+            horizontal.y = 0f;
+            var horizontalDistance = horizontal.magnitude;
+            MovementSampled?.Invoke(new MovementSampleEvent(this, displacement, horizontalDistance, horizontalDistance > 0.0001f));
         }
 
         #endregion

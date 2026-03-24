@@ -77,7 +77,7 @@ namespace CombatSystem.Core
 
         private void Awake()
         {
-            if (initializeOnAwake)
+            if (initializeOnAwake && !ShouldDeferInitializationToUnitRoot())
             {
                 Initialize();
             }
@@ -516,6 +516,11 @@ namespace CombatSystem.Core
             }
 
             return bestSource;
+        }
+
+        private bool ShouldDeferInitializationToUnitRoot()
+        {
+            return TryGetComponent<UnitRoot>(out _);
         }
 
         private struct ShieldInstance

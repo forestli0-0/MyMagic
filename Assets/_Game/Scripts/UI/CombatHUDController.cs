@@ -10,6 +10,9 @@ namespace CombatSystem.UI
     /// </summary>
     public class CombatHUDController : MonoBehaviour
     {
+        private const float AuxiliaryBarGap = 6f;
+        private const int AuxiliaryBarSearchDepth = 8;
+
         [Header("References")]
         [Tooltip("战斗事件总线")]
         [SerializeField] private CombatEventHub eventHub;
@@ -30,6 +33,7 @@ namespace CombatSystem.UI
         [Header("Widgets")]
         [SerializeField] private ValueBarUI healthBar;           // 血条
         [SerializeField] private ValueBarUI resourceBar;         // 蓝条/能量条
+        [SerializeField] private ValueBarUI auxiliaryResourceBar; // 附加资源条
         [SerializeField] private SkillBarUI skillBar;             // 技能栏
         [SerializeField] private BuffBarUI buffBar;               // Buff 栏
         [SerializeField] private CastBarUI castBar;               // 施法条
@@ -49,6 +53,7 @@ namespace CombatSystem.UI
         private CooldownComponent targetCooldown;
         private SkillUserComponent targetSkillUser;
         private BuffController targetBuffs;
+        private ResourceDefinition activeAuxiliaryResource;
 
         private bool initialized;
         private float nextAutoRebindTime;
@@ -150,6 +155,8 @@ namespace CombatSystem.UI
             {
                 EnsureHudToastOverlay();
             }
+
+            EnsureAuxiliaryResourceBar();
 
             targetHealth = null;
             targetResource = null;
@@ -271,7 +278,13 @@ namespace CombatSystem.UI
             if (resourceBar != null && targetResource != null)
             {
                 resourceBar.SetValues(targetResource.Current, targetResource.Max);
+                if (targetResource.PrimaryResource != null)
+                {
+                    resourceBar.SetFillColor(targetResource.PrimaryResource.HudColor);
+                }
             }
+
+            RefreshAuxiliaryResourceBar();
 
             if (skillBar != null && targetSkillUser != null)
             {
@@ -351,7 +364,12 @@ namespace CombatSystem.UI
         {
             if (targetResource != null && evt.Source == targetResource && resourceBar != null)
             {
-                resourceBar.SetValues(evt.NewValue, targetResource.Max);
+                if (evt.Resource == null || evt.Resource == targetResource.PrimaryResource)
+                {
+                    resourceBar.SetValues(targetResource.Current, targetResource.Max);
+                }
+
+                RefreshAuxiliaryResourceBar();
             }
         }
 
@@ -596,6 +614,170 @@ namespace CombatSystem.UI
             rect.sizeDelta = new Vector2(520f, 58f);
 
             hudToastOverlay = root.GetComponent<HudToastOverlay>();
+        }
+
+        private void EnsureAuxiliaryResourceBar()
+        {
+            if (auxiliaryResourceBar != null || resourceBar == null)
+            {
+                return;
+            }
+
+            var templateRect = resourceBar.transform as RectTransform;
+            if (templateRect == null || templateRect.parent == null)
+            {
+                return;
+            }
+
+            var clone = Instantiate(resourceBar.gameObject, templateRect.parent);
+            clone.name = "AuxiliaryResourceBar_Auto";
+            var cloneRect = clone.transform as RectTransform;
+            if (cloneRect != null)
+            {
+                cloneRect.SetSiblingIndex(templateRect.GetSiblingIndex() + 1);
+                PositionAuxiliaryResourceBar(templateRect, cloneRect);
+            }
+
+            auxiliaryResourceBar = clone.GetComponent<ValueBarUI>();
+            if (auxiliaryResourceBar != null)
+            {
+                auxiliaryResourceBar.gameObject.SetActive(false);
+            }
+        }
+
+        private void PositionAuxiliaryResourceBar(RectTransform templateRect, RectTransform cloneRect)
+        {
+            if (templateRect == null || cloneRect == null)
+            {
+                return;
+            }
+
+            var layoutRoot = templateRect.parent as RectTransform;
+            if (layoutRoot == null)
+            {
+                cloneRect.anchoredPosition = templateRect.anchoredPosition + new Vector2(0f, -(templateRect.rect.height + AuxiliaryBarGap));
+                return;
+            }
+
+            var baseRect = TryGetLocalRect(layoutRoot, templateRect);
+            if (!baseRect.HasValue)
+            {
+                cloneRect.anchoredPosition = templateRect.anchoredPosition + new Vector2(0f, -(templateRect.rect.height + AuxiliaryBarGap));
+                return;
+            }
+
+            var basePosition = templateRect.anchoredPosition;
+            var step = Mathf.Max(templateRect.rect.height, cloneRect.rect.height) + AuxiliaryBarGap;
+            var bars = layoutRoot.GetComponentsInChildren<ValueBarUI>(true);
+
+            for (int slot = 1; slot <= AuxiliaryBarSearchDepth; slot++)
+            {
+                for (int directionIndex = 0; directionIndex < 2; directionIndex++)
+                {
+                    var direction = directionIndex == 0 ? 1f : -1f;
+                    var candidatePosition = basePosition + new Vector2(0f, step * slot * direction);
+                    var candidateRect = OffsetRect(baseRect.Value, candidatePosition - basePosition);
+                    if (IsAuxiliaryBarSlotAvailable(layoutRoot, bars, cloneRect, candidateRect))
+                    {
+                        cloneRect.anchoredPosition = candidatePosition;
+                        return;
+                    }
+                }
+            }
+
+            cloneRect.anchoredPosition = basePosition + new Vector2(0f, step * (AuxiliaryBarSearchDepth + 1));
+        }
+
+        private static bool IsAuxiliaryBarSlotAvailable(
+            RectTransform layoutRoot,
+            ValueBarUI[] bars,
+            RectTransform cloneRect,
+            Rect candidateRect)
+        {
+            if (bars == null)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < bars.Length; i++)
+            {
+                var bar = bars[i];
+                if (bar == null || !bar.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var otherRectTransform = bar.transform as RectTransform;
+                if (otherRectTransform == null || otherRectTransform == cloneRect)
+                {
+                    continue;
+                }
+
+                var otherRect = TryGetLocalRect(layoutRoot, otherRectTransform);
+                if (!otherRect.HasValue)
+                {
+                    continue;
+                }
+
+                if (candidateRect.Overlaps(ExpandRect(otherRect.Value, AuxiliaryBarGap)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static Rect? TryGetLocalRect(RectTransform layoutRoot, RectTransform targetRect)
+        {
+            if (layoutRoot == null || targetRect == null)
+            {
+                return null;
+            }
+
+            var corners = new Vector3[4];
+            targetRect.GetWorldCorners(corners);
+            var min = layoutRoot.InverseTransformPoint(corners[0]);
+            var max = layoutRoot.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
+        private static Rect OffsetRect(Rect rect, Vector2 delta)
+        {
+            rect.position += delta;
+            return rect;
+        }
+
+        private static Rect ExpandRect(Rect rect, float padding)
+        {
+            return Rect.MinMaxRect(
+                rect.xMin - padding,
+                rect.yMin - padding,
+                rect.xMax + padding,
+                rect.yMax + padding);
+        }
+
+        private void RefreshAuxiliaryResourceBar()
+        {
+            if (auxiliaryResourceBar == null)
+            {
+                return;
+            }
+
+            if (targetResource == null || !targetResource.TryGetHighestPriorityHudResource(out var view))
+            {
+                activeAuxiliaryResource = null;
+                auxiliaryResourceBar.gameObject.SetActive(false);
+                return;
+            }
+
+            activeAuxiliaryResource = view.Definition;
+            auxiliaryResourceBar.gameObject.SetActive(true);
+            auxiliaryResourceBar.SetValues(view.Current, view.Max);
+            if (view.Definition != null)
+            {
+                auxiliaryResourceBar.SetFillColor(view.Definition.HudColor);
+            }
         }
     }
 }

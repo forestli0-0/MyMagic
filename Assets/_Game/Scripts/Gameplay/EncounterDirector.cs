@@ -221,24 +221,6 @@ namespace CombatSystem.Gameplay
                     tags.Initialize(unitDefinition);
                 }
             }
-
-            var skillUser = instance.GetComponent<SkillUserComponent>();
-            if (skillUser != null)
-            {
-                skillUser.Initialize(unitDefinition);
-            }
-
-            var health = instance.GetComponent<HealthComponent>();
-            if (health != null)
-            {
-                health.Initialize();
-            }
-
-            var resource = instance.GetComponent<ResourceComponent>();
-            if (resource != null)
-            {
-                resource.Initialize();
-            }
         }
 
         private void ApplyTeam(GameObject instance)

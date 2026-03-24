@@ -558,7 +558,7 @@ namespace CombatSystem.Core
 
         /// <summary>
         /// 通知：受到伤害时触发。
-        /// 由 EffectExecutor 在伤害结算时调用。
+        /// 由伤害系统在实际扣血前调用，用于受击反应。
         /// </summary>
         /// <param name="context">技能运行时上下文</param>
         /// <param name="attacker">攻击者</param>

@@ -587,6 +587,33 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            if (effect != null && effect.ResourceDefinition != null)
+            {
+                target.Resource.EnsureResource(effect.ResourceDefinition);
+
+                switch (effect.ResourceOperation)
+                {
+                    case ResourceOperation.SetCurrent:
+                        target.Resource.SetCurrent(effect.ResourceDefinition, value);
+                        return;
+                    case ResourceOperation.Spend:
+                        target.Resource.Spend(effect.ResourceDefinition, Mathf.Abs(value));
+                        return;
+                    case ResourceOperation.Add:
+                    default:
+                        if (value >= 0f)
+                        {
+                            target.Resource.Restore(effect.ResourceDefinition, value);
+                        }
+                        else
+                        {
+                            target.Resource.Spend(effect.ResourceDefinition, -value);
+                        }
+
+                        return;
+                }
+            }
+
             // 检查资源类型是否匹配
             if (target.Resource.ResourceType != effect.ResourceType)
             {
@@ -628,6 +655,11 @@ namespace CombatSystem.Gameplay
         /// </remarks>
         private static void Summon(EffectDefinition effect, SkillRuntimeContext context, CombatTarget target)
         {
+            if (effect == null)
+            {
+                return;
+            }
+
             // 优先使用直接配置的 Prefab，否则使用 UnitDefinition 的 Prefab
             var prefab = effect.SummonPrefab != null ? effect.SummonPrefab : effect.SummonUnit?.Prefab;
             if (prefab == null)
@@ -659,6 +691,23 @@ namespace CombatSystem.Gameplay
                 {
                     summonedTeam.SetTeamId(context.CasterUnit.Team.TeamId);
                 }
+            }
+
+            if (spawned == null)
+            {
+                return;
+            }
+
+            var duration = ModifierResolver.ApplyEffectModifiers(
+                effect.Duration,
+                effect,
+                context,
+                target,
+                ModifierParameters.EffectDuration);
+            duration = Mathf.Max(0f, duration);
+            if (duration > 0f)
+            {
+                Object.Destroy(spawned, duration);
             }
         }
 

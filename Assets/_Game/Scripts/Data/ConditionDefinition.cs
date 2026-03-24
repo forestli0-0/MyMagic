@@ -37,6 +37,8 @@ namespace CombatSystem.Data
         public TagDefinition tag;
         [Tooltip("Buff 相关条件时的指定 Buff")]
         public BuffDefinition buff;
+        [Tooltip("资源相关条件时的指定资源")]
+        public ResourceDefinition resource;
         [Tooltip("控制相关条件时的指定控制类型")]
         public ControlType controlType = ControlType.All;
         [Tooltip("Buff 层数阈值（用于 BuffStacksAtLeast / BuffStacksBelow）")]

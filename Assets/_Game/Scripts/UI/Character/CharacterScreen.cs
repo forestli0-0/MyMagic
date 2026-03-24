@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using CombatSystem.Core;
 using CombatSystem.Data;
@@ -20,6 +21,7 @@ namespace CombatSystem.UI
         private const string StatMoveSpeedId = CombatStatIds.MoveSpeed;
         private const string HoverShieldId = "__hover_shield";
         private const string HoverResourceId = "__hover_resource";
+        private readonly List<ResourceComponent.ResourceView> resourceViews = new List<ResourceComponent.ResourceView>(4);
 
         [Header("References")]
         [SerializeField] private UIManager uiManager;
@@ -514,22 +516,19 @@ namespace CombatSystem.UI
 
             if (resourceText != null)
             {
-                if (resource != null)
-                {
-                    resourceText.text = $"{resource.ResourceType}: {Mathf.RoundToInt(resource.Current)}/{Mathf.RoundToInt(resource.Max)}";
-                }
-                else
-                {
-                    resourceText.text = "资源: -";
-                }
+                resourceText.text = BuildResourceSummary();
             }
 
             if (maxManaText != null)
             {
-                var maxMana = resource != null
-                    ? resource.Max
-                    : GetStatValue(CombatStatIds.MaxMana);
-                maxManaText.text = $"最大法力: {FormatNumber(maxMana)}";
+                if (TryGetPrimaryResourceView(out var primaryResource))
+                {
+                    maxManaText.text = $"{primaryResource.DisplayName}上限: {FormatNumber(primaryResource.Max)}";
+                }
+                else
+                {
+                    maxManaText.text = "主资源上限: -";
+                }
             }
 
             if (healthRegenText != null)
@@ -539,7 +538,14 @@ namespace CombatSystem.UI
 
             if (manaRegenText != null)
             {
-                manaRegenText.text = $"法力回复: {FormatNumber(GetStatValue(CombatStatIds.ManaRegen))}";
+                if (TryGetPrimaryResourceView(out var primaryResource))
+                {
+                    manaRegenText.text = $"{primaryResource.DisplayName}回复: {FormatNumber(GetPrimaryResourceRegen(primaryResource))}";
+                }
+                else
+                {
+                    manaRegenText.text = "主资源回复: -";
+                }
             }
 
             if (attributePointsText != null)
@@ -1189,9 +1195,9 @@ namespace CombatSystem.UI
             BindStatHoverTarget(healthText, StatMaxHealthId, "最大生命");
             BindStatHoverTarget(shieldText, HoverShieldId, "护盾");
             BindStatHoverTarget(resourceText, HoverResourceId, "资源");
-            BindStatHoverTarget(maxManaText, CombatStatIds.MaxMana, "最大法力");
+            BindStatHoverTarget(maxManaText, HoverResourceId, "主资源上限");
             BindStatHoverTarget(healthRegenText, CombatStatIds.HealthRegen, "生命回复");
-            BindStatHoverTarget(manaRegenText, CombatStatIds.ManaRegen, "法力回复");
+            BindStatHoverTarget(manaRegenText, HoverResourceId, "主资源回复");
             BindStatHoverTarget(armorText, CombatStatIds.Armor, "护甲");
             BindStatHoverTarget(moveSpeedText, CombatStatIds.MoveSpeed, "移动速度");
             BindStatHoverTarget(attackPowerText, StatAttackPowerId, "攻击力");
@@ -1218,11 +1224,11 @@ namespace CombatSystem.UI
             critChanceText = EnsureSiblingText(critChanceText, attackSpeedText, "CritChanceText_Auto", "暴击率: -", 1);
             var critTemplate = critChanceText != null ? critChanceText : attackSpeedText;
             critMultiplierText = EnsureSiblingText(critMultiplierText, critTemplate, "CritMultiplierText_Auto", "暴击伤害: -", 1);
-            maxManaText = EnsureSiblingText(maxManaText, resourceText, "MaxManaText_Auto", "最大法力: -", 1);
+            maxManaText = EnsureSiblingText(maxManaText, resourceText, "MaxManaText_Auto", "主资源上限: -", 1);
             var regenTemplate = maxManaText != null ? maxManaText : resourceText;
             healthRegenText = EnsureSiblingText(healthRegenText, regenTemplate, "HealthRegenText_Auto", "生命回复: -", 1);
             var manaRegenTemplate = healthRegenText != null ? healthRegenText : regenTemplate;
-            manaRegenText = EnsureSiblingText(manaRegenText, manaRegenTemplate, "ManaRegenText_Auto", "法力回复: -", 1);
+            manaRegenText = EnsureSiblingText(manaRegenText, manaRegenTemplate, "ManaRegenText_Auto", "主资源回复: -", 1);
         }
 
         private Text EnsureSiblingText(Text target, Text template, string cloneName, string fallbackText, int siblingOffset)
@@ -1556,20 +1562,94 @@ namespace CombatSystem.UI
                 return false;
             }
 
-            var current = Mathf.Max(0f, resource.Current);
-            var max = Mathf.Max(0f, resource.Max);
-            var ratio = max > 0.01f ? current / max : 0f;
-
             var title = string.IsNullOrWhiteSpace(statLabel) ? "资源" : statLabel;
-            var builder = new StringBuilder(192);
+            var builder = new StringBuilder(256);
             builder.AppendLine($"{title} 说明");
-            builder.AppendLine($"资源类型: {resource.ResourceType}");
-            builder.AppendLine($"当前值: {Mathf.RoundToInt(current)}");
-            builder.AppendLine($"最大值: {Mathf.RoundToInt(max)}");
-            builder.Append($"当前占比: {(ratio * 100f):0.#}%");
+            resource.GetResourceViews(resourceViews);
+            if (resourceViews.Count == 0)
+            {
+                builder.Append("无资源通道");
+                content = builder.ToString();
+                return true;
+            }
+
+            for (int i = 0; i < resourceViews.Count; i++)
+            {
+                var view = resourceViews[i];
+                var ratio = view.Max > 0.01f ? view.Current / view.Max : 0f;
+                builder.AppendLine($"{view.DisplayName}: {Mathf.RoundToInt(view.Current)}/{Mathf.RoundToInt(view.Max)} ({ratio * 100f:0.#}%)");
+            }
 
             content = builder.ToString();
             return true;
+        }
+
+        private string BuildResourceSummary()
+        {
+            if (resource == null)
+            {
+                return "资源: -";
+            }
+
+            resource.GetResourceViews(resourceViews);
+            if (resourceViews.Count == 0)
+            {
+                return "资源: -";
+            }
+
+            var builder = new StringBuilder(128);
+            for (int i = 0; i < resourceViews.Count; i++)
+            {
+                var view = resourceViews[i];
+                if (i > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                builder.Append(view.DisplayName)
+                    .Append(": ")
+                    .Append(Mathf.RoundToInt(view.Current))
+                    .Append("/")
+                    .Append(Mathf.RoundToInt(view.Max));
+            }
+
+            return builder.ToString();
+        }
+
+        private bool TryGetPrimaryResourceView(out ResourceComponent.ResourceView view)
+        {
+            view = default;
+            if (resource == null)
+            {
+                return false;
+            }
+
+            resource.GetResourceViews(resourceViews);
+            for (int i = 0; i < resourceViews.Count; i++)
+            {
+                if (resourceViews[i].IsPrimary)
+                {
+                    view = resourceViews[i];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private float GetPrimaryResourceRegen(ResourceComponent.ResourceView primaryResource)
+        {
+            if (stats == null)
+            {
+                return 0f;
+            }
+
+            if (primaryResource.Definition != null && primaryResource.Definition.RegenStat != null)
+            {
+                return stats.GetValue(primaryResource.Definition.RegenStat, 0f);
+            }
+
+            return GetStatValue(CombatStatIds.ManaRegen);
         }
 
         private float GetDefinitionBaseStatValue(string statId)

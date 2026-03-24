@@ -100,6 +100,41 @@ namespace CombatSystem.Core
     }
 
     /// <summary>
+    /// 伤害即将结算事件数据（用于受击前反应，如护盾/减伤/清资源）。
+    /// </summary>
+    public struct DamageApplyingEvent
+    {
+        public UnitRoot Attacker;
+        public HealthComponent Target;
+        public float RequestedDamage;
+        public float PostResistanceDamage;
+        public bool IsCritical;
+        public SkillDefinition Skill;
+        public EffectDefinition Effect;
+        public SkillStepTrigger Trigger;
+
+        public DamageApplyingEvent(
+            UnitRoot attacker,
+            HealthComponent target,
+            float requestedDamage,
+            float postResistanceDamage,
+            bool isCritical,
+            SkillDefinition skill,
+            EffectDefinition effect,
+            SkillStepTrigger trigger)
+        {
+            Attacker = attacker;
+            Target = target;
+            RequestedDamage = requestedDamage;
+            PostResistanceDamage = postResistanceDamage;
+            IsCritical = isCritical;
+            Skill = skill;
+            Effect = effect;
+            Trigger = trigger;
+        }
+    }
+
+    /// <summary>
     /// 伤害结算事件数据（用于命中反馈、音效与镜头效果）。
     /// </summary>
     public struct DamageAppliedEvent
@@ -151,18 +186,44 @@ namespace CombatSystem.Core
     public struct ResourceChangedEvent
     {
         public ResourceComponent Source; // 来源组件
+        public ResourceDefinition Resource; // 资源定义（附加资源/专属条）
         public ResourceType ResourceType; // 资源类型
         public float OldValue;          // 变更前的值
         public float NewValue;          // 变更后的值
         public float Delta;             // 变化量
 
-        public ResourceChangedEvent(ResourceComponent source, ResourceType resourceType, float oldValue, float newValue)
+        public ResourceChangedEvent(
+            ResourceComponent source,
+            ResourceDefinition resource,
+            ResourceType resourceType,
+            float oldValue,
+            float newValue)
         {
             Source = source;
+            Resource = resource;
             ResourceType = resourceType;
             OldValue = oldValue;
             NewValue = newValue;
             Delta = newValue - oldValue;
+        }
+    }
+
+    /// <summary>
+    /// 位移采样事件，用于连续型被动/专属条监听移动状态。
+    /// </summary>
+    public struct MovementSampleEvent
+    {
+        public MovementComponent Source;
+        public Vector3 Displacement;
+        public float HorizontalDistance;
+        public bool IsMoving;
+
+        public MovementSampleEvent(MovementComponent source, Vector3 displacement, float horizontalDistance, bool isMoving)
+        {
+            Source = source;
+            Displacement = displacement;
+            HorizontalDistance = horizontalDistance;
+            IsMoving = isMoving;
         }
     }
 

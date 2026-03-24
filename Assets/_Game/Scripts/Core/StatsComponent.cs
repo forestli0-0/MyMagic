@@ -50,7 +50,7 @@ namespace CombatSystem.Core
 
         private void Awake()
         {
-            if (initializeOnAwake && unitDefinition != null)
+            if (initializeOnAwake && unitDefinition != null && !ShouldDeferInitializationToUnitRoot())
             {
                 Initialize(unitDefinition);
             }
@@ -521,6 +521,16 @@ namespace CombatSystem.Core
             var evt = new StatChangedEvent(this, stat, oldValue, newValue);
             StatChanged?.Invoke(evt);
             eventHub?.RaiseStatChanged(evt);
+        }
+
+        private bool ShouldDeferInitializationToUnitRoot()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            return unitRoot != null;
         }
 
         /// <summary>

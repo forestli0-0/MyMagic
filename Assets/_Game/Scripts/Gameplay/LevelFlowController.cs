@@ -220,14 +220,13 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
-            var skillUser = player.GetComponent<SkillUserComponent>();
-            if (skillUser == null)
+            var unitRoot = player.GetComponent<UnitRoot>();
+            if (unitRoot == null)
             {
                 return;
             }
 
-            var unitRoot = player.GetComponent<UnitRoot>();
-            skillUser.Initialize(unitRoot != null ? unitRoot.Definition : null);
+            unitRoot.Initialize(unitRoot.Definition);
         }
 
         /// <summary>
@@ -506,9 +505,7 @@ namespace CombatSystem.Gameplay
             var resource = player.GetComponent<CombatSystem.Core.ResourceComponent>();
             if (resource != null)
             {
-                cachedPlayerState.hasResource = true;
-                cachedPlayerState.resourceType = resource.ResourceType;
-                cachedPlayerState.resource = resource.Current;
+                cachedPlayerState.resources = CloneResources(resource);
             }
 
             // 缓存成长系统状态
@@ -624,11 +621,11 @@ namespace CombatSystem.Gameplay
                 health.SetCurrent(cachedPlayerState.health);
             }
 
-            // 6. 恢复资源值（仅当资源类型匹配时）
+            // 6. 恢复资源值（主资源 + 附加资源）
             var resource = player.GetComponent<CombatSystem.Core.ResourceComponent>();
-            if (cachedPlayerState.hasResource && resource != null && resource.ResourceType == cachedPlayerState.resourceType)
+            if (resource != null && cachedPlayerState.resources != null && cachedPlayerState.resources.Count > 0)
             {
-                resource.SetCurrent(cachedPlayerState.resource);
+                ApplyCachedResources(resource, cachedPlayerState.resources);
             }
 
             // 清空缓存
@@ -708,6 +705,54 @@ namespace CombatSystem.Gameplay
             return list;
         }
 
+        private static List<ResourceSnapshot> CloneResources(ResourceComponent resource)
+        {
+            if (resource == null)
+            {
+                return null;
+            }
+
+            var views = new List<ResourceComponent.ResourceView>(4);
+            resource.GetResourceViews(views);
+            if (views.Count == 0)
+            {
+                return null;
+            }
+
+            var snapshots = new List<ResourceSnapshot>(views.Count);
+            for (int i = 0; i < views.Count; i++)
+            {
+                var view = views[i];
+                snapshots.Add(new ResourceSnapshot(view.Definition, view.ResourceType, view.Current, view.IsPrimary));
+            }
+
+            return snapshots;
+        }
+
+        private static void ApplyCachedResources(ResourceComponent resource, IReadOnlyList<ResourceSnapshot> snapshots)
+        {
+            if (resource == null || snapshots == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                var snapshot = snapshots[i];
+                if (snapshot.Definition != null)
+                {
+                    resource.EnsureResource(snapshot.Definition);
+                    resource.SetCurrent(snapshot.Definition, snapshot.Current);
+                    continue;
+                }
+
+                if (snapshot.IsPrimary || resource.ResourceType == snapshot.ResourceType)
+                {
+                    resource.SetCurrent(snapshot.Current);
+                }
+            }
+        }
+
         /// <summary>
         /// 玩家状态缓存结构，用于场景切换时临时保存玩家数据。
         /// </summary>
@@ -721,9 +766,7 @@ namespace CombatSystem.Gameplay
             public float health;
 
             // -------- 资源值 --------
-            public bool hasResource;
-            public ResourceType resourceType;
-            public float resource;
+            public List<ResourceSnapshot> resources;
 
             // -------- 成长系统 --------
             public bool hasProgression;
@@ -742,6 +785,22 @@ namespace CombatSystem.Gameplay
             public List<ItemInstance> inventoryItems;
             /// <summary>装备物品深拷贝（按槽位索引）</summary>
             public List<ItemInstance> equipmentItems;
+        }
+
+        private readonly struct ResourceSnapshot
+        {
+            public readonly ResourceDefinition Definition;
+            public readonly ResourceType ResourceType;
+            public readonly float Current;
+            public readonly bool IsPrimary;
+
+            public ResourceSnapshot(ResourceDefinition definition, ResourceType resourceType, float current, bool isPrimary)
+            {
+                Definition = definition;
+                ResourceType = resourceType;
+                Current = current;
+                IsPrimary = isPrimary;
+            }
         }
 
         private InGameScreen GetCachedInGameScreen()

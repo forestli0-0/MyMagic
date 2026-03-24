@@ -114,6 +114,17 @@ namespace CombatSystem.UI
             valueText = text;
         }
 
+        /// <summary>
+        /// 设置填充颜色。
+        /// </summary>
+        public void SetFillColor(Color color)
+        {
+            if (fill != null)
+            {
+                fill.color = color;
+            }
+        }
+
         private void ApplyFillAmount(float normalized)
         {
             if (fill == null)

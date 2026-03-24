@@ -20,8 +20,12 @@ namespace CombatSystem.Data
         [Header("数值/伤害相关")]
         [Tooltip("通用数值参数（伤害值、治疗值等）")]
         [SerializeField] private float value;
+        [Tooltip("资源定义（优先于旧枚举资源类型）")]
+        [SerializeField] private ResourceDefinition resourceDefinition;
         [Tooltip("资源类型（资源效果时使用）")]
         [SerializeField] private ResourceType resourceType = ResourceType.Mana;
+        [Tooltip("资源效果执行模式")]
+        [SerializeField] private ResourceOperation resourceOperation = ResourceOperation.Add;
         [Tooltip("伤害属性分类")]
         [SerializeField] private DamageType damageType;
 
@@ -99,7 +103,9 @@ namespace CombatSystem.Data
         public EffectType EffectType => effectType;
         public DamageType DamageType => damageType;
         public float Value => value;
+        public ResourceDefinition ResourceDefinition => resourceDefinition;
         public ResourceType ResourceType => resourceType;
+        public ResourceOperation ResourceOperation => resourceOperation;
         public float Duration => duration;
         public float Interval => interval;
         public MoveStyle MoveStyle => moveStyle;

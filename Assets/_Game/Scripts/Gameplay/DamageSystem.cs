@@ -45,6 +45,35 @@ namespace CombatSystem.Gameplay
                 return;
             }
 
+            var canTriggerOnHit = CanTriggerOnHit(effect, context);
+            var notifySkillHit = canTriggerOnHit && trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
+            var notifyBuffHit = trigger != SkillStepTrigger.OnHit;
+            var attackerTarget = default(CombatTarget);
+            if (context.CasterUnit != null)
+            {
+                CombatTarget.TryCreate(context.CasterUnit.gameObject, out attackerTarget);
+            }
+
+            RaiseDamageApplyingEvent(
+                context,
+                target,
+                effect,
+                trigger,
+                amount,
+                finalAmount,
+                isCritical);
+
+            if (notifyBuffHit)
+            {
+                var targetBuffs = target.Buffs;
+                targetBuffs?.NotifyDamaged(context, attackerTarget.IsValid ? attackerTarget : target);
+            }
+
+            if (target.Health == null || !target.Health.IsAlive || HitResolutionSystem.IsInvulnerable(target))
+            {
+                return;
+            }
+
             var wasAlive = target.Health.IsAlive;
             var damageSource = new DamageSourceInfo(context.CasterUnit, context.Skill, effect, trigger);
             var appliedDamage = target.Health.ApplyDamage(finalAmount, out var absorbedByShield, damageSource);
@@ -65,10 +94,6 @@ namespace CombatSystem.Gameplay
                 isCritical,
                 wasAlive && target.Health != null && !target.Health.IsAlive);
 
-            var canTriggerOnHit = CanTriggerOnHit(effect, context);
-            var notifySkillHit = canTriggerOnHit && trigger != SkillStepTrigger.OnHit && trigger != SkillStepTrigger.OnProjectileHit;
-            var notifyBuffHit = trigger != SkillStepTrigger.OnHit;
-
             if (notifySkillHit)
             {
                 context.Caster?.NotifyHit(context, target);
@@ -81,15 +106,6 @@ namespace CombatSystem.Gameplay
                 {
                     casterBuffs?.NotifyHit(context, target);
                 }
-
-                var attackerTarget = default(CombatTarget);
-                if (context.CasterUnit != null)
-                {
-                    CombatTarget.TryCreate(context.CasterUnit.gameObject, out attackerTarget);
-                }
-
-                var targetBuffs = target.Buffs;
-                targetBuffs?.NotifyDamaged(context, attackerTarget.IsValid ? attackerTarget : target);
 
                 if (wasAlive && target.Health != null && !target.Health.IsAlive)
                 {
@@ -199,6 +215,38 @@ namespace CombatSystem.Gameplay
             }
 
             return effect.TriggersOnHit;
+        }
+
+        private static void RaiseDamageApplyingEvent(
+            SkillRuntimeContext context,
+            CombatTarget target,
+            EffectDefinition effect,
+            SkillStepTrigger trigger,
+            float requestedDamage,
+            float postResistanceDamage,
+            bool isCritical)
+        {
+            if (target.Health == null)
+            {
+                return;
+            }
+
+            var eventHub = ResolveEventHub(context, target);
+            if (eventHub == null)
+            {
+                return;
+            }
+
+            var evt = new DamageApplyingEvent(
+                context.CasterUnit,
+                target.Health,
+                requestedDamage,
+                postResistanceDamage,
+                isCritical,
+                context.Skill,
+                effect,
+                trigger);
+            eventHub.RaiseDamageApplying(evt);
         }
 
         private static void RaiseDamageAppliedEvent(

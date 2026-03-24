@@ -157,6 +157,18 @@ namespace CombatSystem.Gameplay
                     // 生命百分比高于阈值
                     return GetHealthPercent(subject) >= entry.threshold;
 
+                case ConditionType.ResourceAtLeast:
+                    return GetResourceValue(subject, entry) >= Mathf.Max(0f, entry.threshold);
+
+                case ConditionType.ResourceBelow:
+                    return GetResourceValue(subject, entry) < Mathf.Max(0f, entry.threshold);
+
+                case ConditionType.ResourcePercentAtLeast:
+                    return GetResourcePercent(subject, entry) >= entry.threshold;
+
+                case ConditionType.ResourcePercentBelow:
+                    return GetResourcePercent(subject, entry) < entry.threshold;
+
                 case ConditionType.IsTargetAlive:
                     // 目标存活检测
                     return subject.Health != null && subject.Health.IsAlive;
@@ -184,6 +196,37 @@ namespace CombatSystem.Gameplay
             }
 
             return subject.Health.Current / subject.Health.Max;
+        }
+
+        private static float GetResourceValue(CombatTarget subject, ConditionEntry entry)
+        {
+            if (subject.Resource == null)
+            {
+                return 0f;
+            }
+
+            return entry.resource != null
+                ? subject.Resource.GetCurrent(entry.resource)
+                : subject.Resource.Current;
+        }
+
+        private static float GetResourcePercent(CombatTarget subject, ConditionEntry entry)
+        {
+            if (subject.Resource == null)
+            {
+                return 0f;
+            }
+
+            var max = entry.resource != null
+                ? subject.Resource.GetMax(entry.resource)
+                : subject.Resource.Max;
+
+            if (max <= 0f)
+            {
+                return 0f;
+            }
+
+            return GetResourceValue(subject, entry) / max;
         }
 
         /// <summary>

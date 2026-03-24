@@ -135,7 +135,7 @@ namespace CombatSystem.Gameplay
                 eventHub = unitRoot.EventHub;
             }
 
-            if (initializeOnAwake)
+            if (initializeOnAwake && !ShouldDeferInitializationToUnitRoot())
             {
                 Initialize(unitRoot != null ? unitRoot.Definition : null);
             }
@@ -2852,7 +2852,11 @@ namespace CombatSystem.Gameplay
                 return cost <= 0f;
             }
 
-            // 资源类型必须匹配
+            if (skill != null && skill.ResourceDefinition != null)
+            {
+                return resource.CanSpend(skill.ResourceDefinition, cost);
+            }
+
             if (resource.ResourceType != skill.ResourceType)
             {
                 return false;
@@ -2870,6 +2874,11 @@ namespace CombatSystem.Gameplay
             if (resource == null)
             {
                 return cost <= 0f;
+            }
+
+            if (skill != null && skill.ResourceDefinition != null)
+            {
+                return resource.Spend(skill.ResourceDefinition, cost);
             }
 
             if (resource.ResourceType != skill.ResourceType)
@@ -3077,6 +3086,16 @@ namespace CombatSystem.Gameplay
 
             var result = cooldownDuration / (1f + bonusAttackSpeed);
             return Mathf.Max(result, MinAttackCooldown);
+        }
+
+        private bool ShouldDeferInitializationToUnitRoot()
+        {
+            if (unitRoot == null)
+            {
+                unitRoot = GetComponent<UnitRoot>();
+            }
+
+            return unitRoot != null;
         }
 
         #region Target Handle Pool

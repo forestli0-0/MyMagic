@@ -880,6 +880,221 @@ namespace CombatSystem.Tests
             Assert.IsTrue(CallBoolMethod(wall, "ShouldIntercept", enemyCaster.Unit));
         }
 
+        [UnityTest]
+        public IEnumerator SummonEffect_WithDuration_DestroysSpawnedObject()
+        {
+            CreateSystems();
+            var caster = CreateUnit("TimedSummonCaster");
+            var summonPrefab = Track(new GameObject("TimedSummonPrefab_Source"));
+            var effect = CreateSummonEffect(summonPrefab, 0.05f);
+            var context = CreateRuntimeContext(
+                caster,
+                null,
+                0UL,
+                -1,
+                null,
+                null,
+                true,
+                new Vector3(1f, 0f, 0f),
+                Vector3.forward,
+                1);
+
+            CallMethod(
+                effectExecutorSystem,
+                "ExecuteEffect",
+                effect,
+                context,
+                CreateDefaultValue("CombatSystem.Gameplay.CombatTarget"),
+                ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+
+            yield return null;
+
+            var spawned = GameObject.Find("TimedSummonPrefab_Source(Clone)");
+            Assert.NotNull(spawned);
+
+            yield return new WaitForSeconds(0.08f);
+            Assert.IsTrue(spawned == null);
+        }
+
+        [Test]
+        public void UnitRootInitialize_LoadsAndRemovesStartingPassiveWithoutDuplicateActivationBuff()
+        {
+            CreateSystems();
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            var attackStat = CreateStat("Stat_PassiveAttack");
+            var attackModifier = CreateStatModifier(attackStat, 5f);
+            var activationBuff = CreateBuffWithModifier(attackModifier);
+            var passive = CreatePassiveDefinition(
+                activationBuffs: new[] { activationBuff });
+            var unitDefinition = CreateUnitDefinition(
+                baseStats: new[] { CreateStatValueEntry(attackStat, 10f) },
+                startingPassives: new[] { passive });
+            var unit = CreateFrameworkUnit("PassiveInitUnit");
+
+            InitializeUnit(unit, unitDefinition, eventHub);
+
+            Assert.AreEqual(15f, Convert.ToSingle(CallMethod(unit.Stats, "GetValue", attackStat, 0f)), 0.01f);
+            Assert.AreEqual(1, Convert.ToInt32(GetPropertyValue(unit.Passive, "ActivePassiveCount")));
+            Assert.AreEqual(1, ((IList)GetPropertyValue(unit.Buffs, "ActiveBuffs")).Count);
+
+            InitializeUnit(unit, unitDefinition, eventHub);
+
+            Assert.AreEqual(15f, Convert.ToSingle(CallMethod(unit.Stats, "GetValue", attackStat, 0f)), 0.01f);
+            Assert.AreEqual(1, Convert.ToInt32(GetPropertyValue(unit.Passive, "ActivePassiveCount")));
+            Assert.AreEqual(1, ((IList)GetPropertyValue(unit.Buffs, "ActiveBuffs")).Count);
+
+            Assert.IsTrue(CallBoolMethod(unit.Passive, "RemovePassive", passive));
+            Assert.AreEqual(10f, Convert.ToSingle(CallMethod(unit.Stats, "GetValue", attackStat, 0f)), 0.01f);
+            Assert.AreEqual(0, Convert.ToInt32(GetPropertyValue(unit.Passive, "ActivePassiveCount")));
+            Assert.AreEqual(0, ((IList)GetPropertyValue(unit.Buffs, "ActiveBuffs")).Count);
+        }
+
+        [Test]
+        public void ResourceComponent_AuxiliaryResourceStartsEmptyAndSupportsIndependentSetCurrent()
+        {
+            var unit = CreateFrameworkUnit("AuxiliaryResourceUnit");
+            var flow = CreateResourceDefinition("Resource_TestFlow", 100f, false, true, 10);
+
+            Assert.IsTrue(CallBoolMethod(unit.Resource, "EnsureResource", flow));
+            Assert.AreEqual(0f, Convert.ToSingle(CallMethod(unit.Resource, "GetCurrent", flow)), 0.01f);
+            Assert.AreEqual(100f, Convert.ToSingle(CallMethod(unit.Resource, "GetMax", flow)), 0.01f);
+
+            CallMethod(unit.Resource, "SetCurrent", flow, 35f);
+            Assert.AreEqual(35f, Convert.ToSingle(CallMethod(unit.Resource, "GetCurrent", flow)), 0.01f);
+            Assert.AreEqual(0f, GetFloatProperty(unit.Resource, "Current"), 0.01f);
+        }
+
+        [Test]
+        public void Passive_OnResourceChanged_UsesAuxiliaryResourcePercentCondition()
+        {
+            CreateSystems();
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            var flow = CreateResourceDefinition("Resource_ReactiveFlow", 100f, false, true, 10);
+            var selfTargeting = CreateSelfTargeting();
+            var shieldEffect = CreateShieldEffect(12f, 2f, selfTargeting);
+            var flowThreshold = CreateResourceCondition("ResourcePercentAtLeast", "Caster", flow, 0.5f);
+            var passive = CreatePassiveDefinition(
+                triggers: new[]
+                {
+                    CreatePassiveTrigger("OnResourceChanged", flowThreshold, shieldEffect)
+                },
+                meterDrivers: new[]
+                {
+                    CreatePassiveMeterDriver(flow, "AddByMoveDistance", 0f)
+                });
+            var unitDefinition = CreateUnitDefinition(startingPassives: new[] { passive });
+            var unit = CreateFrameworkUnit("PassiveResourceChangedUnit");
+
+            InitializeUnit(unit, unitDefinition, eventHub);
+
+            CallMethod(unit.Resource, "SetCurrent", flow, 40f);
+            Assert.AreEqual(0f, GetFloatProperty(unit.Health, "Shield"), 0.01f);
+
+            CallMethod(unit.Resource, "SetCurrent", flow, 60f);
+            Assert.AreEqual(12f, GetFloatProperty(unit.Health, "Shield"), 0.01f);
+        }
+
+        [Test]
+        public void Passive_OnDamaged_WithFullAuxiliaryResource_GrantsShieldAndClearsResource()
+        {
+            CreateSystems();
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            var flow = CreateResourceDefinition("Resource_DamageFlow", 100f, false, true, 10);
+            var selfTargeting = CreateSelfTargeting();
+            var shieldEffect = CreateShieldEffect(25f, 2f, selfTargeting);
+            var clearFlow = CreateResourceEffect(0f, flow, "SetCurrent");
+            var condition = CreateResourceCondition("ResourceAtLeast", "Caster", flow, 100f);
+            var passive = CreatePassiveDefinition(
+                triggers: new[]
+                {
+                    CreatePassiveTrigger("OnDamaged", condition, shieldEffect, clearFlow)
+                },
+                meterDrivers: new[]
+                {
+                    CreatePassiveMeterDriver(flow, "AddByMoveDistance", 0f)
+                });
+            var attacker = CreateFrameworkUnit("PassiveDamaged_Attacker");
+            var victim = CreateFrameworkUnit("PassiveDamaged_Victim");
+            var attackerDefinition = CreateUnitDefinition();
+            var victimDefinition = CreateUnitDefinition(startingPassives: new[] { passive });
+            var damage = CreateDamageEffect(10f, "True");
+
+            CallMethod(attacker.Team, "SetTeamId", 1);
+            CallMethod(victim.Team, "SetTeamId", 2);
+            InitializeUnit(attacker, attackerDefinition, eventHub);
+            InitializeUnit(victim, victimDefinition, eventHub);
+            CallMethod(victim.Health, "SetCurrent", 100f);
+            CallMethod(victim.Resource, "SetCurrent", flow, 100f);
+
+            var targetData = CreateCombatTarget(victim.GameObject);
+            var context = CreateRuntimeContext(attacker, eventHub);
+            object damageApplied = null;
+            var subscription = AddEventListener(eventHub, "DamageApplied", evt => damageApplied = evt);
+            CallMethod(
+                effectExecutorSystem,
+                "ExecuteEffect",
+                damage,
+                context,
+                targetData,
+                ParseEnum("CombatSystem.Data.SkillStepTrigger", "OnCastStart"));
+            RemoveEventListener(eventHub, "DamageApplied", subscription);
+
+            Assert.NotNull(damageApplied);
+            Assert.AreEqual(100f, GetFloatProperty(victim.Health, "Current"), 0.01f);
+            Assert.AreEqual(15f, GetFloatProperty(victim.Health, "Shield"), 0.01f);
+            Assert.AreEqual(0f, Convert.ToSingle(CallMethod(victim.Resource, "GetCurrent", flow)), 0.01f);
+            Assert.AreEqual(0f, Convert.ToSingle(GetFieldValue(damageApplied, "AppliedDamage")), 0.01f);
+            Assert.AreEqual(10f, Convert.ToSingle(GetFieldValue(damageApplied, "AbsorbedByShield")), 0.01f);
+        }
+
+        [UnityTest]
+        public IEnumerator Passive_MeterDrivers_AddOnMoveAndDecayOnIdle()
+        {
+            CreateSystems();
+
+            var eventHub = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Core.CombatEventHub")));
+            var flow = CreateResourceDefinition("Resource_MovementFlow", 100f, false, true, 10);
+            var passive = CreatePassiveDefinition(
+                meterDrivers: new[]
+                {
+                    CreatePassiveMeterDriver(flow, "AddByMoveDistance", 2f),
+                    CreatePassiveMeterDriver(flow, "DecayPerSecondWhileIdle", 20f)
+                });
+            var unitDefinition = CreateUnitDefinition(startingPassives: new[] { passive });
+            var unit = CreateFrameworkUnit("PassiveMeterDriverUnit");
+
+            InitializeUnit(unit, unitDefinition, eventHub);
+            yield return null;
+
+            var movementSampleType = RequireType("CombatSystem.Core.MovementSampleEvent");
+            var movingEvent = Activator.CreateInstance(
+                movementSampleType,
+                null,
+                new Vector3(3f, 0f, 0f),
+                3f,
+                true);
+            InvokePrivateMethod(unit.Passive, "HandleMovementSampled", movingEvent);
+
+            var afterMove = Convert.ToSingle(CallMethod(unit.Resource, "GetCurrent", flow));
+            Assert.AreEqual(6f, afterMove, 0.01f);
+
+            yield return null;
+
+            var idleEvent = Activator.CreateInstance(
+                movementSampleType,
+                null,
+                Vector3.zero,
+                0f,
+                false);
+            InvokePrivateMethod(unit.Passive, "HandleMovementSampled", idleEvent);
+
+            var afterIdle = Convert.ToSingle(CallMethod(unit.Resource, "GetCurrent", flow));
+            Assert.Less(afterIdle, afterMove);
+        }
+
         private UnitRig CreateUnit(string name)
         {
             var go = Track(new GameObject(name));
@@ -895,6 +1110,7 @@ namespace CombatSystem.Tests
             var team = go.AddComponent(RequireType("CombatSystem.Core.TeamComponent"));
 
             CallMethod(team, "SetTeamId", 1);
+            CallMethod(stats, "SetBuffController", buffs);
             CallMethod(health, "Initialize");
             CallMethod(resource, "Initialize");
 
@@ -914,6 +1130,56 @@ namespace CombatSystem.Tests
             };
         }
 
+        private UnitRig CreateFrameworkUnit(string name)
+        {
+            var go = Track(new GameObject(name));
+            var unit = go.AddComponent(RequireType("CombatSystem.Core.UnitRoot"));
+            var stats = go.AddComponent(RequireType("CombatSystem.Core.StatsComponent"));
+            var health = go.AddComponent(RequireType("CombatSystem.Core.HealthComponent"));
+            var resource = go.AddComponent(RequireType("CombatSystem.Core.ResourceComponent"));
+            var cooldown = go.AddComponent(RequireType("CombatSystem.Core.CooldownComponent"));
+            var tags = go.AddComponent(RequireType("CombatSystem.Core.UnitTagsComponent"));
+            var buffs = go.AddComponent(RequireType("CombatSystem.Core.BuffController"));
+            var state = go.AddComponent(RequireType("CombatSystem.Core.CombatStateComponent"));
+            var visibility = go.AddComponent(RequireType("CombatSystem.Gameplay.VisibilityComponent"));
+            var skillUser = go.AddComponent(RequireType("CombatSystem.Gameplay.SkillUserComponent"));
+            var team = go.AddComponent(RequireType("CombatSystem.Core.TeamComponent"));
+            var passive = go.GetComponent(RequireType("CombatSystem.Core.PassiveController"));
+            if (passive == null)
+            {
+                passive = go.AddComponent(RequireType("CombatSystem.Core.PassiveController"));
+            }
+
+            CallMethod(team, "SetTeamId", 1);
+            CallMethod(stats, "SetBuffController", buffs);
+
+            return new UnitRig
+            {
+                GameObject = go,
+                Unit = unit,
+                Stats = stats,
+                Health = health,
+                Resource = resource,
+                Cooldown = cooldown,
+                Buffs = buffs,
+                State = state,
+                Visibility = visibility,
+                Team = team,
+                SkillUser = skillUser,
+                Passive = passive,
+                Tags = tags
+            };
+        }
+
+        private void InitializeUnit(UnitRig unit, object unitDefinition, object eventHub)
+        {
+            Assert.NotNull(unit);
+            Assert.NotNull(unit.Unit);
+
+            SetPrivateField(unit.Unit, "eventHub", eventHub);
+            CallMethod(unit.Unit, "Initialize", unitDefinition);
+        }
+
         private void CreateSystems()
         {
             var go = Track(new GameObject("Systems"));
@@ -931,6 +1197,45 @@ namespace CombatSystem.Tests
             SetPrivateField(stat, "minValue", -9999f);
             SetPrivateField(stat, "maxValue", 9999f);
             return stat;
+        }
+
+        private object CreateResourceDefinition(
+            string id,
+            float baseMaxResource,
+            bool initializeToMax,
+            bool showInHud,
+            int hudPriority)
+        {
+            var resource = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ResourceDefinition")));
+            SetPrivateField(resource, "id", id);
+            SetPrivateField(resource, "displayName", id);
+            SetPrivateField(resource, "baseMaxResource", baseMaxResource);
+            SetPrivateField(resource, "initializeToMax", initializeToMax);
+            SetPrivateField(resource, "showInHud", showInHud);
+            SetPrivateField(resource, "hudPriority", hudPriority);
+            SetPrivateField(resource, "clampToMax", true);
+            SetPrivateField(resource, "useLegacyType", false);
+            return resource;
+        }
+
+        private object CreateUnitDefinition(object[] baseStats = null, object[] startingPassives = null)
+        {
+            var unitDefinition = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.UnitDefinition")));
+            SetPrivateField(unitDefinition, "baseStats", CreateTypedList(RequireType("CombatSystem.Data.StatValue"), baseStats ?? Array.Empty<object>()));
+            SetPrivateField(unitDefinition, "tags", CreateTypedList(RequireType("CombatSystem.Data.TagDefinition")));
+            SetPrivateField(unitDefinition, "startingSkills", CreateTypedList(RequireType("CombatSystem.Data.SkillDefinition")));
+            SetPrivateField(unitDefinition, "startingPassives", CreateTypedList(RequireType("CombatSystem.Data.PassiveDefinition"), startingPassives ?? Array.Empty<object>()));
+            SetPrivateField(unitDefinition, "basicAttack", null);
+            return unitDefinition;
+        }
+
+        private object CreateStatValueEntry(object stat, float value)
+        {
+            var statValueType = RequireType("CombatSystem.Data.StatValue");
+            var statValue = Activator.CreateInstance(statValueType);
+            SetField(statValue, "stat", stat);
+            SetField(statValue, "value", value);
+            return statValue;
         }
 
         private object CreateSkill(float resourceCost, float cooldown, object targeting)
@@ -1009,6 +1314,22 @@ namespace CombatSystem.Tests
             return targeting;
         }
 
+        private object CreateSelfTargeting()
+        {
+            var targeting = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.TargetingDefinition")));
+            SetPrivateField(targeting, "mode", ParseEnum("CombatSystem.Data.TargetingMode", "Self"));
+            SetPrivateField(targeting, "team", ParseEnum("CombatSystem.Data.TargetTeam", "Self"));
+            SetPrivateField(targeting, "origin", ParseEnum("CombatSystem.Data.TargetingOrigin", "Caster"));
+            SetPrivateField(targeting, "range", 0f);
+            SetPrivateField(targeting, "radius", 0f);
+            SetPrivateField(targeting, "maxTargets", 1);
+            SetPrivateField(targeting, "includeSelf", true);
+            SetPrivateField(targeting, "allowEmpty", false);
+            SetPrivateField(targeting, "requireExplicitTarget", false);
+            SetPrivateField(targeting, "hitValidation", ParseEnum("CombatSystem.Data.HitValidationPolicy", "None"));
+            return targeting;
+        }
+
         private object CreateCondition(string conditionTypeName, string subjectName, object buff = null)
         {
             var condition = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ConditionDefinition")));
@@ -1017,6 +1338,20 @@ namespace CombatSystem.Tests
             SetField(entry, "type", ParseEnum("CombatSystem.Data.ConditionType", conditionTypeName));
             SetField(entry, "subject", ParseEnum("CombatSystem.Data.ConditionSubject", subjectName));
             SetField(entry, "buff", buff);
+            SetPrivateField(condition, "op", ParseEnum("CombatSystem.Data.ConditionOperator", "All"));
+            SetPrivateField(condition, "entries", CreateTypedList(entryType, entry));
+            return condition;
+        }
+
+        private object CreateResourceCondition(string conditionTypeName, string subjectName, object resourceDefinition, float threshold)
+        {
+            var condition = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ConditionDefinition")));
+            var entryType = RequireType("CombatSystem.Data.ConditionEntry");
+            var entry = Activator.CreateInstance(entryType);
+            SetField(entry, "type", ParseEnum("CombatSystem.Data.ConditionType", conditionTypeName));
+            SetField(entry, "subject", ParseEnum("CombatSystem.Data.ConditionSubject", subjectName));
+            SetField(entry, "resource", resourceDefinition);
+            SetField(entry, "threshold", threshold);
             SetPrivateField(condition, "op", ParseEnum("CombatSystem.Data.ConditionOperator", "All"));
             SetPrivateField(condition, "entries", CreateTypedList(entryType, entry));
             return condition;
@@ -1072,6 +1407,35 @@ namespace CombatSystem.Tests
             SetPrivateField(effect, "moveDestinationPolicy", ParseEnum("CombatSystem.Data.MoveDestinationPolicy", destinationPolicyName));
             SetPrivateField(effect, "moveCollisionPolicy", ParseEnum("CombatSystem.Data.MoveCollisionPolicy", collisionPolicyName));
             SetPrivateField(effect, "moveTargetOffset", targetOffset);
+            return effect;
+        }
+
+        private object CreateShieldEffect(float value, float duration, object overrideTargeting = null)
+        {
+            var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetPrivateField(effect, "effectType", ParseEnum("CombatSystem.Data.EffectType", "Shield"));
+            SetPrivateField(effect, "value", value);
+            SetPrivateField(effect, "duration", duration);
+            SetPrivateField(effect, "overrideTargeting", overrideTargeting);
+            return effect;
+        }
+
+        private object CreateResourceEffect(float value, object resourceDefinition, string operationName)
+        {
+            var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetPrivateField(effect, "effectType", ParseEnum("CombatSystem.Data.EffectType", "Resource"));
+            SetPrivateField(effect, "value", value);
+            SetPrivateField(effect, "resourceDefinition", resourceDefinition);
+            SetPrivateField(effect, "resourceOperation", ParseEnum("CombatSystem.Data.ResourceOperation", operationName));
+            return effect;
+        }
+
+        private object CreateSummonEffect(GameObject summonPrefab, float duration)
+        {
+            var effect = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.EffectDefinition")));
+            SetPrivateField(effect, "effectType", ParseEnum("CombatSystem.Data.EffectType", "Summon"));
+            SetPrivateField(effect, "summonPrefab", summonPrefab);
+            SetPrivateField(effect, "duration", duration);
             return effect;
         }
 
@@ -1136,6 +1500,19 @@ namespace CombatSystem.Tests
             return buff;
         }
 
+        private object CreateStatModifier(object stat, float value, string operationName = "Add")
+        {
+            var modifier = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ModifierDefinition")));
+            SetPrivateField(modifier, "target", ParseEnum("CombatSystem.Data.ModifierTargetType", "Stat"));
+            SetPrivateField(modifier, "scope", ParseEnum("CombatSystem.Data.ModifierScope", "Caster"));
+            SetPrivateField(modifier, "stat", stat);
+            SetPrivateField(modifier, "operation", ParseEnum("CombatSystem.Data.ModifierOperation", operationName));
+            SetPrivateField(modifier, "value", value);
+            SetPrivateField(modifier, "requiredTags", CreateTypedList(RequireType("CombatSystem.Data.TagDefinition")));
+            SetPrivateField(modifier, "blockedTags", CreateTypedList(RequireType("CombatSystem.Data.TagDefinition")));
+            return modifier;
+        }
+
         private object CreateSkillCostModifier(float value)
         {
             var modifier = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.ModifierDefinition")));
@@ -1145,6 +1522,39 @@ namespace CombatSystem.Tests
             SetPrivateField(modifier, "operation", ParseEnum("CombatSystem.Data.ModifierOperation", "Add"));
             SetPrivateField(modifier, "value", value);
             return modifier;
+        }
+
+        private object CreatePassiveDefinition(
+            object[] activationBuffs = null,
+            object[] triggers = null,
+            object[] meterDrivers = null)
+        {
+            var passive = Track(ScriptableObject.CreateInstance(RequireType("CombatSystem.Data.PassiveDefinition")));
+            SetPrivateField(passive, "activationBuffs", CreateTypedList(RequireType("CombatSystem.Data.BuffDefinition"), activationBuffs ?? Array.Empty<object>()));
+            SetPrivateField(passive, "triggers", CreateTypedList(RequireType("CombatSystem.Data.PassiveTrigger"), triggers ?? Array.Empty<object>()));
+            SetPrivateField(passive, "meterDrivers", CreateTypedList(RequireType("CombatSystem.Data.PassiveMeterDriver"), meterDrivers ?? Array.Empty<object>()));
+            SetPrivateField(passive, "tags", CreateTypedList(RequireType("CombatSystem.Data.TagDefinition")));
+            return passive;
+        }
+
+        private object CreatePassiveTrigger(string triggerTypeName, object condition, params object[] effects)
+        {
+            var trigger = Activator.CreateInstance(RequireType("CombatSystem.Data.PassiveTrigger"));
+            SetField(trigger, "triggerType", ParseEnum("CombatSystem.Data.PassiveTriggerType", triggerTypeName));
+            SetField(trigger, "chance", 1f);
+            SetField(trigger, "condition", condition);
+            SetField(trigger, "effects", CreateTypedList(RequireType("CombatSystem.Data.EffectDefinition"), effects));
+            return trigger;
+        }
+
+        private object CreatePassiveMeterDriver(object resourceDefinition, string driverTypeName, float rateOrAmount, object condition = null)
+        {
+            var driver = Activator.CreateInstance(RequireType("CombatSystem.Data.PassiveMeterDriver"));
+            SetField(driver, "resource", resourceDefinition);
+            SetField(driver, "driverType", ParseEnum("CombatSystem.Data.PassiveMeterDriverType", driverTypeName));
+            SetField(driver, "rateOrAmount", rateOrAmount);
+            SetField(driver, "condition", condition);
+            return driver;
         }
 
         private object CreateProjectileDefinition(float hitRadius)
@@ -1500,6 +1910,8 @@ namespace CombatSystem.Tests
             public Component Visibility;
             public Component Team;
             public Component SkillUser;
+            public Component Passive;
+            public Component Tags;
         }
     }
 }

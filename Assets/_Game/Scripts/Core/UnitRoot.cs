@@ -1,4 +1,5 @@
 using CombatSystem.Data;
+using CombatSystem.Gameplay;
 using UnityEngine;
 
 namespace CombatSystem.Core
@@ -21,6 +22,8 @@ namespace CombatSystem.Core
         [SerializeField] private CooldownComponent cooldown;
         [SerializeField] private UnitTagsComponent unitTags;
         [SerializeField] private BuffController buffController;
+        [SerializeField] private SkillUserComponent skillUser;
+        [SerializeField] private PassiveController passiveController;
         [SerializeField] private PlayerProgression progression;
         [SerializeField] private TeamComponent team;
         
@@ -54,6 +57,8 @@ namespace CombatSystem.Core
             cooldown = GetComponent<CooldownComponent>();
             unitTags = GetComponent<UnitTagsComponent>();
             buffController = GetComponent<BuffController>();
+            skillUser = GetComponent<SkillUserComponent>();
+            passiveController = GetComponent<PassiveController>();
             progression = GetComponent<PlayerProgression>();
             team = GetComponent<TeamComponent>();
         }
@@ -62,6 +67,7 @@ namespace CombatSystem.Core
         {
             CacheComponentsIfMissing();
             EnsureVisualPresenterIfMissing();
+            EnsurePassiveControllerIfMissing();
 
             if (initializeOnAwake)
             {
@@ -101,6 +107,16 @@ namespace CombatSystem.Core
                 buffController = GetComponent<BuffController>();
             }
 
+            if (skillUser == null)
+            {
+                skillUser = GetComponent<SkillUserComponent>();
+            }
+
+            if (passiveController == null)
+            {
+                passiveController = GetComponent<PassiveController>();
+            }
+
             if (progression == null)
             {
                 progression = GetComponent<PlayerProgression>();
@@ -127,12 +143,28 @@ namespace CombatSystem.Core
             gameObject.AddComponent<UnitVisualPresenter>();
         }
 
+        private void EnsurePassiveControllerIfMissing()
+        {
+            if (GetComponent<PassiveController>() == null)
+            {
+                passiveController = gameObject.AddComponent<PassiveController>();
+                return;
+            }
+
+            if (passiveController == null)
+            {
+                passiveController = GetComponent<PassiveController>();
+            }
+        }
+
         /// <summary>
         /// 核心初始化入口。
         /// </summary>
         /// <param name="definition">单位配置数据</param>
         public void Initialize(UnitDefinition definition)
         {
+            CacheComponentsIfMissing();
+            EnsurePassiveControllerIfMissing();
             unitDefinition = definition;
 
             // 1. 挂接事件总线
@@ -157,6 +189,16 @@ namespace CombatSystem.Core
             if (resource != null)
             {
                 resource.Initialize();
+            }
+
+            if (skillUser != null)
+            {
+                skillUser.Initialize(definition);
+            }
+
+            if (passiveController != null)
+            {
+                passiveController.Initialize(definition);
             }
         }
 
