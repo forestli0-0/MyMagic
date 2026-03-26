@@ -99,8 +99,18 @@ namespace CombatSystem.AI
         [Header("调试")]
         [Tooltip("当前 AI 状态")]
         [SerializeField] private AIState currentState = AIState.Idle;
+        [Tooltip("上一个 AI 状态")]
+        [SerializeField] private AIState previousState = AIState.Idle;
+        [Tooltip("上次状态切换原因")]
+        [SerializeField] private string lastTransitionReason;
+        [Tooltip("当前状态进入时间")]
+        [SerializeField] private float stateEnterTime;
         [Tooltip("当前目标（调试用）")]
         [SerializeField] private Transform debugTarget;
+        [Tooltip("当前选中的技能（调试用）")]
+        [SerializeField] private SkillDefinition debugSelectedSkill;
+        [Tooltip("当前目标距离（调试用）")]
+        [SerializeField] private float debugDistanceToTarget = -1f;
 
         // 下次思考时间
         private float nextThinkTime;
@@ -152,7 +162,9 @@ namespace CombatSystem.AI
         {
             EnsureReferences();
             EnsureBuffer();
+            InitializeStateTracking();
             ScheduleNextThink(0f);
+            UpdateDebugState();
         }
 
         /// <summary>
@@ -160,25 +172,20 @@ namespace CombatSystem.AI
         /// </summary>
         private void Update()
         {
-            // 死亡时停止一切行为
-            if (health != null && !health.IsAlive)
+            if (HandleDeath())
             {
-                StopMovement();
-                currentState = AIState.Idle;
-                lockMovementDuringCurrentCast = false;
+                UpdateDebugState();
                 return;
             }
 
             // 无配置时不执行
             if (aiProfile == null)
             {
+                UpdateDebugState();
                 return;
             }
 
-            if (skillUser == null || !skillUser.IsCasting)
-            {
-                lockMovementDuringCurrentCast = false;
-            }
+            RefreshCastingLock();
 
             // 定时执行决策
             if (Time.time >= nextThinkTime)
@@ -190,10 +197,64 @@ namespace CombatSystem.AI
             // 每帧执行状态行为
             UpdateState();
 
+            SyncNavAgentPosition();
+            UpdateDebugState();
+        }
+
+        private void InitializeStateTracking()
+        {
+            previousState = currentState;
+            stateEnterTime = Time.time;
+            lastTransitionReason = "启用";
+        }
+
+        private bool HandleDeath()
+        {
+            if (health == null || health.IsAlive)
+            {
+                return false;
+            }
+
+            StopMovement();
+            lockMovementDuringCurrentCast = false;
+            TransitionTo(AIState.Idle, "死亡");
+            return true;
+        }
+
+        private void RefreshCastingLock()
+        {
+            if (skillUser == null || !skillUser.IsCasting)
+            {
+                lockMovementDuringCurrentCast = false;
+            }
+        }
+
+        private void SyncNavAgentPosition()
+        {
             if (useNavMesh && navAgent != null && movement != null)
             {
                 navAgent.nextPosition = transform.position;
             }
+        }
+
+        private void UpdateDebugState()
+        {
+            debugSelectedSkill = selectedSkill;
+            debugDistanceToTarget = hasTarget ? GetDistanceToTarget() : -1f;
+        }
+
+        private void TransitionTo(AIState nextState, string reason)
+        {
+            if (currentState == nextState)
+            {
+                lastTransitionReason = reason;
+                return;
+            }
+
+            previousState = currentState;
+            currentState = nextState;
+            stateEnterTime = Time.time;
+            lastTransitionReason = reason;
         }
 
         /// <summary>
@@ -204,7 +265,7 @@ namespace CombatSystem.AI
             // 施法/调度锁期间保持施法状态（Boss 需要覆盖动画晚于逻辑施法结束的场景）
             if (ShouldStopMovementWhileCasting())
             {
-                currentState = AIState.CastSkill;
+                TransitionTo(AIState.CastSkill, "施法锁移动");
                 return;
             }
 
@@ -216,7 +277,7 @@ namespace CombatSystem.AI
                 if (!hasTarget)
                 {
                     selectedSkill = null;
-                    currentState = AIState.Idle;
+                    TransitionTo(AIState.Idle, "未找到目标");
                     return;
                 }
             }
@@ -225,7 +286,7 @@ namespace CombatSystem.AI
             if (ShouldRetreat())
             {
                 selectedSkill = null;
-                currentState = AIState.Retreat;
+                TransitionTo(AIState.Retreat, "满足撤退条件");
                 return;
             }
 
@@ -235,7 +296,7 @@ namespace CombatSystem.AI
             {
                 ClearTarget();
                 selectedSkill = null;
-                currentState = AIState.Idle;
+                TransitionTo(AIState.Idle, "目标脱离仇恨范围");
                 return;
             }
 
@@ -246,7 +307,7 @@ namespace CombatSystem.AI
                 selectedMinRange = minRange;
                 selectedMaxRange = maxRange;
                 selectedAllowWhileMoving = allowWhileMoving;
-                currentState = AIState.Attack;
+                TransitionTo(AIState.Attack, "选中技能");
                 return;
             }
 
@@ -259,7 +320,9 @@ namespace CombatSystem.AI
                 selectedAllowWhileMoving = true;
 
                 // 根据距离决定追击或攻击
-                currentState = distance <= selectedMaxRange ? AIState.Attack : AIState.Chase;
+                TransitionTo(
+                    distance <= selectedMaxRange ? AIState.Attack : AIState.Chase,
+                    distance <= selectedMaxRange ? "普攻回退可攻击" : "普攻回退需追击");
                 return;
             }
 
@@ -268,7 +331,7 @@ namespace CombatSystem.AI
             selectedMinRange = 0f;
             selectedMaxRange = 0f;
             selectedAllowWhileMoving = true;
-            currentState = AIState.Chase;
+            TransitionTo(AIState.Chase, "无可用技能");
         }
 
         /// <summary>
@@ -276,83 +339,118 @@ namespace CombatSystem.AI
         /// </summary>
         private void UpdateState()
         {
-            if (ShouldStopMovementWhileCasting())
+            if (TryHandleImmediateStateOverride())
             {
-                StopMovement();
-                currentState = AIState.CastSkill;
                 return;
             }
 
             switch (currentState)
             {
                 case AIState.Idle:
-                    // 空闲：停止移动
-                    StopMovement();
+                    TickIdle();
                     break;
 
                 case AIState.Chase:
-                    // 追击：向目标移动
-                    if (!hasTarget)
-                    {
-                        StopMovement();
-                        return;
-                    }
-
-                    MoveTowardsTarget();
-                    if (IsWithinDesiredRange())
-                    {
-                        StopMovement();
-                        currentState = AIState.Attack;
-                    }
+                    TickChase();
                     break;
 
                 case AIState.Attack:
-                    // 攻击：尝试释放技能
-                    if (!hasTarget)
-                    {
-                        StopMovement();
-                        currentState = AIState.Idle;
-                        return;
-                    }
-
-                    if (!IsWithinDesiredRange())
-                    {
-                        currentState = AIState.Chase;
-                        return;
-                    }
-
-                    if (skillUser == null || !skillUser.IsCasting || ShouldStopMovementWhileCasting())
-                    {
-                        StopMovement();
-                    }
-
-                    TryCastSelectedSkill();
+                    TickAttack();
                     break;
 
                 case AIState.CastSkill:
-                    // 施法：等待施法完成
-                    StopMovement();
-                    if (!ShouldStopMovementWhileCasting())
-                    {
-                        currentState = AIState.Attack;
-                    }
+                    TickCastSkill();
                     break;
 
                 case AIState.Retreat:
-                    // 撤退：远离目标
-                    if (!hasTarget)
-                    {
-                        StopMovement();
-                        currentState = AIState.Idle;
-                        return;
-                    }
-
-                    MoveAwayFromTarget();
-                    if (!ShouldRetreat())
-                    {
-                        currentState = AIState.Chase;
-                    }
+                    TickRetreat();
                     break;
+            }
+        }
+
+        private bool TryHandleImmediateStateOverride()
+        {
+            if (!ShouldStopMovementWhileCasting())
+            {
+                return false;
+            }
+
+            StopMovement();
+            TransitionTo(AIState.CastSkill, "施法锁移动");
+            return true;
+        }
+
+        private void TickIdle()
+        {
+            // 空闲：停止移动
+            StopMovement();
+        }
+
+        private void TickChase()
+        {
+            // 追击：向目标移动
+            if (!hasTarget)
+            {
+                StopMovement();
+                return;
+            }
+
+            MoveTowardsTarget();
+            if (IsWithinDesiredRange())
+            {
+                StopMovement();
+                TransitionTo(AIState.Attack, "进入攻击距离");
+            }
+        }
+
+        private void TickAttack()
+        {
+            // 攻击：尝试释放技能
+            if (!hasTarget)
+            {
+                StopMovement();
+                TransitionTo(AIState.Idle, "攻击阶段丢失目标");
+                return;
+            }
+
+            if (!IsWithinDesiredRange())
+            {
+                TransitionTo(AIState.Chase, "目标离开攻击距离");
+                return;
+            }
+
+            if (skillUser == null || !skillUser.IsCasting || ShouldStopMovementWhileCasting())
+            {
+                StopMovement();
+            }
+
+            TryCastSelectedSkill();
+        }
+
+        private void TickCastSkill()
+        {
+            // 施法：等待施法完成
+            StopMovement();
+            if (!ShouldStopMovementWhileCasting())
+            {
+                TransitionTo(AIState.Attack, "施法结束");
+            }
+        }
+
+        private void TickRetreat()
+        {
+            // 撤退：远离目标
+            if (!hasTarget)
+            {
+                StopMovement();
+                TransitionTo(AIState.Idle, "撤退阶段丢失目标");
+                return;
+            }
+
+            MoveAwayFromTarget();
+            if (!ShouldRetreat())
+            {
+                TransitionTo(AIState.Chase, "撤退条件解除");
             }
         }
 
@@ -961,7 +1059,7 @@ namespace CombatSystem.AI
                 lockMovementDuringCurrentCast = !selectedAllowWhileMoving;
                 if (ShouldStopMovementWhileCasting())
                 {
-                    currentState = AIState.CastSkill;
+                    TransitionTo(AIState.CastSkill, "开始施法");
                 }
 
                 selectedSkill = null;
