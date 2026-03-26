@@ -20,6 +20,7 @@ namespace CombatSystem.Gameplay
     /// </remarks>
     public class SkillUserComponent : MonoBehaviour
     {
+        #region 组件引用与配置
         [Header("组件引用")]
         [Tooltip("单位根组件")]
         [SerializeField] private UnitRoot unitRoot;
@@ -49,7 +50,9 @@ namespace CombatSystem.Gameplay
         [SerializeField] private List<SkillDefinition> skills = new List<SkillDefinition>();
         [Tooltip("覆盖默认普通攻击")]
         [SerializeField] private SkillDefinition basicAttackOverride;
+        #endregion
 
+        #region 运行时技能缓存
         // 运行时技能列表
         private readonly List<SkillDefinition> runtimeSkills = new List<SkillDefinition>(8);
         // 等待执行的技能步骤队列
@@ -60,7 +63,9 @@ namespace CombatSystem.Gameplay
         private readonly Dictionary<SkillDefinition, RecastRuntimeState> recastStates = new Dictionary<SkillDefinition, RecastRuntimeState>(16);
         // 技能连段运行时状态
         private readonly Dictionary<SkillDefinition, SequenceRuntimeState> sequenceStates = new Dictionary<SkillDefinition, SequenceRuntimeState>(16);
+        #endregion
 
+        #region 当前施法状态
         // 施法状态
         private bool isCasting;
         private float castStartTime;
@@ -90,7 +95,9 @@ namespace CombatSystem.Gameplay
         private QueuedCast queuedCast;
         // 最近一次施放失败原因（用于 UI/调试）
         private SkillCastFailReason lastCastFailReason = SkillCastFailReason.None;
+        #endregion
 
+        #region 事件与只读属性
         /// <summary>当技能开始施法时触发</summary>
         public event Action<SkillCastEvent> SkillCastStarted;
         /// <summary>当技能施法完成时触发</summary>
@@ -116,7 +123,9 @@ namespace CombatSystem.Gameplay
         public bool IsChanneling => isCasting && currentChannelTime > 0f && Time.time >= castStartTime + currentCastTime;
         /// <summary>最近一次施放失败原因</summary>
         public SkillCastFailReason LastCastFailReason => lastCastFailReason;
+        #endregion
 
+        #region Unity 生命周期
         private void Reset()
         {
             // 编辑器下自动查找组件
@@ -277,7 +286,9 @@ namespace CombatSystem.Gameplay
                 TryConsumeQueuedCast();
             }
         }
+        #endregion
 
+        #region 技能列表管理
         /// <summary>
         /// 根据单位定义初始化技能列表。
         /// </summary>
@@ -573,7 +584,9 @@ namespace CombatSystem.Gameplay
             SkillsChanged?.Invoke();
             return true;
         }
+        #endregion
 
+        #region 施法入口与中断
         /// <summary>
         /// 尝试释放指定技能。
         /// </summary>
@@ -988,7 +1001,9 @@ namespace CombatSystem.Gameplay
             recoveryEndTime = Mathf.Min(recoveryEndTime, Time.time);
             return true;
         }
+        #endregion
 
+        #region 施法校验与输入缓冲
         /// <summary>
         /// 检查指定技能是否可以释放。
         /// </summary>
@@ -1461,7 +1476,9 @@ namespace CombatSystem.Gameplay
                 request.AimDirection,
                 request.ChargeDurationSeconds);
         }
+        #endregion
 
+        #region 命中回调、目标收集与步骤调度
         /// <summary>
         /// 内部方法：当技能直接命中目标时触发。
         /// </summary>
@@ -1865,7 +1882,9 @@ namespace CombatSystem.Gameplay
 
             return true;
         }
+        #endregion
 
+        #region 步骤执行与效果应用
         /// <summary>
         /// 执行单个技能步骤，对所有目标应用效果。
         /// </summary>
@@ -2060,7 +2079,9 @@ namespace CombatSystem.Gameplay
 
             return ResolveModifiedResourceCost(skill, context, primaryTarget);
         }
+        #endregion
 
+        #region 目标解析与自动选目标
         private static bool ShouldIgnoreOptionalExplicitTarget(SkillDefinition skill)
         {
             var targeting = skill != null ? skill.Targeting : null;
@@ -2324,7 +2345,9 @@ namespace CombatSystem.Gameplay
         {
             return candidate.Health != null ? candidate.Health.Current : float.MaxValue;
         }
+        #endregion
 
+        #region 资源成本与弹药状态
         private float ResolveModifiedResourceCost(SkillDefinition skill, SkillRuntimeContext context, CombatTarget primaryTarget)
         {
             if (skill == null)
@@ -2452,7 +2475,9 @@ namespace CombatSystem.Gameplay
 
             SimpleListPool<SkillDefinition>.Release(keys);
         }
+        #endregion
 
+        #region 重施状态
         private bool TryGetRecastState(SkillDefinition skill, out RecastRuntimeState state)
         {
             state = default;
@@ -2613,7 +2638,9 @@ namespace CombatSystem.Gameplay
 
             SimpleListPool<SkillDefinition>.Release(keys);
         }
+        #endregion
 
+        #region 连段状态
         private int GetSequencePhaseForCast(SkillDefinition skill, float now)
         {
             if (skill == null || !skill.SupportsSequence || skill.SequenceConfig == null)
@@ -2840,7 +2867,9 @@ namespace CombatSystem.Gameplay
 
             SimpleListPool<SkillDefinition>.Release(keys);
         }
+        #endregion
 
+        #region 资源、上下文与事件派发
         /// <summary>
         /// 检查当前资源是否足够释放技能。
         /// </summary>
@@ -3033,7 +3062,9 @@ namespace CombatSystem.Gameplay
             currentChargeMultiplier = 1f;
             currentSequencePhase = 1;
         }
+        #endregion
 
+        #region 通用工具
         /// <summary>
         /// 检查指定技能是否为普攻技能。
         /// </summary>
@@ -3097,8 +3128,9 @@ namespace CombatSystem.Gameplay
 
             return unitRoot != null;
         }
+        #endregion
 
-        #region Target Handle Pool
+        #region 目标句柄池
         // 目标列表句柄池，用于复用 TargetListHandle 避免 GC
         private static readonly Stack<TargetListHandle> TargetHandlePool = new Stack<TargetListHandle>(16);
 
@@ -3190,7 +3222,7 @@ namespace CombatSystem.Gameplay
         }
         #endregion
 
-        #region Internal Types
+        #region 内部类型
         private struct AmmoRuntimeState
         {
             public int CurrentCharges;
